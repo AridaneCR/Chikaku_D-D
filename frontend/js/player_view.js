@@ -1,19 +1,19 @@
 // =============================================================
 // CONFIG
 // =============================================================
+
+// Toma API_URL desde config.js (Render) o usa fallback
 const BASE_URL = (window.__env && window.__env.API_URL)
   ? window.__env.API_URL
   : "https://chikaku-d-d-ptyl.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 
-// El tablero usa siempre campaña "default"
-const campaign = "default";
+// El tablero SIEMPRE usa todos los jugadores
+let players = [];
+let isFiltering = false;
 
 const playerBoard = document.getElementById("playerBoard");
-
-let isFiltering = false;
-let players = [];
 
 // =============================================================
 // FETCH HELPERS
@@ -26,8 +26,8 @@ async function fetchJson(url) {
 
 async function loadPlayers() {
   try {
-    players = await fetchJson(`${API_PLAYERS}/${campaign}`);
-    renderPlayerBoard(players);
+    players = await fetchJson(API_PLAYERS); // SIN CAMPAÑA
+    if (!isFiltering) renderPlayerBoard(players);
   } catch (err) {
     console.error("Error cargando jugadores:", err);
   }
@@ -56,25 +56,23 @@ function renderPlayerBoard(list) {
         class="w-full h-48 object-cover rounded mb-3"
       />
 
-      <p>Salud: ${p.life}</p>
-      <p>Habilidad 1: ${p.skill1}</p>
-      <p>Habilidad 2: ${p.skill2}</p>
-      <p>Hitos: ${p.milestones}</p>
-      <p>Características: ${p.attributes}</p>
-      <p>Experiencia: ${p.exp}</p>
+      <p>❤️ Salud: ${p.life}</p>
+      <p>🌀 Habilidad 1: ${p.skill1}</p>
+      <p>✨ Habilidad 2: ${p.skill2}</p>
+      <p>🏆 Hitos: ${p.milestones}</p>
+      <p>📜 Características: ${p.attributes}</p>
+      <p>⭐ EXP Total: ${p.exp}</p>
 
       <div class="grid grid-cols-6 gap-1 mt-3">
-        ${
-          (p.items || [])
-            .slice(0, 6)
-            .map((item) => `
-              <img src="${
-                item ? `data:image/jpeg;base64,${item}` : "/placeholder.png"
-              }" 
-              class="w-10 h-10 object-cover rounded border border-stone-700 bg-stone-900" />
-            `)
-            .join("")
-        }
+        ${(p.items || [])
+          .slice(0, 6)
+          .map((item) => `
+            <img src="${
+              item ? `data:image/jpeg;base64,${item}` : "/placeholder.png"
+            }" 
+            class="w-10 h-10 object-cover rounded border border-stone-700 bg-stone-900" />
+          `)
+          .join("")}
       </div>
 
       <div class='bg-stone-600 h-5 rounded mt-3'>
@@ -87,11 +85,11 @@ function renderPlayerBoard(list) {
 }
 
 // =============================================================
-// SEARCH
+// SEARCH BAR (Opcional)
 // =============================================================
 function searchPlayer() {
-  const nameQuery = document.getElementById("searchName").value.toLowerCase();
-  const levelQuery = document.getElementById("searchLevel").value;
+  const nameQuery = document.getElementById("searchName")?.value.toLowerCase() || "";
+  const levelQuery = document.getElementById("searchLevel")?.value || "";
 
   const results = players.filter((p) => {
     const matchName = nameQuery ? p.name.toLowerCase().includes(nameQuery) : true;
@@ -107,7 +105,7 @@ function clearSearch() {
   document.getElementById("searchName").value = "";
   document.getElementById("searchLevel").value = "";
   isFiltering = false;
-  renderPlayerBoard();
+  renderPlayerBoard(players);
 }
 
 // =============================================================

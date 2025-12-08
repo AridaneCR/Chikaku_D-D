@@ -3,30 +3,20 @@
 // =============================================================
 
 // Cargar API_URL desde config.js o fallback a Render
-const BASE_URL = (window.__env && window.__env.API_URL) 
-  ? window.__env.API_URL 
-  : "https://chikaku-d-d-ptyl.onrender.com";
+const BASE_URL = (window.__env && window.__env.API_URL)
+  ? window.__env.API_URL
+  : "https://chikaku-d-d-ptyl.onrender.com"; // URL del backend en Render
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 
 const PASS = "dragon";
 let players = [];
 
-// currentCampaign seguro para evitar errores en Render
-let currentCampaign = null;
-
-try {
-  currentCampaign = JSON.parse(localStorage.getItem("currentCampaign"));
-} catch {
-  currentCampaign = null;
-}
-
-if (!currentCampaign) {
-  currentCampaign = { name: "default" };
-}
+// Ya NO se usa campaña en backend → siempre "default"
+let currentCampaign = { name: "default" };
 
 // Validaciones
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024; 
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 // =============================================================
@@ -54,18 +44,21 @@ async function fetchJson(url, opts = {}) {
 }
 
 // =============================================================
-// VALIDACIÓN + PREVIEW DE IMÁGENES
+// VALIDACIÓN + PREVIEW IMÁGENES
 // =============================================================
 function validateImage(file) {
   if (!file) return true;
+
   if (!ALLOWED_TYPES.includes(file.type)) {
     alert("Solo se permiten PNG, JPG, JPEG o WEBP.");
     return false;
   }
+
   if (file.size > MAX_IMAGE_SIZE) {
     alert("La imagen supera los 2 MB.");
     return false;
   }
+
   return true;
 }
 
@@ -94,12 +87,12 @@ function addPreview(inputId, previewId) {
 }
 
 // =============================================================
-// REFRESH / RENDER
+// REFRESH / RENDER LIST
 // =============================================================
 async function refreshPlayers() {
   try {
-    const campaign = currentCampaign?.name || "default";
-    players = await fetchJson(`${API_PLAYERS}/${encodeURIComponent(campaign)}`);
+    // NUEVO → el backend ya NO requiere campaña
+    players = await fetchJson(API_PLAYERS);
     renderPlayersList();
   } catch (e) {
     console.error("Error cargando jugadores:", e);
@@ -155,6 +148,7 @@ function renderPlayersList() {
 // =============================================================
 function loginMaster() {
   const pass = document.getElementById("masterPass").value;
+
   if (pass === PASS) {
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("mainApp").classList.remove("hidden");
@@ -178,7 +172,6 @@ async function createCharacter() {
   if (!name.trim()) return alert("El nombre es obligatorio.");
 
   const fd = new FormData();
-  fd.append("campaign", currentCampaign.name);
   fd.append("name", name);
   fd.append("life", get("charLifeInput"));
   fd.append("skill1", get("charSkill1Input"));
@@ -231,8 +224,7 @@ async function openMasterPanel(id) {
             (img, i) => `
           <div>
             <img id="previewItemEdit${i + 1}" src="data:image/jpeg;base64,${img}" class="w-full h-20 object-cover rounded border mb-1"/>
-            <input id="editItem${i + 1}" type="file" accept="image/*" 
-              class="w-full bg-white text-black p-2 rounded" data-current="${img}">
+            <input id="editItem${i + 1}" type="file" accept="image/*" class="w-full bg-white text-black p-2 rounded" data-current="${img}">
           </div>`
           )
           .join("")}
@@ -314,7 +306,7 @@ async function deletePlayer(id) {
 }
 
 // =============================================================
-// PLAYER BOARD
+// OPEN PLAYER BOARD
 // =============================================================
 function openPlayerBoard() {
   window.open("../Player/player_view.html", "_blank");
@@ -326,6 +318,7 @@ function openPlayerBoard() {
 window.addEventListener("load", () => {
   refreshPlayers();
 
+  // Previews del formulario
   addPreview("charImgInput", "previewCharMain");
   for (let i = 1; i <= 6; i++) {
     addPreview(`item${i}Input`, `previewItem${i}`);
