@@ -60,33 +60,26 @@
     </button>
   </div>
 
-  <!-- LOGIN MASTER -->
+  <!-- LOGIN MASTER + IR AL TABLERO -->
   <div id="loginScreen" class="max-w-md mx-auto bg-stone-800 p-6 rounded-xl shadow-xl hidden">
-    <h1 class="text-3xl font-bold text-center mb-4 text-red-400">Entrar como Master</h1>
+    <h1 class="text-3xl font-bold text-center mb-4 text-red-400">Opciones</h1>
 
-    <label>Contraseña:</label>
+    <label>Entrar como Master:</label>
     <input id="masterPass" type="password" class="w-full p-2 rounded text-black mb-3" />
 
     <button onclick="loginMaster()" 
       class="w-full bg-red-600 hover:bg-red-700 p-2 rounded">
-      Entrar
+      Entrar como Master
+    </button>
+
+    <button onclick="enterBoard()" 
+      class="w-full bg-purple-600 hover:bg-purple-700 p-2 rounded mt-4">
+      Ir al Tablero
     </button>
 
     <button onclick="backToStart()" 
       class="w-full bg-gray-600 hover:bg-gray-700 p-2 rounded mt-3">
       Volver
-    </button>
-  </div>
-
-  <!-- LOGIN JUGADOR -->
-  <div id="playerLoginScreen" class="max-w-md mx-auto bg-stone-800 p-6 rounded-xl shadow-xl hidden mt-6">
-    <h1 class="text-3xl font-bold text-center mb-4 text-purple-400">Entrar como Jugador</h1>
-
-    <select id="playerSelectLogin" class="w-full p-2 text-black rounded mb-2"></select>
-
-    <button onclick="enterAsPlayer()" 
-      class="mt-4 w-full bg-purple-600 hover:bg-purple-700 p-2 rounded">
-      Entrar al Tablero
     </button>
   </div>
 
@@ -104,7 +97,7 @@
     });
 
     function backToStart() {
-      document.querySelectorAll("#campaignCard,#campaignSelectCard,#loginScreen,#playerLoginScreen")
+      document.querySelectorAll("#campaignCard,#campaignSelectCard,#loginScreen")
         .forEach(el => el.classList.add("hidden"));
 
       document.getElementById("startScreen").classList.remove("hidden");
@@ -156,16 +149,6 @@
         .forEach(el => el.classList.add("hidden"));
 
       document.getElementById("loginScreen").classList.remove("hidden");
-      document.getElementById("playerLoginScreen").classList.remove("hidden");
-
-      // mostrar jugadores
-      const players = JSON.parse(localStorage.getItem("players") || "[]");
-      const select = document.getElementById("playerSelectLogin");
-      select.innerHTML = "";
-
-      players.forEach((p, i) => {
-        select.innerHTML += `<option value="${i}">${p.name}</option>`;
-      });
     }
 
     function loginMaster() {
@@ -175,10 +158,8 @@
       } else alert("Contraseña incorrecta");
     }
 
-    function enterAsPlayer() {
-      const idx = document.getElementById('playerSelectLogin').value;
-      localStorage.setItem("currentPlayer", idx);
-      window.location.href = "player/player_view.html";
+    function enterBoard() {
+      window.location.href = "./Player/player_view.html";
     }
   </script>
 
