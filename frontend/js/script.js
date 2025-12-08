@@ -1,15 +1,32 @@
 // =============================================================
 // CONFIG
 // =============================================================
-// const API_URL = "http://localhost:3000/api/players";
-const API_URL = "https://chikaku-d-d-ptyl.onrender.com/api/players";
+
+// Cargar API_URL desde config.js o fallback a Render
+const BASE_URL = (window.__env && window.__env.API_URL) 
+  ? window.__env.API_URL 
+  : "https://chikaku-d-d-ptyl.onrender.com";
+
 const API_PLAYERS = `${BASE_URL}/api/players`;
 
 const PASS = "dragon";
 let players = [];
-const currentCampaign = JSON.parse(localStorage.getItem("currentCampaign") || "null");
 
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2 MB
+// currentCampaign seguro para evitar errores en Render
+let currentCampaign = null;
+
+try {
+  currentCampaign = JSON.parse(localStorage.getItem("currentCampaign"));
+} catch {
+  currentCampaign = null;
+}
+
+if (!currentCampaign) {
+  currentCampaign = { name: "default" };
+}
+
+// Validaciones
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024; 
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 // =============================================================
@@ -37,21 +54,18 @@ async function fetchJson(url, opts = {}) {
 }
 
 // =============================================================
-// IMAGE VALIDATOR + PREVIEW
+// VALIDACIÓN + PREVIEW DE IMÁGENES
 // =============================================================
 function validateImage(file) {
   if (!file) return true;
-
   if (!ALLOWED_TYPES.includes(file.type)) {
-    alert("Solo se permiten imágenes PNG, JPG, JPEG o WEBP.");
+    alert("Solo se permiten PNG, JPG, JPEG o WEBP.");
     return false;
   }
-
   if (file.size > MAX_IMAGE_SIZE) {
-    alert("La imagen supera el tamaño máximo permitido de 2MB.");
+    alert("La imagen supera los 2 MB.");
     return false;
   }
-
   return true;
 }
 
@@ -63,9 +77,9 @@ function addPreview(inputId, previewId) {
 
   input.onchange = () => {
     const file = input.files[0];
+
     if (!validateImage(file)) {
       input.value = "";
-      preview.src = "";
       preview.classList.add("hidden");
       return;
     }
@@ -83,23 +97,23 @@ function addPreview(inputId, previewId) {
 // REFRESH / RENDER
 // =============================================================
 async function refreshPlayers() {
-  const campaign = currentCampaign?.name || "default";
   try {
+    const campaign = currentCampaign?.name || "default";
     players = await fetchJson(`${API_PLAYERS}/${encodeURIComponent(campaign)}`);
     renderPlayersList();
   } catch (e) {
-    console.error(e);
+    console.error("Error cargando jugadores:", e);
   }
 }
 
 function renderPlayersList() {
   const list = document.getElementById("playersList");
   list.innerHTML = "";
+
   players.forEach((p) => {
     list.innerHTML += `
       <div class='bg-stone-700 p-4 rounded-xl shadow-xl w-64'>
         
-        <!-- Imagen principal -->
         <img 
           src='${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}'
           class='w-full h-40 object-cover rounded mb-2'
@@ -113,7 +127,6 @@ function renderPlayersList() {
         <p>Características: ${p.attributes}</p>
         <p>Experiencia: ${p.exp}</p>
 
-        <!-- Objetos -->
         <div class='w-full grid grid-cols-3 gap-2 mt-2 mb-2'>
           ${(p.items || []).slice(0, 6).map(img => `
             <img 
@@ -123,12 +136,19 @@ function renderPlayersList() {
           `).join("")}
         </div>
 
-        <button onclick='openMasterPanel("${p._id}")' class='bg-green-600 hover:bg-green-700 p-2 rounded w-full mt-2'>Editar</button>
-        <button onclick='deletePlayer("${p._id}")' class='bg-red-600 hover:bg-red-700 p-2 rounded w-full mt-2'>Eliminar</button>
-      </div>`;
+        <button onclick='openMasterPanel("${p._id}")' 
+          class='bg-green-600 hover:bg-green-700 p-2 rounded w-full mt-2'>
+          Editar
+        </button>
+
+        <button onclick='deletePlayer("${p._id}")' 
+          class='bg-red-600 hover:bg-red-700 p-2 rounded w-full mt-2'>
+          Eliminar
+        </button>
+      </div>
+    `;
   });
 }
-
 
 // =============================================================
 // LOGIN
@@ -152,21 +172,21 @@ function toggleCreateCard() {
 // CREATE CHARACTER
 // =============================================================
 async function createCharacter() {
-  const f = (id) => document.getElementById(id).value;
+  const get = (id) => document.getElementById(id).value;
 
-  const name = f("charNameInput");
+  const name = get("charNameInput");
   if (!name.trim()) return alert("El nombre es obligatorio.");
 
   const fd = new FormData();
-  fd.append("campaign", currentCampaign?.name || "default");
+  fd.append("campaign", currentCampaign.name);
   fd.append("name", name);
-  fd.append("life", f("charLifeInput"));
-  fd.append("skill1", f("charSkill1Input"));
-  fd.append("skill2", f("charSkill2Input"));
-  fd.append("milestones", f("charMilestonesInput"));
-  fd.append("attributes", f("charAttributesInput"));
-  fd.append("exp", f("charExpInput"));
-  fd.append("level", f("charLevelInput"));
+  fd.append("life", get("charLifeInput"));
+  fd.append("skill1", get("charSkill1Input"));
+  fd.append("skill2", get("charSkill2Input"));
+  fd.append("milestones", get("charMilestonesInput"));
+  fd.append("attributes", get("charAttributesInput"));
+  fd.append("exp", get("charExpInput"));
+  fd.append("level", get("charLevelInput"));
 
   const mainImg = document.getElementById("charImgInput").files[0];
   if (mainImg && validateImage(mainImg)) fd.append("charImg", mainImg);
@@ -187,7 +207,7 @@ async function createCharacter() {
 // EDIT PLAYER
 // =============================================================
 async function openMasterPanel(id) {
-  const player = players.find(p => p._id === id);
+  const player = players.find((p) => p._id === id);
   if (!player) return alert("Jugador no encontrado");
 
   const modal = document.createElement("div");
@@ -200,8 +220,8 @@ async function openMasterPanel(id) {
       <label>Nombre:</label>
       <input id='editName' class='w-full p-2 rounded mb-2 text-black' value='${player.name}' />
 
-      <label>Imagen principal</label>
-      <img id="previewEditMain" src="${player.img}" class="w-full h-40 object-cover rounded mb-2"/>
+      <label>Imagen principal:</label>
+      <img id="previewEditMain" src="data:image/jpeg;base64,${player.img}" class="w-full h-40 object-cover rounded mb-2" />
       <input id='editImg' type='file' accept='image/*' class='w-full p-2 rounded bg-white text-black mb-2' />
 
       <h3 class="text-xl font-bold mb-2">Objetos</h3>
@@ -210,8 +230,9 @@ async function openMasterPanel(id) {
           .map(
             (img, i) => `
           <div>
-            <img id="previewItemEdit${i+1}" src="${img}" class="w-full h-20 object-cover rounded border mb-1"/>
-            <input id="editItem${i+1}" type="file" accept="image/*" class="w-full bg-white text-black p-2 rounded" data-current="${img}">
+            <img id="previewItemEdit${i + 1}" src="data:image/jpeg;base64,${img}" class="w-full h-20 object-cover rounded border mb-1"/>
+            <input id="editItem${i + 1}" type="file" accept="image/*" 
+              class="w-full bg-white text-black p-2 rounded" data-current="${img}">
           </div>`
           )
           .join("")}
@@ -238,7 +259,6 @@ async function openMasterPanel(id) {
 
   document.body.appendChild(modal);
 
-  // Previews
   addPreview("editImg", "previewEditMain");
   for (let i = 1; i <= 6; i++) addPreview(`editItem${i}`, `previewItemEdit${i}`);
 
@@ -259,16 +279,16 @@ async function openMasterPanel(id) {
     const keepItems = [];
 
     const newMain = document.getElementById("editImg").files[0];
-    if (newMain) fd.append("charImg", newMain);
+    if (newMain && validateImage(newMain)) fd.append("charImg", newMain);
 
     for (let i = 1; i <= 6; i++) {
       const input = document.getElementById(`editItem${i}`);
       const file = input.files[0];
+
       if (file && validateImage(file)) {
         fd.append("items", file);
       } else {
-        const current = input.dataset.current;
-        if (current) keepItems.push(current);
+        keepItems.push(input.dataset.current);
       }
     }
 
@@ -294,7 +314,7 @@ async function deletePlayer(id) {
 }
 
 // =============================================================
-// OPEN PLAYER BOARD
+// PLAYER BOARD
 // =============================================================
 function openPlayerBoard() {
   window.open("../Player/player_view.html", "_blank");
@@ -306,13 +326,8 @@ function openPlayerBoard() {
 window.addEventListener("load", () => {
   refreshPlayers();
 
-  // Previews del formulario CREAR PERSONAJE
   addPreview("charImgInput", "previewCharMain");
-
-  addPreview("item1Input", "previewItem1");
-  addPreview("item2Input", "previewItem2");
-  addPreview("item3Input", "previewItem3");
-  addPreview("item4Input", "previewItem4");
-  addPreview("item5Input", "previewItem5");
-  addPreview("item6Input", "previewItem6");
+  for (let i = 1; i <= 6; i++) {
+    addPreview(`item${i}Input`, `previewItem${i}`);
+  }
 });
