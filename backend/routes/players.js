@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const Player = require("../models/Player");
+const Player = require("../models/player");
 
 // Usamos memoryStorage y convertimos buffers a base64 para guardar en Mongo
 const upload = multer({ storage: multer.memoryStorage() });
