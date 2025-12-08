@@ -18,31 +18,44 @@ const playerBoard = document.getElementById("playerBoard");
 // EXP SYSTEM (PROGRESIVO 5% POR NIVEL)
 // =============================================================
 
-// Exp mínima del nivel 1
 const BASE_EXP = 100;
 
-// Exp necesaria para subir del nivel actual al siguiente
+// EXP necesaria para subir del nivel N a N+1
 function expNeededForLevel(level) {
   return BASE_EXP * Math.pow(1.05, level - 1);
 }
 
-// Calcula cuánta EXP le sobra para esta barra
+// Calcula cuánto progreso real lleva dentro del nivel actual
 function expProgress(level, totalExp) {
-  let required = 0;
   let remaining = totalExp;
 
-  // Restar exp necesaria de niveles anteriores
+  // Restamos la exp necesaria de niveles anteriores
   for (let i = 1; i < level; i++) {
-    const need = expNeededForLevel(i);
-    remaining -= need;
-    if (remaining < 0) remaining = 0;
+    remaining -= expNeededForLevel(i);
   }
 
-  // EXP necesaria para este nivel
-  required = expNeededForLevel(level);
+  // Si queda negativo, lo igualamos a 0
+  remaining = Math.max(0, remaining);
 
-  // Porcentaje final
+  const required = expNeededForLevel(level);
+
+  // Porcentaje para la barra
   return Math.min(100, (remaining / required) * 100);
+}
+
+// Cuánta EXP le falta para subir
+function expMissing(level, totalExp) {
+  let remaining = totalExp;
+
+  for (let i = 1; i < level; i++) {
+    remaining -= expNeededForLevel(i);
+  }
+
+  remaining = Math.max(0, remaining);
+
+  const required = expNeededForLevel(level);
+
+  return Math.max(0, Math.round(required - remaining));
 }
 
 // =============================================================
@@ -72,15 +85,19 @@ function renderPlayerBoard(list) {
   playerBoard.innerHTML = "";
 
   list.forEach((p) => {
-    // Calculamos porcentaje real usando exp total
-    const expPercent = expProgress(p.level, p.exp || 0);
+    const level = p.level || 1;
+    const exp = p.exp || 0;
+
+    const expPercent = expProgress(level, exp);
+    const missing = expMissing(level, exp);
+    const needed = Math.round(expNeededForLevel(level));
 
     const card = document.createElement("div");
     card.className =
       "inline-block bg-stone-800 p-4 rounded-xl shadow-2xl w-80 text-stone-100 m-2 align-top";
 
     card.innerHTML = `
-      <h2 class='text-2xl font-bold mb-2'>${p.name} (Nivel ${p.level})</h2>
+      <h2 class='text-2xl font-bold mb-2'>${p.name} (Nivel ${level})</h2>
 
       <img 
         src="${p.img ? `data:image/jpeg;base64,${p.img}` : '/placeholder.png'}"
@@ -92,7 +109,7 @@ function renderPlayerBoard(list) {
       <p>✨ Habilidad 2: ${p.skill2}</p>
       <p>🏆 Hitos: ${p.milestones}</p>
       <p>📜 Características: ${p.attributes}</p>
-      <p>⭐ EXP Total: ${p.exp}</p>
+      <p>⭐ EXP Total: ${exp}</p>
 
       <div class="grid grid-cols-6 gap-1 mt-3">
         ${(p.items || [])
@@ -111,7 +128,7 @@ function renderPlayerBoard(list) {
       </div>
 
       <p class='mt-1 text-xs text-stone-300'>
-        Progreso nivel: ${expPercent.toFixed(1)}%
+        Progreso: ${expPercent.toFixed(1)}% — Falta ${missing} EXP (Necesita ${needed})
       </p>
     `;
 
