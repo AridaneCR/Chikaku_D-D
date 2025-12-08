@@ -2,18 +2,48 @@
 // CONFIG
 // =============================================================
 
-// Toma API_URL desde config.js (Render) o usa fallback
+// Toma API_URL desde config.js (Render) o fallback
 const BASE_URL = (window.__env && window.__env.API_URL)
   ? window.__env.API_URL
   : "https://chikaku-d-d-ptyl.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 
-// El tablero SIEMPRE usa todos los jugadores
 let players = [];
 let isFiltering = false;
 
 const playerBoard = document.getElementById("playerBoard");
+
+// =============================================================
+// EXP SYSTEM (PROGRESIVO 5% POR NIVEL)
+// =============================================================
+
+// Exp mínima del nivel 1
+const BASE_EXP = 100;
+
+// Exp necesaria para subir del nivel actual al siguiente
+function expNeededForLevel(level) {
+  return BASE_EXP * Math.pow(1.05, level - 1);
+}
+
+// Calcula cuánta EXP le sobra para esta barra
+function expProgress(level, totalExp) {
+  let required = 0;
+  let remaining = totalExp;
+
+  // Restar exp necesaria de niveles anteriores
+  for (let i = 1; i < level; i++) {
+    const need = expNeededForLevel(i);
+    remaining -= need;
+    if (remaining < 0) remaining = 0;
+  }
+
+  // EXP necesaria para este nivel
+  required = expNeededForLevel(level);
+
+  // Porcentaje final
+  return Math.min(100, (remaining / required) * 100);
+}
 
 // =============================================================
 // FETCH HELPERS
@@ -26,7 +56,7 @@ async function fetchJson(url) {
 
 async function loadPlayers() {
   try {
-    players = await fetchJson(API_PLAYERS); // SIN CAMPAÑA
+    players = await fetchJson(API_PLAYERS);
     if (!isFiltering) renderPlayerBoard(players);
   } catch (err) {
     console.error("Error cargando jugadores:", err);
@@ -42,7 +72,8 @@ function renderPlayerBoard(list) {
   playerBoard.innerHTML = "";
 
   list.forEach((p) => {
-    const expPercent = (p.exp || 0) % 100;
+    // Calculamos porcentaje real usando exp total
+    const expPercent = expProgress(p.level, p.exp || 0);
 
     const card = document.createElement("div");
     card.className =
@@ -78,6 +109,10 @@ function renderPlayerBoard(list) {
       <div class='bg-stone-600 h-5 rounded mt-3'>
         <div class='bg-green-500 h-5 rounded exp-bar' style='width:${expPercent}%;'></div>
       </div>
+
+      <p class='mt-1 text-xs text-stone-300'>
+        Progreso nivel: ${expPercent.toFixed(1)}%
+      </p>
     `;
 
     playerBoard.appendChild(card);
@@ -85,7 +120,7 @@ function renderPlayerBoard(list) {
 }
 
 // =============================================================
-// SEARCH BAR (Opcional)
+// SEARCH
 // =============================================================
 function searchPlayer() {
   const nameQuery = document.getElementById("searchName")?.value.toLowerCase() || "";
