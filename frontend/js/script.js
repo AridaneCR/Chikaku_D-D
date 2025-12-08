@@ -297,7 +297,7 @@ async function deletePlayer(id) {
 // OPEN PLAYER BOARD
 // =============================================================
 function openPlayerBoard() {
-  window.open("./player_view.js/", "_blank");
+  window.open("../Player/player_view.html", "_blank");
 }
 
 // =============================================================
