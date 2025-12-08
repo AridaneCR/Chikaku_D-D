@@ -1,4 +1,5 @@
-const BASE_URL = (window.__env && window.__env.API_URL) || "http://localhost:3000";
+// const API_URL = "http://localhost:3000/api/players";
+const API_URL = "https://chikaku-d-d-ptyl.onrender.com/api/players";
 const API_PLAYERS = `${BASE_URL}/api/players`;
 
 let players = [];

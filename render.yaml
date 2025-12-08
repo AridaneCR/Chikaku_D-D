@@ -1,0 +1,29 @@
+services:
+  # ===========================
+  #        BACKEND API
+  # ===========================
+  - name: chikaku-backend
+    type: web
+    env: node
+    rootDir: backend
+    repo: https://github.com/AridaneCR/Chikaku_D-D
+    buildCommand: "npm install"
+    startCommand: "node server.js"
+    envVars:
+      - key: MONGO_URI
+        sync: false   # Se establece desde el panel de Render
+      - key: PORT
+        value: 10000
+
+  # ===========================
+  #        FRONTEND STATIC
+  # ===========================
+  - name: chikaku-frontend
+    type: static
+    rootDir: frontend
+    repo: https://github.com/AridaneCR/Chikaku_D-D
+    buildCommand: ""      # No necesitas build porque es HTML puro
+    staticPublishPath: "frontend"
+    envVars:
+      - key: API_URL
+        value: https://chikaku-backend.onrender.com/api/players
