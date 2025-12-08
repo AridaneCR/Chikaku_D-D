@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tablero de D&D - Jugador</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .fade-in { animation: fadeIn 0.5s ease forwards; }
+    .fade-out { animation: fadeOut 0.5s ease forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+    @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.8); } }
+    .exp-bar { transition: width 1s ease-in-out; }
+  </style>
+</head>
+<body class="bg-stone-900 text-stone-100 min-h-screen p-6">
+
+  <h1 class="text-4xl text-center text-red-400 mb-6 font-bold">Tablero de D&D</h1>
+
+  <div id="playerBoard" class="relative min-h-screen"></div>
+<script src="../js/player_view.js"></script>
+</body>
+</html>
