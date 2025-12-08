@@ -1,63 +1,60 @@
-// const API_URL = "http://localhost:3000/api/players";
-const API_URL = "https://chikaku-d-d-ptyl.onrender.com/api/players";
+// =============================================================
+// CONFIG
+// =============================================================
+const BASE_URL = (window.__env && window.__env.API_URL)
+  ? window.__env.API_URL
+  : "https://chikaku-d-d-ptyl.onrender.com";
+
 const API_PLAYERS = `${BASE_URL}/api/players`;
 
-let players = [];
-let isFiltering = false;
+// El tablero usa siempre campaña "default"
+const campaign = "default";
 
 const playerBoard = document.getElementById("playerBoard");
 
-// Obtener campaña actual
-const currentCampaign = JSON.parse(localStorage.getItem("currentCampaign") || "null");
+let isFiltering = false;
+let players = [];
 
-// Si no existe, mostrar mensaje
-if (!currentCampaign) {
-  playerBoard.innerHTML = `
-    <p class='text-center text-red-400 text-xl'>
-      ⚠ No hay campaña seleccionada.<br>
-      Vuelve al panel principal.
-    </p>`;
+// =============================================================
+// FETCH HELPERS
+// =============================================================
+async function fetchJson(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
 
-
-// -------------------------------------------------------
-// Cargar jugadores desde MongoDB
-// -------------------------------------------------------
 async function loadPlayers() {
-  if (!currentCampaign) return;
-
   try {
-    const res = await fetch(`${API_PLAYERS}/${encodeURIComponent(currentCampaign.name)}`);
-    players = await res.json();
-    renderPlayerBoard();
+    players = await fetchJson(`${API_PLAYERS}/${campaign}`);
+    renderPlayerBoard(players);
   } catch (err) {
     console.error("Error cargando jugadores:", err);
   }
 }
 
+// =============================================================
+// RENDER
+// =============================================================
+function renderPlayerBoard(list) {
+  if (!list) list = players;
 
-// -------------------------------------------------------
-// RENDER DEL TABLERO
-// -------------------------------------------------------
-function renderPlayerBoard(filtered = null) {
-  if (isFiltering && !filtered) return;
-
-  const list = filtered || players;
   playerBoard.innerHTML = "";
 
-  list.forEach(p => {
-    const expPercent = Math.min((p.level / 100) * 100, 100);
+  list.forEach((p) => {
+    const expPercent = (p.exp || 0) % 100;
 
     const card = document.createElement("div");
-    card.className = "inline-block bg-stone-800 p-4 rounded-xl shadow-2xl w-80 text-stone-100 m-2 align-top";
+    card.className =
+      "inline-block bg-stone-800 p-4 rounded-xl shadow-2xl w-80 text-stone-100 m-2 align-top";
 
     card.innerHTML = `
-      <img src='${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}'
-           class='w-full h-48 object-cover rounded mb-2' />
+      <h2 class='text-2xl font-bold mb-2'>${p.name} (Nivel ${p.level})</h2>
 
-      <h2 class='text-2xl font-bold mb-2'>
-        ${p.name} (Nivel ${p.level})
-      </h2>
+      <img 
+        src="${p.img ? `data:image/jpeg;base64,${p.img}` : '/placeholder.png'}"
+        class="w-full h-48 object-cover rounded mb-3"
+      />
 
       <p>Salud: ${p.life}</p>
       <p>Habilidad 1: ${p.skill1}</p>
@@ -66,17 +63,22 @@ function renderPlayerBoard(filtered = null) {
       <p>Características: ${p.attributes}</p>
       <p>Experiencia: ${p.exp}</p>
 
-      <div class='w-full grid grid-cols-6 gap-2 mt-3'>
-        ${p.items.slice(0, 6).map(
-          img => `
-            <img src='${img ? "data:image/jpeg;base64," + img : "/placeholder.png"}'
-                 class="w-10 h-10 object-cover rounded border border-stone-700 bg-stone-900" />
-          `
-        ).join("")}
+      <div class="grid grid-cols-6 gap-1 mt-3">
+        ${
+          (p.items || [])
+            .slice(0, 6)
+            .map((item) => `
+              <img src="${
+                item ? `data:image/jpeg;base64,${item}` : "/placeholder.png"
+              }" 
+              class="w-10 h-10 object-cover rounded border border-stone-700 bg-stone-900" />
+            `)
+            .join("")
+        }
       </div>
 
-      <div class='bg-stone-600 h-5 rounded mt-4'>
-        <div class='bg-green-500 h-5 rounded exp-bar' style='width:${expPercent}%'></div>
+      <div class='bg-stone-600 h-5 rounded mt-3'>
+        <div class='bg-green-500 h-5 rounded exp-bar' style='width:${expPercent}%;'></div>
       </div>
     `;
 
@@ -84,17 +86,16 @@ function renderPlayerBoard(filtered = null) {
   });
 }
 
-
-// -------------------------------------------------------
-// BUSCAR JUGADOR
-// -------------------------------------------------------
+// =============================================================
+// SEARCH
+// =============================================================
 function searchPlayer() {
-  const nameQ = document.getElementById("searchName").value.toLowerCase();
-  const levelQ = document.getElementById("searchLevel").value;
+  const nameQuery = document.getElementById("searchName").value.toLowerCase();
+  const levelQuery = document.getElementById("searchLevel").value;
 
-  const results = players.filter(p => {
-    const matchName = nameQ ? p.name.toLowerCase().includes(nameQ) : true;
-    const matchLevel = levelQ ? p.level == levelQ : true;
+  const results = players.filter((p) => {
+    const matchName = nameQuery ? p.name.toLowerCase().includes(nameQuery) : true;
+    const matchLevel = levelQuery ? p.level == levelQuery : true;
     return matchName && matchLevel;
   });
 
@@ -102,7 +103,6 @@ function searchPlayer() {
   renderPlayerBoard(results);
 }
 
-// LIMPIAR BÚSQUEDA
 function clearSearch() {
   document.getElementById("searchName").value = "";
   document.getElementById("searchLevel").value = "";
@@ -110,14 +110,16 @@ function clearSearch() {
   renderPlayerBoard();
 }
 
-
-// -------------------------------------------------------
-// AUTO-REFRESH
-// -------------------------------------------------------
+// =============================================================
+// AUTO UPDATE
+// =============================================================
 setInterval(() => {
   if (!isFiltering) loadPlayers();
 }, 2000);
 
-
-// Iniciar
-loadPlayers();
+// =============================================================
+// INIT
+// =============================================================
+window.addEventListener("load", () => {
+  loadPlayers();
+});
