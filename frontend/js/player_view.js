@@ -18,40 +18,56 @@ const playerBoard = document.getElementById("playerBoard");
 // EXP SYSTEM (PROGRESIVO 5% POR NIVEL)
 // =============================================================
 
+// Experiencia base del nivel 1
 const BASE_EXP = 100;
 
-// EXP necesaria para subir del nivel N a N+1
+// Protege contra niveles inválidos
+function safeLevel(level) {
+  const n = Number(level);
+  return isNaN(n) || n < 1 ? 1 : n;
+}
+
+// Protege contra exp inválida
+function safeExp(exp) {
+  const n = Number(exp);
+  return isNaN(n) || n < 0 ? 0 : n;
+}
+
+// Exp necesaria para subir del nivel actual al siguiente
 function expNeededForLevel(level) {
+  level = safeLevel(level);
   return BASE_EXP * Math.pow(1.05, level - 1);
 }
 
-// Calcula cuánto progreso real lleva dentro del nivel actual
+// Progreso dentro del nivel actual
 function expProgress(level, totalExp) {
+  level = safeLevel(level);
+  totalExp = safeExp(totalExp);
+
   let remaining = totalExp;
 
-  // Restamos la exp necesaria de niveles anteriores
+  // Restar los niveles previos
   for (let i = 1; i < level; i++) {
     remaining -= expNeededForLevel(i);
+    if (remaining < 0) remaining = 0;
   }
-
-  // Si queda negativo, lo igualamos a 0
-  remaining = Math.max(0, remaining);
 
   const required = expNeededForLevel(level);
 
-  // Porcentaje para la barra
   return Math.min(100, (remaining / required) * 100);
 }
 
-// Cuánta EXP le falta para subir
+// EXP que falta para subir
 function expMissing(level, totalExp) {
+  level = safeLevel(level);
+  totalExp = safeExp(totalExp);
+
   let remaining = totalExp;
 
   for (let i = 1; i < level; i++) {
     remaining -= expNeededForLevel(i);
+    if (remaining < 0) remaining = 0;
   }
-
-  remaining = Math.max(0, remaining);
 
   const required = expNeededForLevel(level);
 
@@ -85,8 +101,9 @@ function renderPlayerBoard(list) {
   playerBoard.innerHTML = "";
 
   list.forEach((p) => {
-    const level = p.level || 1;
-    const exp = p.exp || 0;
+    // Normalizamos valores
+    const level = safeLevel(p.level);
+    const exp = safeExp(p.exp);
 
     const expPercent = expProgress(level, exp);
     const missing = expMissing(level, exp);
@@ -117,10 +134,9 @@ function renderPlayerBoard(list) {
           .map((item) => `
             <img src="${
               item ? `data:image/jpeg;base64,${item}` : "/placeholder.png"
-            }" 
+            }"
             class="w-10 h-10 object-cover rounded border border-stone-700 bg-stone-900" />
-          `)
-          .join("")}
+          `).join("")}
       </div>
 
       <div class='bg-stone-600 h-5 rounded mt-3'>
@@ -128,7 +144,7 @@ function renderPlayerBoard(list) {
       </div>
 
       <p class='mt-1 text-xs text-stone-300'>
-        Progreso: ${expPercent.toFixed(1)}% — Falta ${missing} EXP (Necesita ${needed})
+        Progreso: ${expPercent.toFixed(1)}% — Falta ${missing} EXP (Requiere ${needed})
       </p>
     `;
 
@@ -145,7 +161,7 @@ function searchPlayer() {
 
   const results = players.filter((p) => {
     const matchName = nameQuery ? p.name.toLowerCase().includes(nameQuery) : true;
-    const matchLevel = levelQuery ? p.level == levelQuery : true;
+    const matchLevel = levelQuery ? safeLevel(p.level) == levelQuery : true;
     return matchName && matchLevel;
   });
 
