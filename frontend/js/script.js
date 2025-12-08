@@ -12,7 +12,7 @@ const API_PLAYERS = `${BASE_URL}/api/players`;
 const PASS = "dragon";
 let players = [];
 
-// Ya NO se usa campaña en backend → siempre "default"
+// Backend NO usa campañas → siempre "default"
 let currentCampaign = { name: "default" };
 
 // Validaciones
@@ -23,10 +23,10 @@ const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 // LOADER
 // =============================================================
 function showLoader() {
-  document.getElementById("loader").classList.remove("hidden");
+  document.getElementById("loader")?.classList.remove("hidden");
 }
 function hideLoader() {
-  document.getElementById("loader").classList.add("hidden");
+  document.getElementById("loader")?.classList.add("hidden");
 }
 
 // =============================================================
@@ -48,35 +48,29 @@ async function fetchJson(url, opts = {}) {
 // =============================================================
 function validateImage(file) {
   if (!file) return true;
-
   if (!ALLOWED_TYPES.includes(file.type)) {
     alert("Solo se permiten PNG, JPG, JPEG o WEBP.");
     return false;
   }
-
   if (file.size > MAX_IMAGE_SIZE) {
     alert("La imagen supera los 2 MB.");
     return false;
   }
-
   return true;
 }
 
 function addPreview(inputId, previewId) {
   const input = document.getElementById(inputId);
   const preview = document.getElementById(previewId);
-
   if (!input || !preview) return;
 
   input.onchange = () => {
-    const file = input.files[0];
-
+    const file = input.files?.[0];
     if (!validateImage(file)) {
       input.value = "";
       preview.classList.add("hidden");
       return;
     }
-
     const reader = new FileReader();
     reader.onload = () => {
       preview.src = reader.result;
@@ -91,7 +85,6 @@ function addPreview(inputId, previewId) {
 // =============================================================
 async function refreshPlayers() {
   try {
-    // NUEVO → el backend ya NO requiere campaña
     players = await fetchJson(API_PLAYERS);
     renderPlayersList();
   } catch (e) {
@@ -181,11 +174,13 @@ async function createCharacter() {
   fd.append("exp", get("charExpInput"));
   fd.append("level", get("charLevelInput"));
 
-  const mainImg = document.getElementById("charImgInput").files[0];
+  const mainImg = document.getElementById("charImgInput").files?.[0];
   if (mainImg && validateImage(mainImg)) fd.append("charImg", mainImg);
 
   for (let i = 1; i <= 6; i++) {
-    const file = document.getElementById(`item${i}Input`).files[0];
+    const input = document.getElementById(`item${i}Input`);
+    if (!input) continue;
+    const file = input.files?.[0];
     if (file && validateImage(file)) fd.append("items", file);
   }
 
@@ -204,7 +199,8 @@ async function openMasterPanel(id) {
   if (!player) return alert("Jugador no encontrado");
 
   const modal = document.createElement("div");
-  modal.className = "fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50";
+  modal.className =
+    "fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50";
 
   modal.innerHTML = `
     <div class='bg-stone-800 p-6 rounded-xl shadow-xl w-96 max-h-[90vh] overflow-y-auto'>
@@ -219,29 +215,25 @@ async function openMasterPanel(id) {
 
       <h3 class="text-xl font-bold mb-2">Objetos</h3>
       <div class="grid grid-cols-2 gap-3">
-        ${player.items
-          .map(
-            (img, i) => `
-          <div>
-            <img id="previewItemEdit${i + 1}" src="data:image/jpeg;base64,${img}" class="w-full h-20 object-cover rounded border mb-1"/>
-            <input id="editItem${i + 1}" type="file" accept="image/*" class="w-full bg-white text-black p-2 rounded" data-current="${img}">
-          </div>`
-          )
-          .join("")}
+        ${
+          (player.items || [])
+            .map((img, i) => `
+              <div>
+                <img id="previewItemEdit${i + 1}" src="data:image/jpeg;base64,${img}" class="w-full h-20 object-cover rounded border mb-1" />
+                <input id="editItem${i + 1}" type="file" accept="image/*" 
+                  class="w-full bg-white text-black p-2 rounded" data-current="${img}">
+              </div>
+            `)
+            .join("")
+        }
       </div>
 
       <label>Salud:</label><input id='editLife' type='number' value='${player.life}' class='w-full p-2 text-black mb-2' />
-
       <label>Habilidad 1:</label><input id='editSkill1' value='${player.skill1}' class='w-full p-2 text-black mb-2' />
-
       <label>Habilidad 2:</label><input id='editSkill2' value='${player.skill2}' class='w-full p-2 text-black mb-2' />
-
       <label>Hitos:</label><input id='editMilestones' value='${player.milestones}' class='w-full p-2 text-black mb-2' />
-
       <label>Características:</label><input id='editAttributes' value='${player.attributes}' class='w-full p-2 text-black mb-2' />
-
       <label>Experiencia:</label><input id='editExp' type='number' value='${player.exp}' class='w-full p-2 text-black mb-2' />
-
       <label>Nivel:</label><input id='editLevel' type='number' value='${player.level}' class='w-full p-2 text-black mb-2' />
 
       <button id='saveEditBtn' class='bg-green-600 hover:bg-green-700 p-2 rounded w-full mt-4'>Guardar</button>
@@ -251,8 +243,13 @@ async function openMasterPanel(id) {
 
   document.body.appendChild(modal);
 
+  // Previews seguros
   addPreview("editImg", "previewEditMain");
-  for (let i = 1; i <= 6; i++) addPreview(`editItem${i}`, `previewItemEdit${i}`);
+  for (let i = 1; i <= 6; i++) {
+    if (document.getElementById(`editItem${i}`)) {
+      addPreview(`editItem${i}`, `previewItemEdit${i}`);
+    }
+  }
 
   document.getElementById("closeEdit").onclick = () => modal.remove();
 
@@ -268,25 +265,30 @@ async function openMasterPanel(id) {
     fd.append("exp", document.getElementById("editExp").value);
     fd.append("level", document.getElementById("editLevel").value);
 
-    const keepItems = [];
-
-    const newMain = document.getElementById("editImg").files[0];
+    const newMain = document.getElementById("editImg").files?.[0];
     if (newMain && validateImage(newMain)) fd.append("charImg", newMain);
+
+    const keepItems = [];
 
     for (let i = 1; i <= 6; i++) {
       const input = document.getElementById(`editItem${i}`);
-      const file = input.files[0];
+      if (!input) continue;
+
+      const file = input.files?.[0];
 
       if (file && validateImage(file)) {
         fd.append("items", file);
       } else {
-        keepItems.push(input.dataset.current);
+        keepItems.push(input.dataset.current || null);
       }
     }
 
     fd.append("keepItems", JSON.stringify(keepItems));
 
-    await fetchJson(`${API_PLAYERS}/${player._id}`, { method: "PUT", body: fd });
+    await fetchJson(`${API_PLAYERS}/${player._id}`, {
+      method: "PUT",
+      body: fd
+    });
 
     modal.remove();
     refreshPlayers();
@@ -298,9 +300,7 @@ async function openMasterPanel(id) {
 // =============================================================
 async function deletePlayer(id) {
   if (!confirm("¿Seguro que deseas eliminar este personaje?")) return;
-
   await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" });
-
   alert("Jugador eliminado.");
   refreshPlayers();
 }
@@ -318,7 +318,6 @@ function openPlayerBoard() {
 window.addEventListener("load", () => {
   refreshPlayers();
 
-  // Previews del formulario
   addPreview("charImgInput", "previewCharMain");
   for (let i = 1; i <= 6; i++) {
     addPreview(`item${i}Input`, `previewItem${i}`);
