@@ -192,7 +192,7 @@ async function createCharacter() {
 }
 
 // =============================================================
-// EDIT PLAYER — COMPLETAMENTE REPARADO
+// EDIT PLAYER — PANEL DE EDICIÓN MEJORADO
 // =============================================================
 async function openMasterPanel(id) {
   const player = players.find((p) => p._id === id);
@@ -202,62 +202,88 @@ async function openMasterPanel(id) {
   modal.className =
     "fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50";
 
+  // PANEL RENOVADO
   modal.innerHTML = `
-    <div class='bg-stone-800 p-6 rounded-xl shadow-xl w-96 max-h-[90vh] overflow-y-auto'>
-      <h2 class='text-2xl font-bold mb-4'>Editar ${player.name}</h2>
+    <div class="bg-stone-900 p-6 rounded-2xl shadow-2xl w-[480px] border border-stone-700 max-h-[90vh] overflow-y-auto">
+      <h2 class="text-3xl font-bold text-red-400 mb-4 text-center">Editar ${player.name}</h2>
 
-      <label>Nombre:</label>
-      <input id='editName' class='w-full p-2 rounded mb-2 text-black' value='${player.name}' />
+      <!-- Imagen principal -->
+      <label class="font-semibold">Imagen principal:</label>
+      <img id="previewEditMain" 
+        src="${player.img ? `data:image/jpeg;base64,${player.img}` : '/placeholder.png'}"
+        class="w-full h-48 object-cover rounded-xl border border-stone-700 mb-3 shadow">
+      <input id="editImg" type="file" accept="image/*"
+        class="w-full p-2 rounded bg-white text-black mb-4">
 
-      <label>Imagen principal:</label>
-      <img id="previewEditMain" src="${player.img ? `data:image/jpeg;base64,${player.img}` : '/placeholder.png'}" class="w-full h-40 object-cover rounded mb-2" />
-      <input id='editImg' type='file' accept='image/*' class='w-full p-2 rounded bg-white text-black mb-2' />
-
-      <h3 class="text-xl font-bold mb-2">Objetos</h3>
-
+      <!-- Datos básicos -->
       <div class="grid grid-cols-2 gap-3">
-        ${[1,2,3,4,5,6].map(i => {
-          const img = player.items?.[i-1] || null;
-          return `
-            <div>
-              <img 
-                id="previewItemEdit${i}" 
-                src="${img ? `data:image/jpeg;base64,${img}` : '/placeholder.png'}" 
-                class="w-full h-20 object-cover rounded border mb-1"
-              />
+        <div>
+          <label>Nombre:</label>
+          <input id="editName" value="${player.name}" class="w-full p-2 rounded text-black mb-2">
+        </div>
+        <div>
+          <label>Nivel:</label>
+          <input id="editLevel" type="number" value="${player.level}" class="w-full p-2 rounded text-black mb-2">
+        </div>
+        <div>
+          <label>Salud:</label>
+          <input id="editLife" type="number" value="${player.life}" class="w-full p-2 rounded text-black mb-2">
+        </div>
+        <div>
+          <label>EXPERIENCIA:</label>
+          <input id="editExp" type="number" value="${player.exp}" class="w-full p-2 rounded text-black mb-2">
+        </div>
+      </div>
 
-              <input 
-                id="editItem${i}" 
-                type="file" 
-                accept="image/*" 
-                class="w-full bg-white text-black p-2 rounded"
-                data-current="${img || ''}"
-              >
+      <!-- Habilidades -->
+      <label>Habilidad 1:</label>
+      <input id="editSkill1" value="${player.skill1}" class="w-full p-2 rounded text-black mb-2">
+
+      <label>Habilidad 2:</label>
+      <input id="editSkill2" value="${player.skill2}" class="w-full p-2 rounded text-black mb-2">
+
+      <!-- Otros datos -->
+      <label>Hitos:</label>
+      <input id="editMilestones" value="${player.milestones}" class="w-full p-2 rounded text-black mb-2">
+
+      <label>Características:</label>
+      <input id="editAttributes" value="${player.attributes}" class="w-full p-2 rounded text-black mb-4">
+
+      <!-- Objetos -->
+      <h3 class="text-xl font-bold text-blue-300 mb-2">Objetos</h3>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        ${[1,2,3,4,5,6].map(i => {
+          const img = player.items?.[i-1] || "";
+          return `
+            <div class="bg-stone-800 p-2 rounded-xl border border-stone-700 shadow">
+              <img id="previewItemEdit${i}"
+                src="${img ? `data:image/jpeg;base64,${img}` : '/placeholder.png'}"
+                class="w-full h-20 object-cover rounded mb-2 border border-stone-600">
+              <input id="editItem${i}" type="file" accept="image/*"
+                     data-current="${img}"
+                     class="w-full bg-white text-black p-2 rounded">
             </div>
           `;
         }).join("")}
       </div>
 
-      <label>Salud:</label><input id='editLife' type='number' value='${player.life}' class='w-full p-2 text-black mb-2' />
-      <label>Habilidad 1:</label><input id='editSkill1' value='${player.skill1}' class='w-full p-2 text-black mb-2' />
-      <label>Habilidad 2:</label><input id='editSkill2' value='${player.skill2}' class='w-full p-2 text-black mb-2' />
-      <label>Hitos:</label><input id='editMilestones' value='${player.milestones}' class='w-full p-2 text-black mb-2' />
-      <label>Características:</label><input id='editAttributes' value='${player.attributes}' class='w-full p-2 text-black mb-2' />
-      <label>Experiencia:</label><input id='editExp' type='number' value='${player.exp}' class='w-full p-2 text-black mb-2' />
-      <label>Nivel:</label><input id='editLevel' type='number' value='${player.level}' class='w-full p-2 text-black mb-2' />
+      <button id="saveEditBtn"
+        class="w-full bg-green-600 hover:bg-green-700 p-3 rounded-xl font-bold text-lg mt-2 shadow-lg">
+        Guardar Cambios
+      </button>
 
-      <button id='saveEditBtn' class='bg-green-600 hover:bg-green-700 p-2 rounded w-full mt-4'>Guardar</button>
-      <button id='closeEdit' class='bg-red-600 hover:bg-red-700 p-2 rounded w-full mt-2'>Cerrar</button>
+      <button id="closeEdit"
+        class="w-full bg-red-600 hover:bg-red-700 p-2 rounded-xl font-bold mt-3 shadow">
+        Cerrar
+      </button>
     </div>
   `;
 
   document.body.appendChild(modal);
 
+  // activar previews
   addPreview("editImg", "previewEditMain");
-
-  for (let i = 1; i <= 6; i++) {
-    addPreview(`editItem${i}`, `previewItemEdit${i}`);
-  }
+  for (let i = 1; i <= 6; i++) addPreview(`editItem${i}`, `previewItemEdit${i}`);
 
   document.getElementById("closeEdit").onclick = () => modal.remove();
 
@@ -277,7 +303,6 @@ async function openMasterPanel(id) {
     if (newMain && validateImage(newMain)) fd.append("charImg", newMain);
 
     const keepItems = [];
-
     for (let i = 1; i <= 6; i++) {
       const input = document.getElementById(`editItem${i}`);
       const file = input.files?.[0];
@@ -329,3 +354,4 @@ window.addEventListener("load", () => {
     addPreview(`item${i}Input`, `previewItem${i}`);
   }
 });
+
