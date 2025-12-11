@@ -5,7 +5,7 @@
 // Cargar API_URL desde config.js o fallback a Render
 const BASE_URL = (window.__env && window.__env.API_URL)
   ? window.__env.API_URL
-  : "https://chikaku-d-d-ptyl.onrender.com";
+  : "https://chikaku-d-d-ptyl.onrender.com"; 
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 
@@ -92,66 +92,45 @@ async function refreshPlayers() {
   }
 }
 
-// =============================================================
-// NUEVO DISEÑO MODERNO DE TARJETAS
-// =============================================================
 function renderPlayersList() {
   const list = document.getElementById("playersList");
   list.innerHTML = "";
 
   players.forEach((p) => {
-    const img = p.img
-      ? `data:image/jpeg;base64,${p.img}`
-      : "/placeholder.png";
-
     list.innerHTML += `
-      <div class="bg-stone-800 border border-stone-700 rounded-2xl shadow-2xl p-4 w-72 transition transform hover:scale-105 hover:shadow-[0_0_20px_rgba(255,0,0,0.4)]">
+      <div class='bg-stone-700 p-4 rounded-xl shadow-xl w-64'>
+        
+        <img 
+          src='${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}'
+          class='w-full h-40 object-cover rounded mb-2'
+        />
 
-        <!-- Imagen -->
-        <img src="${img}"
-             class="w-full h-44 object-cover rounded-xl border border-stone-600 shadow mb-3">
+        <h3 class='text-xl font-bold mb-2'>${p.name} (Nivel ${p.level})</h3>
+        <p>Salud: ${p.life}</p>
+        <p>Habilidad 1: ${p.skill1}</p>
+        <p>Habilidad 2: ${p.skill2}</p>
+        <p>Hitos: ${p.milestones}</p>
+        <p>Características: ${p.attributes}</p>
+        <p>Experiencia: ${p.exp}</p>
 
-        <!-- Nombre y nivel -->
-        <h3 class="text-2xl font-bold text-red-300 mb-1">${p.name}</h3>
-        <p class="text-stone-300 text-sm mb-2">Nivel <span class="text-red-400 font-bold">${p.level}</span></p>
-
-        <!-- Stats -->
-        <div class="text-sm space-y-1 mb-3">
-          <p>❤️ <span class="font-bold">${p.life}</span> Salud</p>
-          <p>🌀 <span class="font-bold">${p.skill1}</span></p>
-          <p>✨ <span class="font-bold">${p.skill2}</span></p>
-          <p>🏆 <span class="font-bold">${p.milestones}</span></p>
-          <p>📜 <span class="font-bold">${p.attributes}</span></p>
-          <p>⭐ EXP Total: <span class="font-bold text-green-300">${p.exp}</span></p>
+        <div class='w-full grid grid-cols-3 gap-2 mt-2 mb-2'>
+          ${(p.items || []).slice(0, 6).map(img => `
+            <img 
+              src='${img ? "data:image/jpeg;base64," + img : "/placeholder.png"}'
+              class='w-full h-16 object-cover rounded border border-stone-600'
+            />
+          `).join("")}
         </div>
 
-        <!-- Objetos -->
-        <h4 class="text-sm font-semibold text-blue-300 mb-1">Objetos:</h4>
-        <div class="grid grid-cols-3 gap-2 mb-3">
-          ${
-            (p.items || [])
-              .slice(0, 6)
-              .map(img => `
-                <img src="${img ? `data:image/jpeg;base64,${img}` : "/placeholder.png"}"
-                     class="w-full h-16 object-cover rounded-lg border border-stone-700 shadow-sm bg-stone-900">
-              `)
-              .join("")
-          }
-        </div>
+        <button onclick='openMasterPanel("${p._id}")' 
+          class='bg-green-600 hover:bg-green-700 p-2 rounded w-full mt-2'>
+          Editar
+        </button>
 
-        <!-- Botones -->
-        <div class="flex gap-3">
-          <button onclick='openMasterPanel("${p._id}")'
-                  class="flex-1 bg-green-600 hover:bg-green-700 p-2 rounded-xl shadow font-semibold">
-            Editar
-          </button>
-
-          <button onclick='deletePlayer("${p._id}")'
-                  class="flex-1 bg-red-600 hover:bg-red-700 p-2 rounded-xl shadow font-semibold">
-            Eliminar
-          </button>
-        </div>
-
+        <button onclick='deletePlayer("${p._id}")' 
+          class='bg-red-600 hover:bg-red-700 p-2 rounded w-full mt-2'>
+          Eliminar
+        </button>
       </div>
     `;
   });
@@ -200,7 +179,8 @@ async function createCharacter() {
 
   for (let i = 1; i <= 6; i++) {
     const input = document.getElementById(`item${i}Input`);
-    const file = input?.files?.[0];
+    if (!input) continue;
+    const file = input.files?.[0];
     if (file && validateImage(file)) fd.append("items", file);
   }
 
@@ -212,7 +192,7 @@ async function createCharacter() {
 }
 
 // =============================================================
-// EDIT PLAYER — COMPLETO
+// EDIT PLAYER — PANEL DE EDICIÓN MEJORADO
 // =============================================================
 async function openMasterPanel(id) {
   const player = players.find((p) => p._id === id);
@@ -222,52 +202,78 @@ async function openMasterPanel(id) {
   modal.className =
     "fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50";
 
+  // PANEL RENOVADO
   modal.innerHTML = `
-    <div class='bg-stone-800 p-6 rounded-2xl shadow-2xl w-96 max-h-[90vh] overflow-y-auto border border-stone-700'>
-      <h2 class='text-2xl font-bold mb-4 text-red-300'>Editar ${player.name}</h2>
+    <div class="bg-stone-900 p-6 rounded-2xl shadow-2xl w-[480px] border border-stone-700 max-h-[90vh] overflow-y-auto">
+      <h2 class="text-3xl font-bold text-red-400 mb-4 text-center">Editar ${player.name}</h2>
 
-      <label>Nombre:</label>
-      <input id='editName' class='w-full p-2 rounded mb-2 text-black' value='${player.name}' />
+      <!-- Imagen principal -->
+      <label class="font-semibold">Imagen principal:</label>
+      <img id="previewEditMain" 
+        src="${player.img ? `data:image/jpeg;base64,${player.img}` : '/placeholder.png'}"
+        class="w-full h-48 object-cover rounded-xl border border-stone-700 mb-3 shadow">
+      <input id="editImg" type="file" accept="image/*"
+        class="w-full p-2 rounded bg-white text-black mb-4">
 
-      <label>Imagen principal:</label>
-      <img id="previewEditMain" src="${player.img ? `data:image/jpeg;base64,${player.img}` : '/placeholder.png'}"
-           class="w-full h-40 object-cover rounded-xl border border-stone-600 shadow mb-2" />
-      <input id='editImg' type='file' accept='image/*'
-             class='w-full p-2 rounded bg-white text-black mb-4' />
+      <!-- Datos básicos -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label>Nombre:</label>
+          <input id="editName" value="${player.name}" class="w-full p-2 rounded text-black mb-2">
+        </div>
+        <div>
+          <label>Nivel:</label>
+          <input id="editLevel" type="number" value="${player.level}" class="w-full p-2 rounded text-black mb-2">
+        </div>
+        <div>
+          <label>Salud:</label>
+          <input id="editLife" type="number" value="${player.life}" class="w-full p-2 rounded text-black mb-2">
+        </div>
+        <div>
+          <label>EXPERIENCIA:</label>
+          <input id="editExp" type="number" value="${player.exp}" class="w-full p-2 rounded text-black mb-2">
+        </div>
+      </div>
 
+      <!-- Habilidades -->
+      <label>Habilidad 1:</label>
+      <input id="editSkill1" value="${player.skill1}" class="w-full p-2 rounded text-black mb-2">
+
+      <label>Habilidad 2:</label>
+      <input id="editSkill2" value="${player.skill2}" class="w-full p-2 rounded text-black mb-2">
+
+      <!-- Otros datos -->
+      <label>Hitos:</label>
+      <input id="editMilestones" value="${player.milestones}" class="w-full p-2 rounded text-black mb-2">
+
+      <label>Características:</label>
+      <input id="editAttributes" value="${player.attributes}" class="w-full p-2 rounded text-black mb-4">
+
+      <!-- Objetos -->
       <h3 class="text-xl font-bold text-blue-300 mb-2">Objetos</h3>
-
       <div class="grid grid-cols-2 gap-4 mb-4">
         ${[1,2,3,4,5,6].map(i => {
-          const img = player.items?.[i-1] || null;
+          const img = player.items?.[i-1] || "";
           return `
-            <div>
+            <div class="bg-stone-800 p-2 rounded-xl border border-stone-700 shadow">
               <img id="previewItemEdit${i}"
-                   src="${img ? `data:image/jpeg;base64,${img}` : '/placeholder.png'}"
-                   class="w-full h-24 object-cover rounded-lg border border-stone-600 shadow mb-1">
+                src="${img ? `data:image/jpeg;base64,${img}` : '/placeholder.png'}"
+                class="w-full h-20 object-cover rounded mb-2 border border-stone-600">
               <input id="editItem${i}" type="file" accept="image/*"
-                     class="w-full bg-white text-black p-2 rounded"
-                     data-current="${img || ''}">
+                     data-current="${img}"
+                     class="w-full bg-white text-black p-2 rounded">
             </div>
           `;
         }).join("")}
       </div>
 
-      <label>Salud:</label><input id='editLife' type='number' value='${player.life}' class='w-full p-2 text-black mb-2' />
-      <label>Habilidad 1:</label><input id='editSkill1' value='${player.skill1}' class='w-full p-2 text-black mb-2' />
-      <label>Habilidad 2:</label><input id='editSkill2' value='${player.skill2}' class='w-full p-2 text-black mb-2' />
-      <label>Hitos:</label><input id='editMilestones' value='${player.milestones}' class='w-full p-2 text-black mb-2' />
-      <label>Características:</label><input id='editAttributes' value='${player.attributes}' class='w-full p-2 text-black mb-2' />
-      <label>Experiencia:</label><input id='editExp' type='number' value='${player.exp}' class='w-full p-2 text-black mb-2' />
-      <label>Nivel:</label><input id='editLevel' type='number' value='${player.level}' class='w-full p-2 text-black mb-4' />
-
-      <button id='saveEditBtn'
-              class='bg-green-600 hover:bg-green-700 p-2 rounded-xl w-full mt-2 shadow font-bold'>
-        Guardar
+      <button id="saveEditBtn"
+        class="w-full bg-green-600 hover:bg-green-700 p-3 rounded-xl font-bold text-lg mt-2 shadow-lg">
+        Guardar Cambios
       </button>
 
-      <button id='closeEdit'
-              class='bg-red-600 hover:bg-red-700 p-2 rounded-xl w-full mt-2 shadow font-bold'>
+      <button id="closeEdit"
+        class="w-full bg-red-600 hover:bg-red-700 p-2 rounded-xl font-bold mt-3 shadow">
         Cerrar
       </button>
     </div>
@@ -275,11 +281,9 @@ async function openMasterPanel(id) {
 
   document.body.appendChild(modal);
 
+  // activar previews
   addPreview("editImg", "previewEditMain");
-
-  for (let i = 1; i <= 6; i++) {
-    addPreview(`editItem${i}`, `previewItemEdit${i}`);
-  }
+  for (let i = 1; i <= 6; i++) addPreview(`editItem${i}`, `previewItemEdit${i}`);
 
   document.getElementById("closeEdit").onclick = () => modal.remove();
 
@@ -299,10 +303,10 @@ async function openMasterPanel(id) {
     if (newMain && validateImage(newMain)) fd.append("charImg", newMain);
 
     const keepItems = [];
-
     for (let i = 1; i <= 6; i++) {
       const input = document.getElementById(`editItem${i}`);
       const file = input.files?.[0];
+
       if (file && validateImage(file)) {
         fd.append("items", file);
       } else {
@@ -350,3 +354,4 @@ window.addEventListener("load", () => {
     addPreview(`item${i}Input`, `previewItem${i}`);
   }
 });
+
