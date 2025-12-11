@@ -5,7 +5,7 @@
 // Cargar API_URL desde config.js o fallback a Render
 const BASE_URL = (window.__env && window.__env.API_URL)
   ? window.__env.API_URL
-  : "https://chikaku-d-d-ptyl.onrender.com"; // URL del backend en Render
+  : "https://chikaku-d-d-ptyl.onrender.com"; 
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 
@@ -192,7 +192,7 @@ async function createCharacter() {
 }
 
 // =============================================================
-// EDIT PLAYER
+// EDIT PLAYER — COMPLETAMENTE REPARADO
 // =============================================================
 async function openMasterPanel(id) {
   const player = players.find((p) => p._id === id);
@@ -210,22 +210,32 @@ async function openMasterPanel(id) {
       <input id='editName' class='w-full p-2 rounded mb-2 text-black' value='${player.name}' />
 
       <label>Imagen principal:</label>
-      <img id="previewEditMain" src="data:image/jpeg;base64,${player.img}" class="w-full h-40 object-cover rounded mb-2" />
+      <img id="previewEditMain" src="${player.img ? `data:image/jpeg;base64,${player.img}` : '/placeholder.png'}" class="w-full h-40 object-cover rounded mb-2" />
       <input id='editImg' type='file' accept='image/*' class='w-full p-2 rounded bg-white text-black mb-2' />
 
       <h3 class="text-xl font-bold mb-2">Objetos</h3>
+
       <div class="grid grid-cols-2 gap-3">
-        ${
-          (player.items || [])
-            .map((img, i) => `
-              <div>
-                <img id="previewItemEdit${i + 1}" src="data:image/jpeg;base64,${img}" class="w-full h-20 object-cover rounded border mb-1" />
-                <input id="editItem${i + 1}" type="file" accept="image/*" 
-                  class="w-full bg-white text-black p-2 rounded" data-current="${img}">
-              </div>
-            `)
-            .join("")
-        }
+        ${[1,2,3,4,5,6].map(i => {
+          const img = player.items?.[i-1] || null;
+          return `
+            <div>
+              <img 
+                id="previewItemEdit${i}" 
+                src="${img ? `data:image/jpeg;base64,${img}` : '/placeholder.png'}" 
+                class="w-full h-20 object-cover rounded border mb-1"
+              />
+
+              <input 
+                id="editItem${i}" 
+                type="file" 
+                accept="image/*" 
+                class="w-full bg-white text-black p-2 rounded"
+                data-current="${img || ''}"
+              >
+            </div>
+          `;
+        }).join("")}
       </div>
 
       <label>Salud:</label><input id='editLife' type='number' value='${player.life}' class='w-full p-2 text-black mb-2' />
@@ -243,12 +253,10 @@ async function openMasterPanel(id) {
 
   document.body.appendChild(modal);
 
-  // Previews seguros
   addPreview("editImg", "previewEditMain");
+
   for (let i = 1; i <= 6; i++) {
-    if (document.getElementById(`editItem${i}`)) {
-      addPreview(`editItem${i}`, `previewItemEdit${i}`);
-    }
+    addPreview(`editItem${i}`, `previewItemEdit${i}`);
   }
 
   document.getElementById("closeEdit").onclick = () => modal.remove();
@@ -272,8 +280,6 @@ async function openMasterPanel(id) {
 
     for (let i = 1; i <= 6; i++) {
       const input = document.getElementById(`editItem${i}`);
-      if (!input) continue;
-
       const file = input.files?.[0];
 
       if (file && validateImage(file)) {
