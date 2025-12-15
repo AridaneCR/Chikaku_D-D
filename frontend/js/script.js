@@ -1,10 +1,26 @@
 // =============================================================
 // CONFIG
 // =============================================================
+// =============================================================
+// UI ACTIONS (FALTABAN)
+// =============================================================
+function toggleCreateCard() {
+  const card = document.getElementById("createCard");
+  if (!card) {
+    console.error("createCard no existe en el DOM");
+    return;
+  }
+  card.classList.toggle("hidden");
+}
 
-const BASE_URL = (window.__env && window.__env.API_URL)
-  ? window.__env.API_URL
-  : "https://chikaku-d-d-ptyl.onrender.com";
+function openPlayerBoard() {
+  window.open("/player/player_view.html", "_blank");
+}
+
+const BASE_URL =
+  window.__env && window.__env.API_URL
+    ? window.__env.API_URL
+    : "https://chikaku-d-d-ptyl.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 const PASS = "dragon";
@@ -137,10 +153,12 @@ function renderPlayersList() {
   const list = document.getElementById("playersList");
   list.innerHTML = "";
 
-  players.forEach(p => {
+  players.forEach((p) => {
     list.innerHTML += `
       <div class="bg-stone-700 p-4 rounded-xl w-64 shadow">
-        <img src="${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}"
+        <img src="${
+          p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"
+        }"
           class="w-full h-40 object-cover rounded mb-2">
 
         <h3 class="font-bold text-lg">${p.name} (Nivel ${p.level})</h3>
@@ -148,9 +166,13 @@ function renderPlayersList() {
         <p>EXP: ${p.exp}</p>
 
         <div class="mt-2 flex flex-wrap gap-1">
-          ${(p.skills || []).map(s => `
+          ${(p.skills || [])
+            .map(
+              (s) => `
             <span class="px-2 py-1 bg-zinc-800 rounded text-xs">${s}</span>
-          `).join("")}
+          `
+            )
+            .join("")}
         </div>
 
         <button onclick="openMasterPanel('${p._id}')"
@@ -174,9 +196,9 @@ async function createCharacter() {
   const name = document.getElementById("charNameInput").value.trim();
   if (!name) return alert("Nombre obligatorio");
 
-  const skills = Array.from(
-    document.querySelectorAll("#skillsContainer input")
-  ).map(i => i.value.trim()).filter(Boolean);
+  const skills = Array.from(document.querySelectorAll("#skillsContainer input"))
+    .map((i) => i.value.trim())
+    .filter(Boolean);
 
   const fd = new FormData();
   fd.append("name", name);
@@ -205,11 +227,12 @@ async function createCharacter() {
 // EDIT PLAYER
 // =============================================================
 async function openMasterPanel(id) {
-  const player = players.find(p => p._id === id);
+  const player = players.find((p) => p._id === id);
   if (!player) return;
 
   const modal = document.createElement("div");
-  modal.className = "fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50";
+  modal.className =
+    "fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50";
 
   modal.innerHTML = `
     <div class="bg-stone-900 p-6 rounded-xl w-[480px] max-h-[90vh] overflow-y-auto">
@@ -240,13 +263,16 @@ async function openMasterPanel(id) {
 
   document.body.appendChild(modal);
 
-  (player.skills || []).forEach(s => addEditSkillInput(s));
-  document.getElementById("addEditSkillBtn").onclick = () => addEditSkillInput();
+  (player.skills || []).forEach((s) => addEditSkillInput(s));
+  document.getElementById("addEditSkillBtn").onclick = () =>
+    addEditSkillInput();
 
   document.getElementById("saveEditBtn").onclick = async () => {
     const skills = Array.from(
       document.querySelectorAll("#editSkillsContainer input")
-    ).map(i => i.value.trim()).filter(Boolean);
+    )
+      .map((i) => i.value.trim())
+      .filter(Boolean);
 
     const fd = new FormData();
     fd.append("name", editName.value);
