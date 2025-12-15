@@ -1,29 +1,11 @@
 // =============================================================
 // CONFIG
 // =============================================================
-// =============================================================
-// UI ACTIONS (FALTABAN)
-// =============================================================
-function toggleCreateCard() {
-  const card = document.getElementById("createCard");
-  if (!card) {
-    console.error("createCard no existe en el DOM");
-    return;
-  }
-  card.classList.toggle("hidden");
-}
-
-function openPlayerBoard() {
-  window.open("/player/player_view.html", "_blank");
-}
-
-const BASE_URL =
-  window.__env && window.__env.API_URL
-    ? window.__env.API_URL
-    : "https://chikaku-d-d-ptyl.onrender.com";
+const BASE_URL = (window.__env && window.__env.API_URL)
+  ? window.__env.API_URL
+  : "https://chikaku-d-d-ptyl.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
-const PASS = "dragon";
 let players = [];
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -54,16 +36,16 @@ async function fetchJson(url, opts = {}) {
 }
 
 // =============================================================
-// VALIDACIÓN IMÁGENES
+// IMÁGENES
 // =============================================================
 function validateImage(file) {
   if (!file) return true;
   if (!ALLOWED_TYPES.includes(file.type)) {
-    alert("Solo PNG, JPG, JPEG o WEBP.");
+    alert("Solo PNG, JPG, JPEG o WEBP");
     return false;
   }
   if (file.size > MAX_IMAGE_SIZE) {
-    alert("Máx 2 MB.");
+    alert("Máx 2MB");
     return false;
   }
   return true;
@@ -91,58 +73,26 @@ function addPreview(inputId, previewId) {
 }
 
 // =============================================================
-// SKILLS DINÁMICAS (MÁX 8)
+// HABILIDADES DINÁMICAS (CREATE)
 // =============================================================
 function addSkillInput(value = "") {
   const container = document.getElementById("skillsContainer");
-  if (!container) return;
-
-  if (container.children.length >= 8) {
-    alert("Máximo 8 habilidades");
-    return;
-  }
-
-  const div = document.createElement("div");
-  div.className = "flex gap-2";
-
-  div.innerHTML = `
-    <input type="text"
-      value="${value}"
-      placeholder="Habilidad"
-      class="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700 text-white">
-    <button type="button"
-      onclick="this.parentElement.remove()"
-      class="px-3 rounded bg-red-600 hover:bg-red-700 font-bold">
-      ✕
-    </button>
-  `;
-
-  container.appendChild(div);
-}
-
-function addEditSkillInput(value = "") {
-  const container = document.getElementById("editSkillsContainer");
   if (!container || container.children.length >= 8) return;
 
   const div = document.createElement("div");
   div.className = "flex gap-2";
 
   div.innerHTML = `
-    <input type="text"
-      value="${value}"
-      class="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700 text-white">
-    <button type="button"
-      onclick="this.parentElement.remove()"
-      class="px-3 rounded bg-red-600 hover:bg-red-700 font-bold">
-      ✕
-    </button>
+    <input class="input flex-1" value="${value}">
+    <button onclick="this.parentElement.remove()"
+      class="px-3 rounded bg-red-600 hover:bg-red-700 font-bold">✕</button>
   `;
 
   container.appendChild(div);
 }
 
 // =============================================================
-// PLAYERS LIST
+// LOAD PLAYERS
 // =============================================================
 async function refreshPlayers() {
   players = await fetchJson(API_PLAYERS);
@@ -153,37 +103,27 @@ function renderPlayersList() {
   const list = document.getElementById("playersList");
   list.innerHTML = "";
 
-  players.forEach((p) => {
+  players.forEach(p => {
     list.innerHTML += `
-      <div class="bg-stone-700 p-4 rounded-xl w-64 shadow">
-        <img src="${
-          p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"
-        }"
+      <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow">
+        <img src="${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}"
           class="w-full h-40 object-cover rounded mb-2">
 
         <h3 class="font-bold text-lg">${p.name} (Nivel ${p.level})</h3>
         <p>Vida: ${p.life}</p>
         <p>EXP: ${p.exp}</p>
 
-        <div class="mt-2 flex flex-wrap gap-1">
-          ${(p.skills || [])
-            .map(
-              (s) => `
-            <span class="px-2 py-1 bg-zinc-800 rounded text-xs">${s}</span>
-          `
-            )
-            .join("")}
+        <div class="flex flex-wrap gap-1 mt-2">
+          ${(p.skills || []).map(s =>
+            `<span class="px-2 py-1 bg-zinc-800 rounded text-xs">${s}</span>`
+          ).join("")}
         </div>
 
         <button onclick="openMasterPanel('${p._id}')"
-          class="mt-3 w-full bg-green-600 p-2 rounded">
-          Editar
-        </button>
+          class="mt-3 w-full bg-green-600 p-2 rounded">Editar</button>
 
         <button onclick="deletePlayer('${p._id}')"
-          class="mt-2 w-full bg-red-600 p-2 rounded">
-          Eliminar
-        </button>
+          class="mt-2 w-full bg-red-600 p-2 rounded">Eliminar</button>
       </div>
     `;
   });
@@ -193,12 +133,11 @@ function renderPlayersList() {
 // CREATE CHARACTER
 // =============================================================
 async function createCharacter() {
-  const name = document.getElementById("charNameInput").value.trim();
+  const name = charNameInput.value.trim();
   if (!name) return alert("Nombre obligatorio");
 
-  const skills = Array.from(document.querySelectorAll("#skillsContainer input"))
-    .map((i) => i.value.trim())
-    .filter(Boolean);
+  const skills = [...document.querySelectorAll("#skillsContainer input")]
+    .map(i => i.value.trim()).filter(Boolean);
 
   const fd = new FormData();
   fd.append("name", name);
@@ -209,8 +148,9 @@ async function createCharacter() {
   fd.append("level", charLevelInput.value);
   fd.append("skills", JSON.stringify(skills));
 
-  const img = charImgInput.files[0];
-  if (img && validateImage(img)) fd.append("charImg", img);
+  if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
+    fd.append("charImg", charImgInput.files[0]);
+  }
 
   for (let i = 1; i <= 6; i++) {
     const f = document.getElementById(`item${i}Input`)?.files[0];
@@ -218,65 +158,78 @@ async function createCharacter() {
   }
 
   await fetchJson(API_PLAYERS, { method: "POST", body: fd });
-  alert("Personaje creado");
   toggleCreateCard();
   refreshPlayers();
 }
 
 // =============================================================
-// EDIT PLAYER
+// EDIT PLAYER (MISMO DISEÑO)
 // =============================================================
 async function openMasterPanel(id) {
-  const player = players.find((p) => p._id === id);
-  if (!player) return;
+  const p = players.find(x => x._id === id);
+  if (!p) return;
 
   const modal = document.createElement("div");
-  modal.className =
-    "fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50";
+  modal.className = "fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4";
 
   modal.innerHTML = `
-    <div class="bg-stone-900 p-6 rounded-xl w-[480px] max-h-[90vh] overflow-y-auto">
-      <h2 class="text-2xl font-bold mb-3 text-center">Editar ${player.name}</h2>
+    <div class="bg-zinc-900 border border-zinc-700 rounded-3xl shadow-2xl w-full max-w-3xl p-8 overflow-y-auto">
 
-      <input id="editName" value="${player.name}" class="w-full p-2 rounded text-black mb-2">
-      <input id="editLevel" type="number" value="${player.level}" class="w-full p-2 rounded text-black mb-2">
-      <input id="editLife" type="number" value="${player.life}" class="w-full p-2 rounded text-black mb-2">
-      <input id="editExp" type="number" value="${player.exp}" class="w-full p-2 rounded text-black mb-2">
+      <h2 class="text-2xl font-bold text-amber-400 mb-6 text-center">
+        Editar personaje
+      </h2>
 
-      <h3 class="font-bold mt-3">Habilidades</h3>
-      <div id="editSkillsContainer" class="space-y-2 mb-2"></div>
-      <button id="addEditSkillBtn" class="bg-zinc-800 px-3 py-2 rounded">
-        ➕ Añadir habilidad
-      </button>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div><label class="label">Nombre</label><input id="editName" class="input" value="${p.name}"></div>
+        <div><label class="label">Salud</label><input id="editLife" type="number" class="input" value="${p.life}"></div>
+        <div><label class="label">Hitos</label><input id="editMilestones" class="input" value="${p.milestones || ""}"></div>
+        <div><label class="label">Características</label><input id="editAttributes" class="input" value="${p.attributes || ""}"></div>
+        <div><label class="label">Experiencia</label><input id="editExp" type="number" class="input" value="${p.exp}"></div>
+        <div><label class="label">Nivel</label><input id="editLevel" type="number" class="input" value="${p.level}"></div>
+      </div>
 
-      <button id="saveEditBtn"
-        class="mt-4 w-full bg-green-600 p-2 rounded">
-        Guardar
-      </button>
+      <div class="mt-8">
+        <label class="label text-sky-400">Habilidades (máx. 8)</label>
+        <div id="editSkillsContainer" class="space-y-2 mt-2"></div>
+        <button id="addEditSkillBtn"
+          class="mt-3 px-4 py-2 rounded bg-zinc-800 hover:bg-zinc-700">
+          ➕ Añadir habilidad
+        </button>
+      </div>
 
-      <button onclick="this.closest('.fixed').remove()"
-        class="mt-2 w-full bg-red-600 p-2 rounded">
-        Cerrar
-      </button>
+      <div class="mt-10 flex gap-4">
+        <button id="saveEditBtn"
+          class="flex-1 py-3 rounded-xl bg-green-600 font-bold">Guardar</button>
+        <button onclick="modal.remove()"
+          class="flex-1 py-3 rounded-xl bg-red-600 font-bold">Cerrar</button>
+      </div>
     </div>
   `;
 
   document.body.appendChild(modal);
 
-  (player.skills || []).forEach((s) => addEditSkillInput(s));
-  document.getElementById("addEditSkillBtn").onclick = () =>
-    addEditSkillInput();
+  (p.skills || []).forEach(s => {
+    const div = document.createElement("div");
+    div.className = "flex gap-2";
+    div.innerHTML = `
+      <input class="input flex-1" value="${s}">
+      <button onclick="this.parentElement.remove()"
+        class="px-3 rounded bg-red-600 font-bold">✕</button>
+    `;
+    editSkillsContainer.appendChild(div);
+  });
 
-  document.getElementById("saveEditBtn").onclick = async () => {
-    const skills = Array.from(
-      document.querySelectorAll("#editSkillsContainer input")
-    )
-      .map((i) => i.value.trim())
-      .filter(Boolean);
+  addEditSkillBtn.onclick = () => addSkillInput.call({ }, "");
+
+  saveEditBtn.onclick = async () => {
+    const skills = [...editSkillsContainer.querySelectorAll("input")]
+      .map(i => i.value.trim()).filter(Boolean);
 
     const fd = new FormData();
     fd.append("name", editName.value);
     fd.append("life", editLife.value);
+    fd.append("milestones", editMilestones.value);
+    fd.append("attributes", editAttributes.value);
     fd.append("exp", editExp.value);
     fd.append("level", editLevel.value);
     fd.append("skills", JSON.stringify(skills));
@@ -301,5 +254,5 @@ async function deletePlayer(id) {
 // =============================================================
 window.addEventListener("load", () => {
   refreshPlayers();
-  addSkillInput(); // primera habilidad por defecto
+  addSkillInput();
 });
