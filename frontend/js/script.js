@@ -1,9 +1,23 @@
 // =============================================================
+// UI ACTIONS
+// =============================================================
+function toggleCreateCard() {
+  const card = document.getElementById("createCard");
+  if (!card) return;
+  card.classList.toggle("hidden");
+}
+
+function openPlayerBoard() {
+  window.open("/player/player_view.html", "_blank");
+}
+
+// =============================================================
 // CONFIG
 // =============================================================
-const BASE_URL = (window.__env && window.__env.API_URL)
-  ? window.__env.API_URL
-  : "https://chikaku-d-d-ptyl.onrender.com";
+const BASE_URL =
+  window.__env && window.__env.API_URL
+    ? window.__env.API_URL
+    : "https://chikaku-d-d-ptyl.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 let players = [];
@@ -73,19 +87,27 @@ function addPreview(inputId, previewId) {
 }
 
 // =============================================================
-// HABILIDADES DINÁMICAS (CREATE)
+// SKILLS DINÁMICAS (CREATE)
 // =============================================================
 function addSkillInput(value = "") {
   const container = document.getElementById("skillsContainer");
-  if (!container || container.children.length >= 8) return;
+  if (!container) return;
+
+  if (container.children.length >= 8) {
+    alert("Máximo 8 habilidades");
+    return;
+  }
 
   const div = document.createElement("div");
   div.className = "flex gap-2";
 
   div.innerHTML = `
     <input class="input flex-1" value="${value}">
-    <button onclick="this.parentElement.remove()"
-      class="px-3 rounded bg-red-600 hover:bg-red-700 font-bold">✕</button>
+    <button type="button"
+      onclick="this.parentElement.remove()"
+      class="px-3 rounded bg-red-600 hover:bg-red-700 font-bold">
+      ✕
+    </button>
   `;
 
   container.appendChild(div);
@@ -103,7 +125,7 @@ function renderPlayersList() {
   const list = document.getElementById("playersList");
   list.innerHTML = "";
 
-  players.forEach(p => {
+  players.forEach((p) => {
     list.innerHTML += `
       <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow">
         <img src="${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}"
@@ -120,10 +142,14 @@ function renderPlayersList() {
         </div>
 
         <button onclick="openMasterPanel('${p._id}')"
-          class="mt-3 w-full bg-green-600 p-2 rounded">Editar</button>
+          class="mt-3 w-full bg-green-600 p-2 rounded">
+          Editar
+        </button>
 
         <button onclick="deletePlayer('${p._id}')"
-          class="mt-2 w-full bg-red-600 p-2 rounded">Eliminar</button>
+          class="mt-2 w-full bg-red-600 p-2 rounded">
+          Eliminar
+        </button>
       </div>
     `;
   });
@@ -166,63 +192,82 @@ async function createCharacter() {
 // EDIT PLAYER (MISMO DISEÑO)
 // =============================================================
 async function openMasterPanel(id) {
-  const p = players.find(x => x._id === id);
-  if (!p) return;
+  const player = players.find(p => p._id === id);
+  if (!player) return;
 
   const modal = document.createElement("div");
-  modal.className = "fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4";
+  modal.className =
+    "fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4";
 
   modal.innerHTML = `
-    <div class="bg-zinc-900 border border-zinc-700 rounded-3xl shadow-2xl w-full max-w-3xl p-8 overflow-y-auto">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-3xl shadow-2xl
+                w-full max-w-4xl p-8 overflow-y-auto">
 
       <h2 class="text-2xl font-bold text-amber-400 mb-6 text-center">
         Editar personaje
       </h2>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div><label class="label">Nombre</label><input id="editName" class="input" value="${p.name}"></div>
-        <div><label class="label">Salud</label><input id="editLife" type="number" class="input" value="${p.life}"></div>
-        <div><label class="label">Hitos</label><input id="editMilestones" class="input" value="${p.milestones || ""}"></div>
-        <div><label class="label">Características</label><input id="editAttributes" class="input" value="${p.attributes || ""}"></div>
-        <div><label class="label">Experiencia</label><input id="editExp" type="number" class="input" value="${p.exp}"></div>
-        <div><label class="label">Nivel</label><input id="editLevel" type="number" class="input" value="${p.level}"></div>
+        <div><label class="label">Nombre</label><input id="editName" class="input" value="${player.name}"></div>
+        <div><label class="label">Salud</label><input id="editLife" type="number" class="input" value="${player.life}"></div>
+        <div><label class="label">Hitos</label><input id="editMilestones" class="input" value="${player.milestones || ""}"></div>
+        <div><label class="label">Características</label><input id="editAttributes" class="input" value="${player.attributes || ""}"></div>
+        <div><label class="label">Experiencia</label><input id="editExp" type="number" class="input" value="${player.exp}"></div>
+        <div><label class="label">Nivel</label><input id="editLevel" type="number" class="input" value="${player.level}"></div>
       </div>
 
       <div class="mt-8">
         <label class="label text-sky-400">Habilidades (máx. 8)</label>
         <div id="editSkillsContainer" class="space-y-2 mt-2"></div>
         <button id="addEditSkillBtn"
-          class="mt-3 px-4 py-2 rounded bg-zinc-800 hover:bg-zinc-700">
+          class="mt-3 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700">
           ➕ Añadir habilidad
         </button>
       </div>
 
       <div class="mt-10 flex gap-4">
         <button id="saveEditBtn"
-          class="flex-1 py-3 rounded-xl bg-green-600 font-bold">Guardar</button>
-        <button onclick="modal.remove()"
-          class="flex-1 py-3 rounded-xl bg-red-600 font-bold">Cerrar</button>
+          class="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-700 font-bold">
+          Guardar
+        </button>
+        <button id="closeEditBtn"
+          class="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 font-bold">
+          Cerrar
+        </button>
       </div>
     </div>
   `;
 
   document.body.appendChild(modal);
 
-  (p.skills || []).forEach(s => {
+  const skillsContainer = document.getElementById("editSkillsContainer");
+  (player.skills || []).forEach(s => {
     const div = document.createElement("div");
     div.className = "flex gap-2";
     div.innerHTML = `
       <input class="input flex-1" value="${s}">
       <button onclick="this.parentElement.remove()"
-        class="px-3 rounded bg-red-600 font-bold">✕</button>
+        class="px-3 rounded bg-red-600 hover:bg-red-700 font-bold">✕</button>
     `;
-    editSkillsContainer.appendChild(div);
+    skillsContainer.appendChild(div);
   });
 
-  addEditSkillBtn.onclick = () => addSkillInput.call({ }, "");
+  document.getElementById("addEditSkillBtn").onclick = () => {
+    if (skillsContainer.children.length >= 8) return;
+    const div = document.createElement("div");
+    div.className = "flex gap-2";
+    div.innerHTML = `
+      <input class="input flex-1">
+      <button onclick="this.parentElement.remove()"
+        class="px-3 rounded bg-red-600 hover:bg-red-700 font-bold">✕</button>
+    `;
+    skillsContainer.appendChild(div);
+  };
 
-  saveEditBtn.onclick = async () => {
-    const skills = [...editSkillsContainer.querySelectorAll("input")]
+  document.getElementById("closeEditBtn").onclick = () => modal.remove();
+
+  document.getElementById("saveEditBtn").onclick = async () => {
+    const skills = [...skillsContainer.querySelectorAll("input")]
       .map(i => i.value.trim()).filter(Boolean);
 
     const fd = new FormData();
