@@ -35,57 +35,81 @@
 
     <!-- FORMULARIO CREAR PERSONAJE -->
     <section id="createCard"
-      class="hidden max-w-3xl mx-auto mb-12 bg-zinc-900 border border-zinc-700 rounded-3xl shadow-2xl p-8">
+      class="hidden max-w-4xl mx-auto mb-12 bg-zinc-900 border border-zinc-700 rounded-3xl shadow-2xl p-8">
 
       <h2 class="text-2xl font-bold text-amber-400 mb-6">
         Crear nuevo personaje
       </h2>
 
       <!-- DATOS BÁSICOS -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input id="charNameInput" placeholder="Nombre" class="input" />
-        <input id="charLifeInput" type="number" min="1" value="10" placeholder="Salud" class="input" />
-        <input id="charMilestonesInput" placeholder="Hitos" class="input" />
-        <input id="charAttributesInput" placeholder="Características" class="input" />
-        <input id="charExpInput" type="number" min="0" value="0" placeholder="Experiencia" class="input" />
-        <input id="charLevelInput" type="number" min="1" value="1" placeholder="Nivel" class="input" />
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div>
+          <label class="label">Nombre</label>
+          <input id="charNameInput" class="input" />
+        </div>
+
+        <div>
+          <label class="label">Salud</label>
+          <input id="charLifeInput" type="number" min="1" value="10" class="input" />
+        </div>
+
+        <div>
+          <label class="label">Hitos</label>
+          <input id="charMilestonesInput" class="input" />
+        </div>
+
+        <div>
+          <label class="label">Características</label>
+          <input id="charAttributesInput" class="input" />
+        </div>
+
+        <div>
+          <label class="label">Experiencia</label>
+          <input id="charExpInput" type="number" min="0" value="0" class="input" />
+        </div>
+
+        <div>
+          <label class="label">Nivel</label>
+          <input id="charLevelInput" type="number" min="1" value="1" class="input" />
+        </div>
       </div>
 
       <!-- HABILIDADES -->
       <div class="mt-8">
-        <h3 class="text-xl font-bold text-sky-400 mb-3">
+        <label class="label text-sky-400">
           Habilidades (máx. 8)
-        </h3>
+        </label>
 
-        <div id="skillsContainer" class="space-y-2 mb-3"></div>
+        <div id="skillsContainer" class="space-y-2 mt-2"></div>
 
         <button type="button"
           onclick="addSkillInput()"
-          class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition">
+          class="mt-3 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition">
           ➕ Añadir habilidad
         </button>
       </div>
 
       <!-- IMAGEN PRINCIPAL -->
       <div class="mt-8">
-        <label class="block text-sm text-zinc-400 mb-1">Imagen principal</label>
+        <label class="label">Imagen principal</label>
         <input id="charImgInput" type="file" accept="image/*" class="file" />
-        <img id="previewCharMain"
-          class="hidden mt-3 w-full h-56 object-cover rounded-xl border border-zinc-700 shadow" />
+        <img id="previewCharMain" class="preview h-56 mt-3" />
       </div>
 
       <!-- OBJETOS -->
-      <h3 class="text-xl font-bold text-emerald-400 mt-8 mb-3">
-        Objetos (máx. 6)
-      </h3>
+      <div class="mt-8">
+        <label class="label text-emerald-400">
+          Objetos (máx. 6)
+        </label>
 
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div><input id="item1Input" type="file" class="file" /><img id="previewItem1" class="preview" /></div>
-        <div><input id="item2Input" type="file" class="file" /><img id="previewItem2" class="preview" /></div>
-        <div><input id="item3Input" type="file" class="file" /><img id="previewItem3" class="preview" /></div>
-        <div><input id="item4Input" type="file" class="file" /><img id="previewItem4" class="preview" /></div>
-        <div><input id="item5Input" type="file" class="file" /><img id="previewItem5" class="preview" /></div>
-        <div><input id="item6Input" type="file" class="file" /><img id="previewItem6" class="preview" /></div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-3">
+          <div><input id="item1Input" type="file" class="file" /><img id="previewItem1" class="preview" /></div>
+          <div><input id="item2Input" type="file" class="file" /><img id="previewItem2" class="preview" /></div>
+          <div><input id="item3Input" type="file" class="file" /><img id="previewItem3" class="preview" /></div>
+          <div><input id="item4Input" type="file" class="file" /><img id="previewItem4" class="preview" /></div>
+          <div><input id="item5Input" type="file" class="file" /><img id="previewItem5" class="preview" /></div>
+          <div><input id="item6Input" type="file" class="file" /><img id="previewItem6" class="preview" /></div>
+        </div>
       </div>
 
       <button onclick="createCharacter()"
@@ -112,19 +136,21 @@
     <div class="h-14 w-14 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
   </div>
 
-  <!-- CLASES -->
+  <!-- CLASES REUTILIZABLES -->
   <style>
+    .label {
+      @apply block mb-1 text-sm font-semibold text-zinc-400;
+    }
     .input {
       @apply w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
-      text-zinc-100 placeholder-zinc-500 focus:outline-none
-      focus:ring-2 focus:ring-red-500;
+      text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500;
     }
     .file {
       @apply w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700
       text-zinc-300;
     }
     .preview {
-      @apply hidden mt-2 w-full h-24 object-cover rounded-lg border border-zinc-700 shadow;
+      @apply hidden w-full object-cover rounded-xl border border-zinc-700 shadow;
     }
   </style>
 
