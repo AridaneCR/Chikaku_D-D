@@ -99,18 +99,43 @@ function addSkillInput(value = "") {
   }
 
   const div = document.createElement("div");
-  div.className = "flex gap-2";
+  div.className = "relative";
 
   div.innerHTML = `
-    <input class="input flex-1" value="${value}">
+    <input class="input pr-10" value="${value}">
     <button type="button"
       onclick="this.parentElement.remove()"
-      class="px-3 rounded bg-red-600 hover:bg-red-700 font-bold">
+      class="absolute right-2 top-1/2 -translate-y-1/2
+             px-2 py-1 rounded bg-red-600 hover:bg-red-700 font-bold">
       ✕
     </button>
   `;
 
   container.appendChild(div);
+}
+
+// =============================================================
+// OBJETOS DINÁMICOS (CREATE)
+// =============================================================
+function initItems() {
+  const container = document.getElementById("objectsContainer");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  for (let i = 1; i <= 6; i++) {
+    const div = document.createElement("div");
+    div.className = "object-card";
+
+    div.innerHTML = `
+      <label class="label-sm">Objeto ${i}</label>
+      <input id="item${i}Input" type="file" class="file" />
+      <img id="previewItem${i}" class="preview mt-3" />
+    `;
+
+    container.appendChild(div);
+    addPreview(`item${i}Input`, `previewItem${i}`);
+  }
 }
 
 // =============================================================
@@ -241,29 +266,22 @@ async function openMasterPanel(id) {
   document.body.appendChild(modal);
 
   const skillsContainer = document.getElementById("editSkillsContainer");
-  (player.skills || []).forEach(s => {
-    const div = document.createElement("div");
-    div.className = "flex gap-2";
-    div.innerHTML = `
-      <input class="input flex-1" value="${s}">
-      <button onclick="this.parentElement.remove()"
-        class="px-3 rounded bg-red-600 hover:bg-red-700 font-bold">✕</button>
-    `;
-    skillsContainer.appendChild(div);
-  });
+  (player.skills || []).forEach(s => addEditSkill(s));
 
-  document.getElementById("addEditSkillBtn").onclick = () => {
+  function addEditSkill(value = "") {
     if (skillsContainer.children.length >= 8) return;
     const div = document.createElement("div");
-    div.className = "flex gap-2";
+    div.className = "relative";
     div.innerHTML = `
-      <input class="input flex-1">
+      <input class="input pr-10" value="${value}">
       <button onclick="this.parentElement.remove()"
-        class="px-3 rounded bg-red-600 hover:bg-red-700 font-bold">✕</button>
+        class="absolute right-2 top-1/2 -translate-y-1/2
+               px-2 py-1 rounded bg-red-600 hover:bg-red-700 font-bold">✕</button>
     `;
     skillsContainer.appendChild(div);
-  };
+  }
 
+  document.getElementById("addEditSkillBtn").onclick = () => addEditSkill();
   document.getElementById("closeEditBtn").onclick = () => modal.remove();
 
   document.getElementById("saveEditBtn").onclick = async () => {
@@ -299,5 +317,8 @@ async function deletePlayer(id) {
 // =============================================================
 window.addEventListener("load", () => {
   refreshPlayers();
-  addSkillInput();
+  initItems();
+  addPreview("charImgInput", "previewCharMain");
 });
+
+
