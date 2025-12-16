@@ -4,12 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>D&D App – Master</title>
+
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="bg-zinc-950 text-zinc-100 min-h-screen">
 
-  <!-- HEADER -->
+  <!-- =============================================================
+  HEADER
+  ============================================================= -->
   <header class="sticky top-0 z-40 bg-zinc-900/80 backdrop-blur border-b border-zinc-800">
     <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
       <h1 class="text-2xl font-bold tracking-wide text-red-400">
@@ -30,10 +34,14 @@
     </div>
   </header>
 
-  <!-- CONTENIDO -->
+  <!-- =============================================================
+  CONTENIDO
+  ============================================================= -->
   <main class="max-w-7xl mx-auto px-6 py-10">
 
-    <!-- FORMULARIO CREAR PERSONAJE -->
+    <!-- =============================================================
+    FORMULARIO CREAR PERSONAJE
+    ============================================================= -->
     <section id="createCard"
       class="hidden max-w-4xl mx-auto mb-12 bg-zinc-900 border border-zinc-700 rounded-3xl shadow-2xl p-8">
 
@@ -41,7 +49,7 @@
         Crear nuevo personaje
       </h2>
 
-      <!-- DATOS BÁSICOS -->
+      <!-- ================= DATOS BÁSICOS ================= -->
       <div class="bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
         <h3 class="section-title">Datos básicos</h3>
 
@@ -78,7 +86,7 @@
         </div>
       </div>
 
-      <!-- HABILIDADES -->
+      <!-- ================= HABILIDADES ================= -->
       <div class="mt-8 bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
         <h3 class="section-title text-sky-400">
           Habilidades (máx. 8)
@@ -93,7 +101,7 @@
         </button>
       </div>
 
-      <!-- IMAGEN PRINCIPAL -->
+      <!-- ================= IMAGEN PRINCIPAL ================= -->
       <div class="mt-8 bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
         <h3 class="section-title">
           Imagen principal
@@ -103,34 +111,31 @@
         <img id="previewCharMain" class="preview h-56 mt-4" />
       </div>
 
-      <!-- OBJETOS -->
+      <!-- ================= OBJETOS ================= -->
       <div class="mt-8 bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
         <h3 class="section-title text-emerald-400">
           Objetos (máx. 6)
         </h3>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-          ${[1,2,3,4,5,6].map(i => `
-            <div class="object-card">
-              <label class="label-sm">Objeto ${i}</label>
-              <input id="item${i}Input" type="file" class="file" />
-              <img id="previewItem${i}" class="preview mt-3" />
-            </div>
-          `).join("")}
+        <!-- CONTENEDOR DINÁMICO -->
+        <div id="objectsContainer"
+          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
         </div>
       </div>
 
-      <!-- BOTÓN FINAL -->
+      <!-- ================= BOTÓN FINAL ================= -->
       <button onclick="createCharacter()"
-        class="mt-10 w-full py-3 rounded-xl 
-        bg-gradient-to-r from-red-600 to-red-700 
-        hover:from-red-700 hover:to-red-800 
+        class="mt-10 w-full py-3 rounded-xl
+        bg-gradient-to-r from-red-600 to-red-700
+        hover:from-red-700 hover:to-red-800
         font-bold text-lg shadow-lg transition">
         🐉 Crear personaje
       </button>
     </section>
 
-    <!-- LISTA DE JUGADORES -->
+    <!-- =============================================================
+    LISTA DE JUGADORES
+    ============================================================= -->
     <section>
       <h2 class="text-3xl font-bold text-red-300 mb-6 text-center">
         Jugadores de la campaña
@@ -142,13 +147,17 @@
     </section>
   </main>
 
-  <!-- LOADER -->
+  <!-- =============================================================
+  LOADER
+  ============================================================= -->
   <div id="loader"
     class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
     <div class="h-14 w-14 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
   </div>
 
-  <!-- CLASES -->
+  <!-- =============================================================
+  CLASES TAILWIND
+  ============================================================= -->
   <style>
     .section-title {
       @apply text-lg font-bold text-zinc-300;
@@ -175,6 +184,9 @@
     }
   </style>
 
+  <!-- =============================================================
+  SCRIPT
+  ============================================================= -->
   <script src="../js/script.js"></script>
 </body>
 </html>
