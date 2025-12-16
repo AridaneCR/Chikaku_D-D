@@ -9,56 +9,6 @@
 
 <body class="bg-stone-900 text-stone-100 min-h-screen p-6">
 
-  <!-- SELECCIÓN INICIAL -->
-  <div id="startScreen" class="max-w-md mx-auto text-center mt-20 hidden">
-    <h1 class="text-4xl font-bold mb-6 text-red-400">Dungeons & Dragons</h1>
-
-    <button onclick="openNewCampaignForm()" 
-      class="bg-green-600 hover:bg-green-700 p-3 rounded w-full mb-3">
-      Crear Nueva Campaña
-    </button>
-
-    <button onclick="openCampaignSelector()" 
-      class="bg-blue-600 hover:bg-blue-700 p-3 rounded w-full">
-      Seleccionar Campaña Existente
-    </button>
-  </div>
-
-  <!-- FORMULARIO CREAR CAMPAÑA -->
-  <div id="campaignCard" class="max-w-md mx-auto bg-stone-800 p-6 rounded-xl shadow-xl mb-6 hidden">
-    <h1 class="text-3xl font-bold text-center mb-4 text-red-400">Crear Campaña</h1>
-
-    <label>Nombre de la campaña:</label>
-    <input id="campaignNameInput" class="w-full p-2 text-black rounded mb-2" />
-
-    <label>Número de jugadores:</label>
-    <input id="campaignPlayersInput" type="number" min="1" class="w-full p-2 text-black rounded mb-2" />
-
-    <button onclick="createCampaign()" class="bg-green-600 hover:bg-green-700 p-2 rounded w-full mt-2">
-      Crear Campaña
-    </button>
-
-    <button onclick="backToStart()" class="bg-gray-600 hover:bg-gray-700 p-2 rounded w-full mt-3">
-      Volver
-    </button>
-  </div>
-
-  <!-- SELECCIONAR CAMPAÑA EXISTENTE -->
-  <div id="campaignSelectCard" class="max-w-md mx-auto bg-stone-800 p-6 rounded-xl shadow-xl mb-6 hidden">
-    <h1 class="text-3xl font-bold text-center mb-4 text-blue-400">Seleccionar Campaña</h1>
-
-    <select id="campaignSelect" class="w-full p-2 text-black rounded mb-4"></select>
-
-    <button onclick="chooseCampaign()" 
-      class="bg-blue-600 hover:bg-blue-700 p-2 rounded w-full mb-2">
-      Seleccionar
-    </button>
-
-    <button onclick="backToStart()" 
-      class="bg-gray-600 hover:bg-gray-700 p-2 rounded w-full">
-      Volver
-    </button>
-  </div>
 
   <!-- LOGIN MASTER + IR AL TABLERO -->
   <div id="loginScreen" class="max-w-md mx-auto bg-stone-800 p-6 rounded-xl shadow-xl hidden">
