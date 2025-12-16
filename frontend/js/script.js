@@ -19,6 +19,12 @@ function toggleCreateCard(forceOpen = false) {
   }
 }
 
+// 🔥 NUEVO: abrir SIEMPRE en modo crear
+function openCreateForm() {
+  resetForm();
+  toggleCreateCard(true);
+}
+
 function openPlayerBoard() {
   window.open("/player/player_view.html", "_blank");
 }
@@ -253,8 +259,8 @@ function editPlayer(id) {
   charLifeInput.value = player.life;
   charMilestonesInput.value = player.milestones || "";
   charAttributesInput.value = player.attributes || "";
-  charExpInput.value = player.exp || 0;
-  charLevelInput.value = player.level || 1;
+  charExpInput.value = player.exp ?? 0;
+  charLevelInput.value = player.level ?? 1;
 
   skillsContainer.innerHTML = "";
   (player.skills || []).forEach(s => addSkillInput(s));

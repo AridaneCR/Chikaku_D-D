@@ -21,7 +21,8 @@
       </h1>
 
       <div class="flex gap-3">
-        <button onclick="toggleCreateCard()"
+        <!-- 🔥 CAMBIO CLAVE -->
+        <button onclick="openCreateForm()"
           class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 font-semibold shadow transition">
           Crear personaje
         </button>
@@ -122,7 +123,7 @@
         </div>
       </div>
 
-      <!-- ================= BOTÓN FINAL (DINÁMICO) ================= -->
+      <!-- ================= BOTÓN FINAL ================= -->
       <button
         id="submitCharacterBtn"
         onclick="submitCharacter()"
@@ -157,7 +158,7 @@
   </div>
 
   <!-- =============================================================
-  CLASES TAILWIND
+  CLASES TAILWIND (MEJOR CONTRASTE)
   ============================================================= -->
   <style>
     .section-title {
@@ -169,16 +170,23 @@
     .label-sm {
       @apply block mb-2 text-xs font-semibold text-zinc-400;
     }
+    /* 🔥 CONTRASTE CORREGIDO */
     .input {
-      @apply w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
-      text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500;
+      @apply w-full px-4 py-2 rounded-lg
+      bg-zinc-900 border border-zinc-600
+      text-white placeholder-zinc-500
+      focus:outline-none focus:ring-2 focus:ring-red-500;
+    }
+    input[type="number"] {
+      color: white;
     }
     .file {
       @apply w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700
       text-zinc-300;
     }
     .preview {
-      @apply hidden w-full object-cover rounded-xl border border-zinc-700 shadow;
+      @apply hidden w-full object-cover rounded-xl
+      border border-zinc-600 shadow-md;
     }
     .object-card {
       @apply bg-zinc-800 border border-zinc-700 rounded-xl p-4;
