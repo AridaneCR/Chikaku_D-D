@@ -40,7 +40,7 @@
   <main class="max-w-7xl mx-auto px-6 py-10">
 
     <!-- =============================================================
-    FORMULARIO CREAR PERSONAJE
+    FORMULARIO CREAR / EDITAR PERSONAJE
     ============================================================= -->
     <section id="createCard"
       class="hidden max-w-4xl mx-auto mb-12 bg-zinc-900 border border-zinc-700 rounded-3xl shadow-2xl p-8">
@@ -117,14 +117,15 @@
           Objetos (máx. 6)
         </h3>
 
-        <!-- CONTENEDOR DINÁMICO -->
         <div id="objectsContainer"
           class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
         </div>
       </div>
 
-      <!-- ================= BOTÓN FINAL ================= -->
-      <button onclick="createCharacter()"
+      <!-- ================= BOTÓN FINAL (DINÁMICO) ================= -->
+      <button
+        id="submitCharacterBtn"
+        onclick="submitCharacter()"
         class="mt-10 w-full py-3 rounded-xl
         bg-gradient-to-r from-red-600 to-red-700
         hover:from-red-700 hover:to-red-800

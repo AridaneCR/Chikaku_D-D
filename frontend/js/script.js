@@ -1,10 +1,22 @@
 // =============================================================
+// STATE
+// =============================================================
+let formMode = "create"; // "create" | "edit"
+let editingPlayerId = null;
+
+// =============================================================
 // UI ACTIONS
 // =============================================================
-function toggleCreateCard() {
+function toggleCreateCard(forceOpen = false) {
   const card = document.getElementById("createCard");
   if (!card) return;
-  card.classList.toggle("hidden");
+
+  if (forceOpen) {
+    card.classList.remove("hidden");
+    card.scrollIntoView({ behavior: "smooth" });
+  } else {
+    card.classList.toggle("hidden");
+  }
 }
 
 function openPlayerBoard() {
@@ -87,7 +99,7 @@ function addPreview(inputId, previewId) {
 }
 
 // =============================================================
-// SKILLS DINÁMICAS (CREATE)
+// SKILLS
 // =============================================================
 function addSkillInput(value = "") {
   const container = document.getElementById("skillsContainer");
@@ -115,7 +127,7 @@ function addSkillInput(value = "") {
 }
 
 // =============================================================
-// OBJETOS DINÁMICOS (CREATE)
+// OBJETOS
 // =============================================================
 function initItems() {
   const container = document.getElementById("objectsContainer");
@@ -139,7 +151,7 @@ function initItems() {
 }
 
 // =============================================================
-// LOAD PLAYERS
+// PLAYERS LIST
 // =============================================================
 async function refreshPlayers() {
   players = await fetchJson(API_PLAYERS);
@@ -150,7 +162,7 @@ function renderPlayersList() {
   const list = document.getElementById("playersList");
   list.innerHTML = "";
 
-  players.forEach((p) => {
+  players.forEach(p => {
     list.innerHTML += `
       <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow">
         <img src="${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}"
@@ -166,7 +178,7 @@ function renderPlayersList() {
           ).join("")}
         </div>
 
-        <button onclick="openMasterPanel('${p._id}')"
+        <button onclick="editPlayer('${p._id}')"
           class="mt-3 w-full bg-green-600 p-2 rounded">
           Editar
         </button>
@@ -181,9 +193,9 @@ function renderPlayersList() {
 }
 
 // =============================================================
-// CREATE CHARACTER
+// CREATE / EDIT SUBMIT
 // =============================================================
-async function createCharacter() {
+async function submitCharacter() {
   const name = charNameInput.value.trim();
   if (!name) return alert("Nombre obligatorio");
 
@@ -208,99 +220,73 @@ async function createCharacter() {
     if (f && validateImage(f)) fd.append("items", f);
   }
 
-  await fetchJson(API_PLAYERS, { method: "POST", body: fd });
+  if (formMode === "create") {
+    await fetchJson(API_PLAYERS, { method: "POST", body: fd });
+  } else {
+    await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
+      method: "PUT",
+      body: fd
+    });
+  }
+
+  resetForm();
   toggleCreateCard();
   refreshPlayers();
 }
 
 // =============================================================
-// EDIT PLAYER (MISMO DISEÑO)
+// EDIT PLAYER
 // =============================================================
-async function openMasterPanel(id) {
+function editPlayer(id) {
   const player = players.find(p => p._id === id);
   if (!player) return;
 
-  const modal = document.createElement("div");
-  modal.className =
-    "fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4";
+  formMode = "edit";
+  editingPlayerId = id;
 
-  modal.innerHTML = `
-    <div class="bg-zinc-900 border border-zinc-700 rounded-3xl shadow-2xl
-                w-full max-w-4xl p-8 overflow-y-auto">
+  toggleCreateCard(true);
 
-      <h2 class="text-2xl font-bold text-amber-400 mb-6 text-center">
-        Editar personaje
-      </h2>
+  document.querySelector("#createCard h2").innerText = "Editar personaje";
+  document.getElementById("submitCharacterBtn").innerText = "💾 Guardar cambios";
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div><label class="label">Nombre</label><input id="editName" class="input" value="${player.name}"></div>
-        <div><label class="label">Salud</label><input id="editLife" type="number" class="input" value="${player.life}"></div>
-        <div><label class="label">Hitos</label><input id="editMilestones" class="input" value="${player.milestones || ""}"></div>
-        <div><label class="label">Características</label><input id="editAttributes" class="input" value="${player.attributes || ""}"></div>
-        <div><label class="label">Experiencia</label><input id="editExp" type="number" class="input" value="${player.exp}"></div>
-        <div><label class="label">Nivel</label><input id="editLevel" type="number" class="input" value="${player.level}"></div>
-      </div>
+  charNameInput.value = player.name;
+  charLifeInput.value = player.life;
+  charMilestonesInput.value = player.milestones || "";
+  charAttributesInput.value = player.attributes || "";
+  charExpInput.value = player.exp || 0;
+  charLevelInput.value = player.level || 1;
 
-      <div class="mt-8">
-        <label class="label text-sky-400">Habilidades (máx. 8)</label>
-        <div id="editSkillsContainer" class="space-y-2 mt-2"></div>
-        <button id="addEditSkillBtn"
-          class="mt-3 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700">
-          ➕ Añadir habilidad
-        </button>
-      </div>
+  skillsContainer.innerHTML = "";
+  (player.skills || []).forEach(s => addSkillInput(s));
 
-      <div class="mt-10 flex gap-4">
-        <button id="saveEditBtn"
-          class="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-700 font-bold">
-          Guardar
-        </button>
-        <button id="closeEditBtn"
-          class="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 font-bold">
-          Cerrar
-        </button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  const skillsContainer = document.getElementById("editSkillsContainer");
-  (player.skills || []).forEach(s => addEditSkill(s));
-
-  function addEditSkill(value = "") {
-    if (skillsContainer.children.length >= 8) return;
-    const div = document.createElement("div");
-    div.className = "relative";
-    div.innerHTML = `
-      <input class="input pr-10" value="${value}">
-      <button onclick="this.parentElement.remove()"
-        class="absolute right-2 top-1/2 -translate-y-1/2
-               px-2 py-1 rounded bg-red-600 hover:bg-red-700 font-bold">✕</button>
-    `;
-    skillsContainer.appendChild(div);
+  if (player.img) {
+    previewCharMain.src = "data:image/jpeg;base64," + player.img;
+    previewCharMain.classList.remove("hidden");
   }
+}
 
-  document.getElementById("addEditSkillBtn").onclick = () => addEditSkill();
-  document.getElementById("closeEditBtn").onclick = () => modal.remove();
+// =============================================================
+// RESET FORM
+// =============================================================
+function resetForm() {
+  formMode = "create";
+  editingPlayerId = null;
 
-  document.getElementById("saveEditBtn").onclick = async () => {
-    const skills = [...skillsContainer.querySelectorAll("input")]
-      .map(i => i.value.trim()).filter(Boolean);
+  document.querySelector("#createCard h2").innerText = "Crear nuevo personaje";
+  document.getElementById("submitCharacterBtn").innerText = "🐉 Crear personaje";
 
-    const fd = new FormData();
-    fd.append("name", editName.value);
-    fd.append("life", editLife.value);
-    fd.append("milestones", editMilestones.value);
-    fd.append("attributes", editAttributes.value);
-    fd.append("exp", editExp.value);
-    fd.append("level", editLevel.value);
-    fd.append("skills", JSON.stringify(skills));
+  charNameInput.value = "";
+  charLifeInput.value = 10;
+  charMilestonesInput.value = "";
+  charAttributesInput.value = "";
+  charExpInput.value = 0;
+  charLevelInput.value = 1;
 
-    await fetchJson(`${API_PLAYERS}/${id}`, { method: "PUT", body: fd });
-    modal.remove();
-    refreshPlayers();
-  };
+  skillsContainer.innerHTML = "";
+  charImgInput.value = "";
+  previewCharMain.classList.add("hidden");
+
+  initItems();
 }
 
 // =============================================================
@@ -320,5 +306,3 @@ window.addEventListener("load", () => {
   initItems();
   addPreview("charImgInput", "previewCharMain");
 });
-
-
