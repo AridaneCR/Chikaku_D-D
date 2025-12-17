@@ -23,7 +23,7 @@ router.get("/", async (req, res) => {
 });
 
 /* ============================================================
-   GET BY ID (DEBE IR ANTES QUE /:campaign)
+   GET BY ID
 ============================================================ */
 router.get("/id/:id", async (req, res) => {
   try {
@@ -37,7 +37,7 @@ router.get("/id/:id", async (req, res) => {
 });
 
 /* ============================================================
-   GET BY CAMPAIGN (ESTA RUTA SIEMPRE VA LA ÚLTIMA)
+   GET BY CAMPAIGN
 ============================================================ */
 router.get("/:campaign", async (req, res) => {
   try {
@@ -68,18 +68,26 @@ router.post(
         ? req.files.items.map(f => toBase64(f.buffer))
         : [];
 
+      const skills = req.body.skills
+        ? JSON.parse(req.body.skills)
+        : [];
+
+      const itemDescriptions = req.body.itemDescriptions
+        ? JSON.parse(req.body.itemDescriptions)
+        : [];
+
       const player = new Player({
         campaign: req.body.campaign || "default",
         name: req.body.name,
         life: Number(req.body.life) || 10,
-        skill1: req.body.skill1 || "",
-        skill2: req.body.skill2 || "",
+        skills,
         milestones: req.body.milestones || "",
         attributes: req.body.attributes || "",
         exp: Number(req.body.exp) || 0,
         level: Number(req.body.level) || 1,
         img,
-        items
+        items,
+        itemDescriptions
       });
 
       res.json(await player.save());
@@ -104,33 +112,46 @@ router.put(
       const player = await Player.findById(req.params.id);
       if (!player) return res.status(404).json({ error: "Jugador no encontrado" });
 
+      // ---------- campos simples ----------
       player.name = req.body.name ?? player.name;
       player.life = req.body.life !== undefined ? Number(req.body.life) : player.life;
-      player.skill1 = req.body.skill1 ?? player.skill1;
-      player.skill2 = req.body.skill2 ?? player.skill2;
       player.milestones = req.body.milestones ?? player.milestones;
       player.attributes = req.body.attributes ?? player.attributes;
       player.exp = req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
       player.level = req.body.level !== undefined ? Number(req.body.level) : player.level;
 
+      // ---------- skills ----------
+      if (req.body.skills) {
+        player.skills = JSON.parse(req.body.skills);
+      }
+
+      // ---------- imagen principal ----------
       if (req.files?.charImg?.[0]) {
         player.img = toBase64(req.files.charImg[0].buffer);
       }
 
-      let keepItems = [];
-      if (req.body.keepItems) {
-        try {
-          keepItems = JSON.parse(req.body.keepItems).filter(i => i && i !== "");
-        } catch {
-          keepItems = [];
-        }
-      }
-
+      // ---------- ITEMS (mantener + reemplazar) ----------
+      const existingItems = player.items || [];
       const newItems = req.files?.items
         ? req.files.items.map(f => toBase64(f.buffer))
         : [];
 
-      player.items = [...keepItems, ...newItems].slice(0, 6);
+      const finalItems = [];
+
+      for (let i = 0; i < 6; i++) {
+        if (newItems[i]) {
+          finalItems[i] = newItems[i];
+        } else {
+          finalItems[i] = existingItems[i] || null;
+        }
+      }
+
+      player.items = finalItems.filter(Boolean);
+
+      // ---------- DESCRIPCIONES ----------
+      if (req.body.itemDescriptions) {
+        player.itemDescriptions = JSON.parse(req.body.itemDescriptions);
+      }
 
       res.json(await player.save());
     } catch (e) {
