@@ -16,7 +16,7 @@ router.get("/", async (req, res) => {
   try {
     const players = await Player.find().sort({ createdAt: -1 });
 
-    const normalized = players.map(p => {
+    const normalized = players.map((p) => {
       const obj = p.toObject();
 
       // 🔥 FIX LEGACY SKILLS
@@ -44,46 +44,58 @@ router.post(
   "/",
   upload.fields([
     { name: "charImg", maxCount: 1 },
-    { name: "items", maxCount: 6 }
+    { name: "items", maxCount: 6 },
   ]),
   async (req, res) => {
     try {
+      console.log("🟡 CREATE PLAYER BODY:", req.body);
+      console.log("🟡 CREATE PLAYER FILES:", Object.keys(req.files || {}));
+
+      const skillsRaw = req.body.skills;
+      const descRaw = req.body.itemDescriptions;
+
+      console.log("🟡 skills RAW:", skillsRaw, "TYPE:", typeof skillsRaw);
+      console.log("🟡 itemDescriptions RAW:", descRaw, "TYPE:", typeof descRaw);
+
+      const skills = skillsRaw ? JSON.parse(skillsRaw) : [];
+      const itemDescriptions = descRaw ? JSON.parse(descRaw) : [];
+
+      console.log("🟢 skills PARSED:", skills);
+      console.log("🟢 itemDescriptions PARSED:", itemDescriptions);
+
       const img = req.files?.charImg?.[0]
         ? toBase64(req.files.charImg[0].buffer)
         : null;
 
       const items = req.files?.items
-        ? req.files.items.map(f => toBase64(f.buffer))
-        : [];
-
-      const skills = req.body.skills
-        ? JSON.parse(req.body.skills)
-        : [];
-
-      const itemDescriptions = req.body.itemDescriptions
-        ? JSON.parse(req.body.itemDescriptions)
+        ? req.files.items.map((f) => toBase64(f.buffer))
         : [];
 
       const player = new Player({
         campaign: req.body.campaign || "default",
         name: req.body.name,
         life: Number(req.body.life) || 10,
-
         skills,
         milestones: req.body.milestones || "",
         attributes: req.body.attributes || "",
-
         exp: Number(req.body.exp) || 0,
         level: Number(req.body.level) || 1,
-
         img,
         items,
-        itemDescriptions
+        itemDescriptions,
       });
 
-      res.json(await player.save());
+      const saved = await player.save();
+
+      console.log("🟢 PLAYER SAVED:", {
+        id: saved._id,
+        skills: saved.skills,
+        itemDescriptions: saved.itemDescriptions,
+      });
+
+      res.json(saved);
     } catch (e) {
-      console.error(e);
+      console.error("🔴 CREATE ERROR:", e);
       res.status(400).json({ error: "Error creando jugador" });
     }
   }
@@ -96,19 +108,23 @@ router.put(
   "/:id",
   upload.fields([
     { name: "charImg", maxCount: 1 },
-    { name: "items", maxCount: 6 }
+    { name: "items", maxCount: 6 },
   ]),
   async (req, res) => {
     try {
       const player = await Player.findById(req.params.id);
-      if (!player) return res.status(404).json({ error: "Jugador no encontrado" });
+      if (!player)
+        return res.status(404).json({ error: "Jugador no encontrado" });
 
       player.name = req.body.name ?? player.name;
-      player.life = req.body.life !== undefined ? Number(req.body.life) : player.life;
+      player.life =
+        req.body.life !== undefined ? Number(req.body.life) : player.life;
       player.milestones = req.body.milestones ?? player.milestones;
       player.attributes = req.body.attributes ?? player.attributes;
-      player.exp = req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
-      player.level = req.body.level !== undefined ? Number(req.body.level) : player.level;
+      player.exp =
+        req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
+      player.level =
+        req.body.level !== undefined ? Number(req.body.level) : player.level;
 
       // ✅ SKILLS
       if (req.body.skills) {
@@ -126,7 +142,7 @@ router.put(
 
       // ✅ SOLO AÑADIR NUEVOS OBJETOS, NO BORRAR
       if (req.files?.items?.length) {
-        const newItems = req.files.items.map(f => toBase64(f.buffer));
+        const newItems = req.files.items.map((f) => toBase64(f.buffer));
         player.items = [...player.items, ...newItems].slice(0, 6);
       }
 
@@ -144,7 +160,8 @@ router.put(
 router.delete("/:id", async (req, res) => {
   try {
     const deleted = await Player.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: "Jugador no encontrado" });
+    if (!deleted)
+      return res.status(404).json({ error: "Jugador no encontrado" });
     res.json({ ok: true });
   } catch (e) {
     console.error(e);
