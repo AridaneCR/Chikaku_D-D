@@ -176,7 +176,9 @@ function renderPlayersList() {
   list.innerHTML = "";
 
   players.forEach(p => {
-    const skills = Array.isArray(p.skills) ? p.skills : [];
+    const skills = p.skills?.length
+      ? p.skills
+      : [p.skill1, p.skill2].filter(Boolean);
 
     list.innerHTML += `
       <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow">
@@ -259,7 +261,7 @@ async function submitCharacter() {
 }
 
 // =============================================================
-// EDIT PLAYER (FIX TOTAL)
+// EDIT PLAYER (🔥 FIX DEFINITIVO)
 // =============================================================
 function editPlayer(id) {
   const player = players.find(p => p._id === id);
@@ -280,11 +282,15 @@ function editPlayer(id) {
   charExpInput.value = player.exp ?? 0;
   charLevelInput.value = player.level ?? 1;
 
-  // ===== SKILLS =====
+  // ===== HABILIDADES (LEGACY + NUEVAS) =====
   skillsContainer.innerHTML = "";
-  (Array.isArray(player.skills) ? player.skills : []).forEach(s => addSkillInput(s));
+  const skills = player.skills?.length
+    ? player.skills
+    : [player.skill1, player.skill2].filter(Boolean);
 
-  // ===== ITEMS =====
+  skills.forEach(s => addSkillInput(s));
+
+  // ===== OBJETOS =====
   initItems();
 
   if (Array.isArray(player.items)) {
