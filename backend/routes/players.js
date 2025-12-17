@@ -98,6 +98,7 @@ router.post(
   }
 );
 
+
 /* ============================================================
    UPDATE PLAYER
 ============================================================ */
@@ -112,7 +113,6 @@ router.put(
       const player = await Player.findById(req.params.id);
       if (!player) return res.status(404).json({ error: "Jugador no encontrado" });
 
-      // ---------- campos simples ----------
       player.name = req.body.name ?? player.name;
       player.life = req.body.life !== undefined ? Number(req.body.life) : player.life;
       player.milestones = req.body.milestones ?? player.milestones;
@@ -120,37 +120,26 @@ router.put(
       player.exp = req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
       player.level = req.body.level !== undefined ? Number(req.body.level) : player.level;
 
-      // ---------- skills ----------
+      // ✅ SKILLS
       if (req.body.skills) {
         player.skills = JSON.parse(req.body.skills);
       }
 
-      // ---------- imagen principal ----------
+      // ✅ DESCRIPCIÓN OBJETOS
+      if (req.body.itemDescriptions) {
+        player.itemDescriptions = JSON.parse(req.body.itemDescriptions);
+      }
+
       if (req.files?.charImg?.[0]) {
         player.img = toBase64(req.files.charImg[0].buffer);
       }
 
-      // ---------- ITEMS (mantener + reemplazar) ----------
-      const existingItems = player.items || [];
       const newItems = req.files?.items
         ? req.files.items.map(f => toBase64(f.buffer))
         : [];
 
-      const finalItems = [];
-
-      for (let i = 0; i < 6; i++) {
-        if (newItems[i]) {
-          finalItems[i] = newItems[i];
-        } else {
-          finalItems[i] = existingItems[i] || null;
-        }
-      }
-
-      player.items = finalItems.filter(Boolean);
-
-      // ---------- DESCRIPCIONES ----------
-      if (req.body.itemDescriptions) {
-        player.itemDescriptions = JSON.parse(req.body.itemDescriptions);
+      if (newItems.length) {
+        player.items = newItems.slice(0, 6);
       }
 
       res.json(await player.save());
@@ -160,6 +149,7 @@ router.put(
     }
   }
 );
+
 
 /* ============================================================
    DELETE PLAYER

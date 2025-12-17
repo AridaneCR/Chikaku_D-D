@@ -18,7 +18,9 @@
 
 <body class="bg-zinc-950 text-zinc-100 min-h-screen">
 
-  <!-- HEADER -->
+  <!-- =============================================================
+  HEADER
+  ============================================================= -->
   <header class="sticky top-0 z-40 bg-zinc-900/80 backdrop-blur border-b border-zinc-800">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <h1 class="text-3xl font-bold tracking-wide text-red-400 text-center">
@@ -27,7 +29,9 @@
     </div>
   </header>
 
-  <!-- CONTENIDO -->
+  <!-- =============================================================
+  CONTENIDO
+  ============================================================= -->
   <main class="max-w-6xl mx-auto px-6 py-8">
 
     <!-- BUSCADOR -->
@@ -78,7 +82,43 @@
 
   </main>
 
-  <!-- SCRIPT EXTERNO -->
+  <!-- =============================================================
+  MODAL OBJETOS
+  ============================================================= -->
+  <div
+    id="objectModal"
+    onclick="closeObjectModal()"
+    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
+
+    <div
+      onclick="event.stopPropagation()"
+      class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-sm w-full relative shadow-2xl">
+
+      <!-- Botón cerrar -->
+      <button
+        onclick="closeObjectModal()"
+        class="absolute top-2 right-2 text-stone-300 hover:text-white text-xl">
+        ✕
+      </button>
+
+      <!-- Imagen objeto -->
+      <img
+        id="objectModalImg"
+        src=""
+        alt="Objeto"
+        class="w-full h-48 object-cover rounded mb-4 border border-stone-700" />
+
+      <!-- Descripción -->
+      <p
+        id="objectModalDesc"
+        class="text-stone-200 text-sm whitespace-pre-line">
+      </p>
+    </div>
+  </div>
+
+  <!-- =============================================================
+  SCRIPT
+  ============================================================= -->
   <script src="/js/player_view.js"></script>
 
 </body>
