@@ -25,7 +25,7 @@ function openCreateForm() {
 }
 
 function openPlayerBoard() {
-  window.open("/player/player_view.html", "_blank");
+  window.open("../player/player_view.html", "_blank");
 }
 
 // =============================================================
