@@ -132,7 +132,7 @@ function addSkillInput(value = "") {
 }
 
 // =============================================================
-// OBJETOS (CON DESCRIPCIÓN)
+// OBJETOS
 // =============================================================
 function initItems() {
   const container = document.getElementById("objectsContainer");
@@ -186,7 +186,7 @@ function renderPlayersList() {
         <p>EXP: ${p.exp}</p>
 
         <div class="flex flex-wrap gap-1 mt-2">
-          ${(p.skills || []).map(s =>
+          ${(Array.isArray(p.skills) ? p.skills : []).map(s =>
             `<span class="px-2 py-1 bg-zinc-800 rounded text-xs">${s}</span>`
           ).join("")}
         </div>
@@ -256,7 +256,7 @@ async function submitCharacter() {
 }
 
 // =============================================================
-// EDIT PLAYER
+// EDIT PLAYER (🔥 FIX HABILIDADES LEGACY)
 // =============================================================
 function editPlayer(id) {
   const player = players.find(p => p._id === id);
@@ -277,8 +277,21 @@ function editPlayer(id) {
   charExpInput.value = player.exp ?? 0;
   charLevelInput.value = player.level ?? 1;
 
+  // 🔥 FIX DEFINITIVO
   skillsContainer.innerHTML = "";
-  (player.skills || []).forEach(s => addSkillInput(s));
+
+  let skills = [];
+
+  if (Array.isArray(player.skills)) {
+    skills = player.skills;
+  } else if (typeof player.skills === "string") {
+    skills = player.skills
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+
+  skills.forEach(s => addSkillInput(s));
 
   initItems();
 
