@@ -10,42 +10,30 @@ function toBase64(buffer) {
 }
 
 /* ============================================================
-   GET ALL PLAYERS
+   GET ALL PLAYERS (NORMALIZA SKILLS)
 ============================================================ */
 router.get("/", async (req, res) => {
   try {
     const players = await Player.find().sort({ createdAt: -1 });
-    res.json(players);
+
+    const normalized = players.map(p => {
+      const obj = p.toObject();
+
+      // 🔥 FIX LEGACY SKILLS
+      if (!Array.isArray(obj.skills) || obj.skills.length === 0) {
+        const legacy = [];
+        if (obj.skill1) legacy.push(obj.skill1);
+        if (obj.skill2) legacy.push(obj.skill2);
+        obj.skills = legacy;
+      }
+
+      return obj;
+    });
+
+    res.json(normalized);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Error obteniendo jugadores." });
-  }
-});
-
-/* ============================================================
-   GET BY ID
-============================================================ */
-router.get("/id/:id", async (req, res) => {
-  try {
-    const player = await Player.findById(req.params.id);
-    if (!player) return res.status(404).json({ error: "Jugador no encontrado" });
-    res.json(player);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Error obteniendo jugador." });
-  }
-});
-
-/* ============================================================
-   GET BY CAMPAIGN
-============================================================ */
-router.get("/:campaign", async (req, res) => {
-  try {
-    const players = await Player.find({ campaign: req.params.campaign });
-    res.json(players);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Error obteniendo campaña." });
   }
 });
 
@@ -80,11 +68,14 @@ router.post(
         campaign: req.body.campaign || "default",
         name: req.body.name,
         life: Number(req.body.life) || 10,
+
         skills,
         milestones: req.body.milestones || "",
         attributes: req.body.attributes || "",
+
         exp: Number(req.body.exp) || 0,
         level: Number(req.body.level) || 1,
+
         img,
         items,
         itemDescriptions
@@ -98,9 +89,8 @@ router.post(
   }
 );
 
-
 /* ============================================================
-   UPDATE PLAYER
+   UPDATE PLAYER (NO BORRAR OBJETOS)
 ============================================================ */
 router.put(
   "/:id",
@@ -125,7 +115,7 @@ router.put(
         player.skills = JSON.parse(req.body.skills);
       }
 
-      // ✅ DESCRIPCIÓN OBJETOS
+      // ✅ DESCRIPCIONES
       if (req.body.itemDescriptions) {
         player.itemDescriptions = JSON.parse(req.body.itemDescriptions);
       }
@@ -134,12 +124,10 @@ router.put(
         player.img = toBase64(req.files.charImg[0].buffer);
       }
 
-      const newItems = req.files?.items
-        ? req.files.items.map(f => toBase64(f.buffer))
-        : [];
-
-      if (newItems.length) {
-        player.items = newItems.slice(0, 6);
+      // ✅ SOLO AÑADIR NUEVOS OBJETOS, NO BORRAR
+      if (req.files?.items?.length) {
+        const newItems = req.files.items.map(f => toBase64(f.buffer));
+        player.items = [...player.items, ...newItems].slice(0, 6);
       }
 
       res.json(await player.save());
@@ -149,7 +137,6 @@ router.put(
     }
   }
 );
-
 
 /* ============================================================
    DELETE PLAYER
