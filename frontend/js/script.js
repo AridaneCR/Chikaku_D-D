@@ -19,7 +19,6 @@ function toggleCreateCard(forceOpen = false) {
   }
 }
 
-// 🔥 NUEVO: abrir SIEMPRE en modo crear
 function openCreateForm() {
   resetForm();
   toggleCreateCard(true);
@@ -133,7 +132,7 @@ function addSkillInput(value = "") {
 }
 
 // =============================================================
-// OBJETOS
+// OBJETOS (CON DESCRIPCIÓN)
 // =============================================================
 function initItems() {
   const container = document.getElementById("objectsContainer");
@@ -147,7 +146,15 @@ function initItems() {
 
     div.innerHTML = `
       <label class="label-sm">Objeto ${i}</label>
+
       <input id="item${i}Input" type="file" class="file" />
+
+      <textarea
+        id="item${i}Desc"
+        class="input mt-2 resize-none"
+        rows="2"
+        placeholder="Descripción del objeto..."></textarea>
+
       <img id="previewItem${i}" class="preview mt-3" />
     `;
 
@@ -208,6 +215,13 @@ async function submitCharacter() {
   const skills = [...document.querySelectorAll("#skillsContainer input")]
     .map(i => i.value.trim()).filter(Boolean);
 
+  const itemDescriptions = [];
+
+  for (let i = 1; i <= 6; i++) {
+    const desc = document.getElementById(`item${i}Desc`)?.value.trim();
+    itemDescriptions.push(desc || "");
+  }
+
   const fd = new FormData();
   fd.append("name", name);
   fd.append("life", charLifeInput.value);
@@ -216,6 +230,7 @@ async function submitCharacter() {
   fd.append("exp", charExpInput.value);
   fd.append("level", charLevelInput.value);
   fd.append("skills", JSON.stringify(skills));
+  fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
 
   if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
     fd.append("charImg", charImgInput.files[0]);
@@ -264,6 +279,15 @@ function editPlayer(id) {
 
   skillsContainer.innerHTML = "";
   (player.skills || []).forEach(s => addSkillInput(s));
+
+  initItems();
+
+  if (player.itemDescriptions) {
+    player.itemDescriptions.forEach((desc, i) => {
+      const el = document.getElementById(`item${i + 1}Desc`);
+      if (el) el.value = desc;
+    });
+  }
 
   if (player.img) {
     previewCharMain.src = "data:image/jpeg;base64," + player.img;
