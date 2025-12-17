@@ -132,7 +132,7 @@ function addSkillInput(value = "") {
 }
 
 // =============================================================
-// OBJETOS
+// OBJETOS + DESCRIPCIÓN
 // =============================================================
 function initItems() {
   const container = document.getElementById("objectsContainer");
@@ -176,6 +176,8 @@ function renderPlayersList() {
   list.innerHTML = "";
 
   players.forEach(p => {
+    const skills = Array.isArray(p.skills) ? p.skills : [];
+
     list.innerHTML += `
       <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow">
         <img src="${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}"
@@ -186,7 +188,7 @@ function renderPlayersList() {
         <p>EXP: ${p.exp}</p>
 
         <div class="flex flex-wrap gap-1 mt-2">
-          ${(Array.isArray(p.skills) ? p.skills : []).map(s =>
+          ${skills.map(s =>
             `<span class="px-2 py-1 bg-zinc-800 rounded text-xs">${s}</span>`
           ).join("")}
         </div>
@@ -213,13 +215,14 @@ async function submitCharacter() {
   if (!name) return alert("Nombre obligatorio");
 
   const skills = [...document.querySelectorAll("#skillsContainer input")]
-    .map(i => i.value.trim()).filter(Boolean);
+    .map(i => i.value.trim())
+    .filter(Boolean);
 
   const itemDescriptions = [];
-
   for (let i = 1; i <= 6; i++) {
-    const desc = document.getElementById(`item${i}Desc`)?.value.trim();
-    itemDescriptions.push(desc || "");
+    itemDescriptions.push(
+      document.getElementById(`item${i}Desc`)?.value.trim() || ""
+    );
   }
 
   const fd = new FormData();
@@ -256,7 +259,7 @@ async function submitCharacter() {
 }
 
 // =============================================================
-// EDIT PLAYER (🔥 FIX HABILIDADES LEGACY)
+// EDIT PLAYER (FIX TOTAL)
 // =============================================================
 function editPlayer(id) {
   const player = players.find(p => p._id === id);
@@ -268,7 +271,7 @@ function editPlayer(id) {
   toggleCreateCard(true);
 
   document.querySelector("#createCard h2").innerText = "Editar personaje";
-  document.getElementById("submitCharacterBtn").innerText = "💾 Guardar cambios";
+  submitCharacterBtn.innerText = "💾 Guardar cambios";
 
   charNameInput.value = player.name;
   charLifeInput.value = player.life;
@@ -277,25 +280,24 @@ function editPlayer(id) {
   charExpInput.value = player.exp ?? 0;
   charLevelInput.value = player.level ?? 1;
 
-  // 🔥 FIX DEFINITIVO
+  // ===== SKILLS =====
   skillsContainer.innerHTML = "";
+  (Array.isArray(player.skills) ? player.skills : []).forEach(s => addSkillInput(s));
 
-  let skills = [];
-
-  if (Array.isArray(player.skills)) {
-    skills = player.skills;
-  } else if (typeof player.skills === "string") {
-    skills = player.skills
-      .split(",")
-      .map(s => s.trim())
-      .filter(Boolean);
-  }
-
-  skills.forEach(s => addSkillInput(s));
-
+  // ===== ITEMS =====
   initItems();
 
-  if (player.itemDescriptions) {
+  if (Array.isArray(player.items)) {
+    player.items.forEach((img, i) => {
+      const preview = document.getElementById(`previewItem${i + 1}`);
+      if (preview && img) {
+        preview.src = "data:image/jpeg;base64," + img;
+        preview.classList.remove("hidden");
+      }
+    });
+  }
+
+  if (Array.isArray(player.itemDescriptions)) {
     player.itemDescriptions.forEach((desc, i) => {
       const el = document.getElementById(`item${i + 1}Desc`);
       if (el) el.value = desc;
@@ -316,7 +318,7 @@ function resetForm() {
   editingPlayerId = null;
 
   document.querySelector("#createCard h2").innerText = "Crear nuevo personaje";
-  document.getElementById("submitCharacterBtn").innerText = "🐉 Crear personaje";
+  submitCharacterBtn.innerText = "🐉 Crear personaje";
 
   charNameInput.value = "";
   charLifeInput.value = 10;
