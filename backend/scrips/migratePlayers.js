@@ -1,65 +1,96 @@
+/**
+ * ============================================================
+ * MIGRACIÓN DE JUGADORES
+ * - Convierte skills antiguas a array
+ * - Añade itemDescriptions si no existen
+ * - Limpia datos corruptos
+ * ============================================================
+ */
+
+require("dotenv").config();
+
 const mongoose = require("mongoose");
 const Player = require("../models/player");
 
-// 🔗 Conecta a Mongo (usa la MISMA URI que tu backend)
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
-
-async function migrate() {
+async function migratePlayers() {
   try {
     console.log("🚀 Iniciando migración de jugadores...");
 
+    // 🔐 Comprobación de seguridad
+    if (!process.env.MONGO_URI) {
+      throw new Error("❌ MONGO_URI no está definido en el archivo .env");
+    }
+
+    // 🔌 Conexión a MongoDB
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    console.log("✅ Conectado a MongoDB");
+
     const players = await Player.find();
 
+    if (!players.length) {
+      console.log("ℹ️ No hay jugadores que migrar");
+      process.exit(0);
+    }
+
     for (const player of players) {
-      let changed = false;
+      let modified = false;
 
-      // 🔄 MIGRAR skill1 / skill2 → skills[]
-      if (!Array.isArray(player.skills) || player.skills.length === 0) {
-        const newSkills = [];
-
-        if (player.skill1 && player.skill1.trim() !== "") {
-          newSkills.push(player.skill1.trim());
-        }
-
-        if (player.skill2 && player.skill2.trim() !== "") {
-          newSkills.push(player.skill2.trim());
-        }
-
-        if (newSkills.length > 0) {
-          player.skills = newSkills;
-          changed = true;
-        }
+      // ================================
+      // MIGRAR SKILLS
+      // ================================
+      if (!Array.isArray(player.skills)) {
+        console.log(`🔁 Migrando skills de ${player.name}`);
+        player.skills = [];
+        modified = true;
       }
 
-      // 🧹 ELIMINAR CAMPOS ANTIGUOS
-      if (player.skill1 !== undefined || player.skill2 !== undefined) {
-        player.skill1 = undefined;
-        player.skill2 = undefined;
-        changed = true;
+      // Eliminar valores vacíos
+      const cleanSkills = player.skills.filter(
+        s => typeof s === "string" && s.trim() !== ""
+      );
+
+      if (cleanSkills.length !== player.skills.length) {
+        player.skills = cleanSkills;
+        modified = true;
       }
 
-      // 📦 ASEGURAR itemDescriptions
+      // ================================
+      // MIGRAR DESCRIPCIÓN DE OBJETOS
+      // ================================
       if (!Array.isArray(player.itemDescriptions)) {
+        console.log(`🔁 Migrando itemDescriptions de ${player.name}`);
         player.itemDescriptions = [];
-        changed = true;
+        modified = true;
       }
 
-      if (changed) {
+      // Ajustar longitud a máx 6
+      if (player.itemDescriptions.length > 6) {
+        player.itemDescriptions = player.itemDescriptions.slice(0, 6);
+        modified = true;
+      }
+
+      // ================================
+      // GUARDAR CAMBIOS
+      // ================================
+      if (modified) {
         await player.save();
-        console.log(`✅ Migrado: ${player.name}`);
+        console.log(`✅ Jugador migrado: ${player.name}`);
+      } else {
+        console.log(`✔️ ${player.name} ya estaba correcto`);
       }
     }
 
     console.log("🎉 Migración completada con éxito");
     process.exit(0);
 
-  } catch (err) {
-    console.error("❌ Error en migración:", err);
+  } catch (error) {
+    console.error("💥 ERROR EN MIGRACIÓN:", error);
     process.exit(1);
   }
 }
 
-migrate();
+migratePlayers();

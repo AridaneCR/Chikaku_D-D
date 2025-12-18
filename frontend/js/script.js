@@ -191,8 +191,8 @@ function renderPlayersList() {
 
         <div class="flex flex-wrap gap-1 mt-2">
           ${skills.map(s =>
-            `<span class="px-2 py-1 bg-zinc-800 rounded text-xs">${s}</span>`
-          ).join("")}
+      `<span class="px-2 py-1 bg-zinc-800 rounded text-xs">${s}</span>`
+    ).join("")}
         </div>
 
         <button onclick="editPlayer('${p._id}')"
@@ -225,6 +225,12 @@ async function submitCharacter() {
     itemDescriptions.push(
       document.getElementById(`item${i}Desc`)?.value.trim() || ""
     );
+
+    console.log("ENVIANDO AL BACKEND:", {
+      skills,
+      itemDescriptions
+    });
+
   }
 
   const fd = new FormData();
