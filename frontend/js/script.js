@@ -189,14 +189,26 @@ function renderPlayersList() {
         <p>Vida: ${p.life}</p>
         <p>EXP: ${p.exp}</p>
 
+        <!-- HABILIDADES -->
         <div class="flex flex-wrap gap-1 mt-2">
           ${skills.map(s =>
-      `<span class="px-2 py-1 bg-zinc-800 rounded text-xs">${s}</span>`
-    ).join("")}
+            `<span class="px-2 py-1 bg-zinc-800 rounded text-xs">${s}</span>`
+          ).join("")}
+        </div>
+
+        <!-- 🔥 OBJETOS -->
+        <div class="grid grid-cols-6 gap-1 mt-3">
+          ${(p.items || []).map((item, i) => `
+            <img
+              src="${item ? `data:image/jpeg;base64,${item}` : "/placeholder.png"}"
+              title="${p.itemDescriptions?.[i] || ""}"
+              class="w-10 h-10 object-cover rounded border border-zinc-700 bg-zinc-800 cursor-pointer"
+            />
+          `).join("")}
         </div>
 
         <button onclick="editPlayer('${p._id}')"
-          class="mt-3 w-full bg-green-600 p-2 rounded">
+          class="mt-4 w-full bg-green-600 p-2 rounded">
           Editar
         </button>
 
