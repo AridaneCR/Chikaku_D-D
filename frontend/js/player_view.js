@@ -2,55 +2,39 @@
 // CONFIG
 // =============================================================
 
-const BASE_URL =
-  (window.__env && window.__env.API_URL)
-    ? window.__env.API_URL
-    : "https://chikaku-d-d-ptyl.onrender.com";
+const BASE_URL = (window.__env && window.__env.API_URL)
+  ? window.__env.API_URL
+  : "https://chikaku-d-d-ptyl.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 
 let players = [];
 let isFiltering = false;
+let lastPayload = "";
 
 const playerBoard = document.getElementById("playerBoard");
 
 // =============================================================
-// EXP SYSTEM (5% MÁS DIFÍCIL POR NIVEL)
+// EXP SYSTEM
 // =============================================================
 
 const BASE_EXP = 100;
 
-function safeLevel(level) {
-  level = Number(level);
-  return (!level || level < 1) ? 1 : level;
-}
-
-function safeExp(exp) {
-  exp = Number(exp);
-  return (!exp || exp < 0) ? 0 : exp;
-}
+const safeLevel = l => (!l || l < 1) ? 1 : Number(l);
+const safeExp = e => (!e || e < 0) ? 0 : Number(e);
 
 function expNeededForLevel(level) {
-  level = safeLevel(level);
   return BASE_EXP * Math.pow(1.05, level - 1);
 }
 
 function expProgress(level, totalExp) {
-  level = safeLevel(level);
-  totalExp = safeExp(totalExp);
-
   let expBefore = 0;
-  for (let i = 1; i < level; i++) {
-    expBefore += expNeededForLevel(i);
-  }
-
-  let expCurrent = totalExp - expBefore;
-  if (expCurrent < 0) expCurrent = 0;
-
+  for (let i = 1; i < level; i++) expBefore += expNeededForLevel(i);
+  let current = totalExp - expBefore;
+  if (current < 0) current = 0;
   const required = expNeededForLevel(level);
-  if (expCurrent >= required) expCurrent = 0;
-
-  return Math.min(100, (expCurrent / required) * 100);
+  if (current >= required) current = 0;
+  return Math.min(100, (current / required) * 100);
 }
 
 // =============================================================
@@ -64,40 +48,13 @@ async function fetchJson(url) {
 }
 
 async function loadPlayers() {
-  try {
-    players = await fetchJson(API_PLAYERS);
-    if (!isFiltering) renderPlayerBoard(players);
-  } catch (err) {
-    console.error("Error cargando jugadores:", err);
-  }
+  const data = await fetchJson(API_PLAYERS);
+  const payload = JSON.stringify(data);
+  if (payload === lastPayload) return;
+  lastPayload = payload;
+  players = data;
+  if (!isFiltering) renderPlayerBoard(players);
 }
-
-// =============================================================
-// MODAL OBJETOS
-// =============================================================
-
-function openObjectModal(img, description) {
-  const modal = document.getElementById("objectModal");
-  const modalImg = document.getElementById("objectModalImg");
-  const modalDesc = document.getElementById("objectModalDesc");
-
-  modalImg.src = img || "/placeholder.png";
-  modalDesc.textContent = description || "Sin descripción";
-
-  modal.classList.remove("hidden");
-  modal.classList.add("flex");
-}
-
-function closeObjectModal() {
-  const modal = document.getElementById("objectModal");
-  modal.classList.add("hidden");
-  modal.classList.remove("flex");
-}
-
-// Cerrar con ESC
-window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeObjectModal();
-});
 
 // =============================================================
 // RENDER
@@ -106,12 +63,11 @@ window.addEventListener("keydown", (e) => {
 function renderPlayerBoard(list = players) {
   playerBoard.innerHTML = "";
 
-  list.forEach((p) => {
+  list.forEach(p => {
     const level = safeLevel(p.level);
     const exp = safeExp(p.exp);
-    const expPercent = expProgress(level, exp);
+    const percent = expProgress(level, exp);
     const needed = Math.round(expNeededForLevel(level));
-
     const skills = Array.isArray(p.skills) ? p.skills : [];
 
     const card = document.createElement("div");
@@ -121,48 +77,37 @@ function renderPlayerBoard(list = players) {
     card.innerHTML = `
       <h2 class="text-2xl font-bold mb-2">${p.name} (Nivel ${level})</h2>
 
-      <img 
-        src="${p.img ? `data:image/jpeg;base64,${p.img}` : "/placeholder.png"}"
-        class="w-full h-48 object-cover rounded mb-3"
-      />
+      <img loading="lazy"
+        src="${p.img ? `data:image/jpeg;base64,${p.img}` : '/placeholder.png'}"
+        class="w-full h-48 object-cover rounded mb-3"/>
 
       <p>❤️ Salud: ${p.life}</p>
-
-      <div class="mt-2">
-        <p class="font-semibold mb-1">🌀 Habilidades</p>
-        ${
-          skills.length
-            ? skills.map(s => `<span class="inline-block bg-stone-700 px-2 py-1 rounded text-xs mr-1 mb-1">${s}</span>`).join("")
-            : "<span class='text-xs text-stone-400'>Sin habilidades</span>"
-        }
-      </div>
-
-      <p class="mt-2">🏆 Hitos: ${p.milestones || "-"}</p>
+      <p>🏆 Hitos: ${p.milestones || "-"}</p>
       <p>📜 Características: ${p.attributes || "-"}</p>
 
-      <p class="mt-2">⭐ EXP Total: ${exp}</p>
-      <p class="text-xs text-stone-400 mb-1">
-        EXP necesaria para subir: ${needed}
-      </p>
+      ${
+        skills.length
+          ? `<button
+              onclick='openSkillsModal(${JSON.stringify(skills)})'
+              class="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded text-sm font-semibold">
+              Ver habilidades (${skills.length})
+            </button>`
+          : ""
+      }
 
-      <div class="bg-stone-600 h-5 rounded mt-2">
-        <div class="bg-green-500 h-5 rounded" style="width:${expPercent}%"></div>
+      <p class="mt-3 text-sm">⭐ EXP: ${exp}</p>
+      <p class="text-xs text-stone-400">Necesaria: ${needed}</p>
+
+      <div class="bg-stone-600 h-4 rounded mt-2 overflow-hidden">
+        <div class="bg-green-500 h-4 exp-bar" style="width:${percent}%;"></div>
       </div>
 
-      <p class="mt-1 text-xs text-stone-400">
-        Progreso del nivel actual: ${expPercent.toFixed(1)}%
-      </p>
-
-      <div class="grid grid-cols-6 gap-1 mt-4">
+      <div class="grid grid-cols-6 gap-1 mt-3">
         ${(p.items || []).slice(0, 6).map((item, i) => `
-          <img
-            src="${item ? `data:image/jpeg;base64,${item}` : "/placeholder.png"}"
-            class="w-10 h-10 object-cover rounded border border-stone-700 bg-stone-900 cursor-pointer hover:scale-110 transition"
-            onclick="openObjectModal(
-              '${item ? `data:image/jpeg;base64,${item}` : "/placeholder.png"}',
-              '${(p.itemDescriptions && p.itemDescriptions[i]) || ""}'
-            )"
-          />
+          <img loading="lazy"
+            src="${item ? `data:image/jpeg;base64,${item}` : '/placeholder.png'}"
+            class="w-10 h-10 object-cover rounded border cursor-pointer"
+            onclick="openItemModal('${p.itemDescriptions?.[i] || "Sin descripción"}')"/>
         `).join("")}
       </div>
     `;
@@ -172,26 +117,86 @@ function renderPlayerBoard(list = players) {
 }
 
 // =============================================================
+// MODAL HABILIDADES
+// =============================================================
+
+function openSkillsModal(skills) {
+  closeModal();
+
+  const modal = document.createElement("div");
+  modal.id = "modal";
+  modal.className =
+    "fixed inset-0 bg-black/70 flex items-center justify-center z-50";
+
+  modal.innerHTML = `
+    <div class="bg-zinc-900 rounded-xl p-6 w-96 relative">
+      <button onclick="closeModal()"
+        class="absolute top-2 right-2 text-zinc-400 hover:text-white">✕</button>
+
+      <h3 class="text-xl font-bold mb-4 text-indigo-400">Habilidades</h3>
+
+      <ul class="space-y-2">
+        ${skills.map(s => `
+          <li class="bg-zinc-800 px-3 py-2 rounded">${s}</li>
+        `).join("")}
+      </ul>
+    </div>
+  `;
+
+  modal.addEventListener("click", e => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.body.appendChild(modal);
+}
+
+// =============================================================
+// MODAL ITEMS
+// =============================================================
+
+function openItemModal(text) {
+  closeModal();
+
+  const modal = document.createElement("div");
+  modal.id = "modal";
+  modal.className =
+    "fixed inset-0 bg-black/70 flex items-center justify-center z-50";
+
+  modal.innerHTML = `
+    <div class="bg-zinc-900 rounded-xl p-6 w-96 relative">
+      <button onclick="closeModal()"
+        class="absolute top-2 right-2 text-zinc-400 hover:text-white">✕</button>
+      <h3 class="text-xl font-bold mb-2 text-emerald-400">Objeto</h3>
+      <p>${text}</p>
+    </div>
+  `;
+
+  modal.addEventListener("click", e => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.body.appendChild(modal);
+}
+
+function closeModal() {
+  document.getElementById("modal")?.remove();
+}
+
+// =============================================================
 // SEARCH
 // =============================================================
 
 function searchPlayer() {
-  const nameQuery = document.getElementById("searchName")?.value.toLowerCase() || "";
-  const levelQuery = document.getElementById("searchLevel")?.value || "";
-
-  const results = players.filter(p => {
-    const matchName = nameQuery ? p.name.toLowerCase().includes(nameQuery) : true;
-    const matchLevel = levelQuery ? p.level == levelQuery : true;
-    return matchName && matchLevel;
-  });
-
+  const name = document.getElementById("searchName").value.toLowerCase();
+  const lvl = document.getElementById("searchLevel").value;
   isFiltering = true;
-  renderPlayerBoard(results);
+  renderPlayerBoard(players.filter(p =>
+    (!name || p.name.toLowerCase().includes(name)) &&
+    (!lvl || p.level == lvl)
+  ));
 }
 
 function clearSearch() {
-  document.getElementById("searchName").value = "";
-  document.getElementById("searchLevel").value = "";
   isFiltering = false;
   renderPlayerBoard(players);
 }
@@ -202,12 +207,10 @@ function clearSearch() {
 
 setInterval(() => {
   if (!isFiltering) loadPlayers();
-}, 3000);
+}, 8000);
 
 // =============================================================
 // INIT
 // =============================================================
 
-window.addEventListener("load", () => {
-  loadPlayers();
-});
+window.addEventListener("load", loadPlayers);
