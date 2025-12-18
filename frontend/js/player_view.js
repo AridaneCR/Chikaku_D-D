@@ -71,38 +71,57 @@ function renderPlayerBoard(list = players) {
     const skills = Array.isArray(p.skills) ? p.skills : [];
 
     const card = document.createElement("div");
-    card.className =
-      "inline-block bg-stone-800 p-4 rounded-xl shadow-2xl w-80 text-stone-100 m-2 align-top";
+    card.className = `
+      bg-stone-800 rounded-xl shadow-2xl
+      flex flex-col
+      w-full max-w-sm
+      text-stone-100
+    `;
 
     card.innerHTML = `
-      <h2 class="text-2xl font-bold mb-2">${p.name} (Nivel ${level})</h2>
+      <h2 class="text-xl font-bold mb-2">
+        ${p.name} (Nivel ${level})
+      </h2>
 
-      <img loading="lazy"
-        src="${p.img ? `data:image/jpeg;base64,${p.img}` : '/placeholder.png'}"
-        class="w-full h-48 object-cover rounded mb-3"/>
+      <!-- IMAGEN NORMALIZADA -->
+      <div class="w-full aspect-[4/3] overflow-hidden rounded mb-3">
+        <img loading="lazy"
+          src="${p.img ? `data:image/jpeg;base64,${p.img}` : '/placeholder.png'}"
+          class="w-full h-full object-cover"/>
+      </div>
 
-      <p>❤️ Salud: ${p.life}</p>
-      <p>🏆 Hitos: ${p.milestones || "-"}</p>
-      <p>📜 Características: ${p.attributes || "-"}</p>
+      <!-- CONTENIDO -->
+      <div class="flex-1 space-y-1 text-sm">
+        <p>❤️ Salud: ${p.life}</p>
+        <p>🏆 Hitos: ${p.milestones || "-"}</p>
+        <p>📜 Características: ${p.attributes || "-"}</p>
+      </div>
 
+      <!-- BOTÓN HABILIDADES -->
       ${
         skills.length
           ? `<button
               onclick='openSkillsModal(${JSON.stringify(skills)})'
-              class="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded text-sm font-semibold">
+              class="mt-4 bg-indigo-600 hover:bg-indigo-700
+                     px-3 py-2 rounded text-sm font-semibold">
               Ver habilidades (${skills.length})
             </button>`
           : ""
       }
 
-      <p class="mt-3 text-sm">⭐ EXP: ${exp}</p>
-      <p class="text-xs text-stone-400">Necesaria: ${needed}</p>
+      <!-- EXP -->
+      <div class="mt-4">
+        <p class="text-sm">⭐ EXP: ${exp}</p>
+        <p class="text-xs text-stone-400">Necesaria: ${needed}</p>
 
-      <div class="bg-stone-600 h-4 rounded mt-2 overflow-hidden">
-        <div class="bg-green-500 h-4 exp-bar" style="width:${percent}%;"></div>
+        <div class="bg-stone-600 h-4 rounded mt-2 overflow-hidden">
+          <div class="bg-green-500 h-4 exp-bar"
+               style="width:${percent}%;"></div>
+        </div>
       </div>
 
-      <div class="grid grid-cols-6 gap-1 mt-3">
+      <!-- OBJETOS -->
+      <div class="grid grid-cols-6 gap-1 mt-4">
         ${(p.items || []).slice(0, 6).map((item, i) => `
           <img loading="lazy"
             src="${item ? `data:image/jpeg;base64,${item}` : '/placeholder.png'}"
@@ -115,6 +134,7 @@ function renderPlayerBoard(list = players) {
     playerBoard.appendChild(card);
   });
 }
+
 
 // =============================================================
 // MODAL HABILIDADES
