@@ -5,7 +5,7 @@
  * - Añade itemDescriptions si no existen
  * - Limpia datos corruptos
  * ============================================================
- */
+
 
 require("dotenv").config();
 
@@ -94,3 +94,4 @@ async function migratePlayers() {
 }
 
 migratePlayers();
+ */
