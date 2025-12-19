@@ -3,6 +3,7 @@
 // =============================================================
 let formMode = "create"; // "create" | "edit"
 let editingPlayerId = null;
+let lastSignature = "";
 
 // =============================================================
 // UI ACTIONS
@@ -43,7 +44,7 @@ const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 // =============================================================
-// LOADER
+// LOADER (solo para acciones importantes)
 // =============================================================
 function showLoader() {
   document.getElementById("loader")?.classList.remove("hidden");
@@ -55,14 +56,14 @@ function hideLoader() {
 // =============================================================
 // FETCH
 // =============================================================
-async function fetchJson(url, opts = {}) {
-  showLoader();
+async function fetchJson(url, opts = {}, showLoading = false) {
+  if (showLoading) showLoader();
   try {
     const res = await fetch(url, opts);
     if (!res.ok) throw new Error(await res.text());
     return await res.json();
   } finally {
-    hideLoader();
+    if (showLoading) hideLoader();
   }
 }
 
@@ -132,7 +133,7 @@ function addSkillInput(value = "") {
 }
 
 // =============================================================
-// OBJETOS + DESCRIPCIÓN
+// OBJETOS
 // =============================================================
 function initItems() {
   const container = document.getElementById("objectsContainer");
@@ -146,15 +147,9 @@ function initItems() {
 
     div.innerHTML = `
       <label class="label-sm">Objeto ${i}</label>
-
       <input id="item${i}Input" type="file" class="file" />
-
-      <textarea
-        id="item${i}Desc"
-        class="input mt-2 resize-none"
-        rows="2"
-        placeholder="Descripción del objeto..."></textarea>
-
+      <textarea id="item${i}Desc" class="input mt-2 resize-none"
+        rows="2" placeholder="Descripción del objeto..."></textarea>
       <img id="previewItem${i}" class="preview mt-3" />
     `;
 
@@ -164,10 +159,17 @@ function initItems() {
 }
 
 // =============================================================
-// PLAYERS LIST
+// PLAYERS LIST (OPTIMIZADA)
 // =============================================================
 async function refreshPlayers() {
-  players = await fetchJson(API_PLAYERS);
+  const data = await fetchJson(API_PLAYERS);
+
+  // 🔥 Firma ligera (no base64)
+  const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
+  if (signature === lastSignature) return;
+
+  lastSignature = signature;
+  players = data;
   renderPlayersList();
 }
 
@@ -175,26 +177,40 @@ function renderPlayersList() {
   const list = document.getElementById("playersList");
   list.innerHTML = "";
 
+  const frag = document.createDocumentFragment();
+
   players.forEach(p => {
-    const skills = p.skills?.length
+    const skills = Array.isArray(p.skills)
       ? p.skills
       : [p.skill1, p.skill2].filter(Boolean);
 
-    list.innerHTML += `
-      <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow">
-        <img src="${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}"
-          class="w-full h-40 object-cover rounded mb-2">
+    const card = document.createElement("div");
+    card.className =
+      "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
 
-        <h3 class="font-bold text-lg">${p.name} (Nivel ${p.level})</h3>
-        <p>Vida: ${p.life}</p>
-        <p>EXP: ${p.exp}</p>
+    card.innerHTML = `
+      <img loading="lazy"
+        src="${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}"
+        class="w-full h-40 object-cover rounded mb-2">
 
-        <div class="flex flex-wrap gap-1 mt-2">
-          ${skills.map(s =>
-            `<span class="px-2 py-1 bg-zinc-800 rounded text-xs">${s}</span>`
-          ).join("")}
-        </div>
+      <h3 class="font-bold text-lg truncate">
+        ${p.name} (Nivel ${p.level})
+      </h3>
 
+      <p>❤️ Vida: ${p.life}</p>
+      <p>⭐ EXP: ${p.exp}</p>
+
+      ${
+        skills.length
+          ? `<div class="flex flex-wrap gap-1 mt-2">
+              ${skills.map(s =>
+                `<span class="px-2 py-1 bg-zinc-800 rounded text-xs">${s}</span>`
+              ).join("")}
+            </div>`
+          : ""
+      }
+
+      <div class="mt-auto">
         <button onclick="editPlayer('${p._id}')"
           class="mt-3 w-full bg-green-600 p-2 rounded">
           Editar
@@ -206,31 +222,28 @@ function renderPlayersList() {
         </button>
       </div>
     `;
+
+    frag.appendChild(card);
   });
+
+  list.appendChild(frag);
 }
 
 // =============================================================
-// CREATE / EDIT SUBMIT
+// CREATE / EDIT
 // =============================================================
 async function submitCharacter() {
   const name = charNameInput.value.trim();
   if (!name) return alert("Nombre obligatorio");
 
   const skills = [...document.querySelectorAll("#skillsContainer input")]
-    .map(i => i.value.trim())
-    .filter(Boolean);
+    .map(i => i.value.trim()).filter(Boolean);
 
   const itemDescriptions = [];
   for (let i = 1; i <= 6; i++) {
     itemDescriptions.push(
       document.getElementById(`item${i}Desc`)?.value.trim() || ""
     );
-
-    console.log("ENVIANDO AL BACKEND:", {
-  skills,
-  itemDescriptions
-});
-
   }
 
   const fd = new FormData();
@@ -253,12 +266,12 @@ async function submitCharacter() {
   }
 
   if (formMode === "create") {
-    await fetchJson(API_PLAYERS, { method: "POST", body: fd });
+    await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
   } else {
     await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
       method: "PUT",
       body: fd
-    });
+    }, true);
   }
 
   resetForm();
@@ -267,70 +280,11 @@ async function submitCharacter() {
 }
 
 // =============================================================
-// EDIT PLAYER (🔥 FIX DEFINITIVO)
-// =============================================================
-function editPlayer(id) {
-  const player = players.find(p => p._id === id);
-  if (!player) return;
-
-  formMode = "edit";
-  editingPlayerId = id;
-
-  toggleCreateCard(true);
-
-  document.querySelector("#createCard h2").innerText = "Editar personaje";
-  submitCharacterBtn.innerText = "💾 Guardar cambios";
-
-  charNameInput.value = player.name;
-  charLifeInput.value = player.life;
-  charMilestonesInput.value = player.milestones || "";
-  charAttributesInput.value = player.attributes || "";
-  charExpInput.value = player.exp ?? 0;
-  charLevelInput.value = player.level ?? 1;
-
-  // ===== HABILIDADES (LEGACY + NUEVAS) =====
-  skillsContainer.innerHTML = "";
-  const skills = player.skills?.length
-    ? player.skills
-    : [player.skill1, player.skill2].filter(Boolean);
-
-  skills.forEach(s => addSkillInput(s));
-
-  // ===== OBJETOS =====
-  initItems();
-
-  if (Array.isArray(player.items)) {
-    player.items.forEach((img, i) => {
-      const preview = document.getElementById(`previewItem${i + 1}`);
-      if (preview && img) {
-        preview.src = "data:image/jpeg;base64," + img;
-        preview.classList.remove("hidden");
-      }
-    });
-  }
-
-  if (Array.isArray(player.itemDescriptions)) {
-    player.itemDescriptions.forEach((desc, i) => {
-      const el = document.getElementById(`item${i + 1}Desc`);
-      if (el) el.value = desc;
-    });
-  }
-
-  if (player.img) {
-    previewCharMain.src = "data:image/jpeg;base64," + player.img;
-    previewCharMain.classList.remove("hidden");
-  }
-}
-
-// =============================================================
-// RESET FORM
+// RESET / DELETE
 // =============================================================
 function resetForm() {
   formMode = "create";
   editingPlayerId = null;
-
-  document.querySelector("#createCard h2").innerText = "Crear nuevo personaje";
-  submitCharacterBtn.innerText = "🐉 Crear personaje";
 
   charNameInput.value = "";
   charLifeInput.value = 10;
@@ -346,12 +300,9 @@ function resetForm() {
   initItems();
 }
 
-// =============================================================
-// DELETE
-// =============================================================
 async function deletePlayer(id) {
   if (!confirm("¿Eliminar personaje?")) return;
-  await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" });
+  await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" }, true);
   refreshPlayers();
 }
 

@@ -10,7 +10,8 @@ const API_PLAYERS = `${BASE_URL}/api/players`;
 
 let players = [];
 let isFiltering = false;
-let lastPayload = "";
+let lastSignature = ""; // 🔥 firma ligera (NO base64)
+let firstLoad = true;
 
 const playerBoard = document.getElementById("playerBoard");
 
@@ -23,9 +24,8 @@ const BASE_EXP = 100;
 const safeLevel = l => (!l || l < 1) ? 1 : Number(l);
 const safeExp = e => (!e || e < 0) ? 0 : Number(e);
 
-function expNeededForLevel(level) {
-  return BASE_EXP * Math.pow(1.05, level - 1);
-}
+const expNeededForLevel = lvl =>
+  BASE_EXP * Math.pow(1.05, lvl - 1);
 
 function expProgress(level, totalExp) {
   let expBefore = 0;
@@ -33,12 +33,11 @@ function expProgress(level, totalExp) {
   let current = totalExp - expBefore;
   if (current < 0) current = 0;
   const required = expNeededForLevel(level);
-  if (current >= required) current = 0;
   return Math.min(100, (current / required) * 100);
 }
 
 // =============================================================
-// SKELETON
+// SKELETON (solo primera carga)
 // =============================================================
 
 function showSkeleton(count = 8) {
@@ -55,8 +54,7 @@ function showSkeleton(count = 8) {
       <div class="h-44 bg-stone-700 rounded mb-3"></div>
       <div class="h-4 bg-stone-700 rounded mb-2"></div>
       <div class="h-4 bg-stone-700 rounded mb-2"></div>
-      <div class="h-4 bg-stone-700 rounded mb-4"></div>
-      <div class="grid grid-cols-6 gap-1">
+      <div class="grid grid-cols-6 gap-1 mt-4">
         ${"<div class='h-10 bg-stone-700 rounded'></div>".repeat(6)}
       </div>
     `;
@@ -69,23 +67,32 @@ function showSkeleton(count = 8) {
 // =============================================================
 
 async function fetchJson(url) {
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
+function buildSignature(list) {
+  // 🔥 SOLO datos ligeros
+  return list
+    .map(p => `${p._id}:${p.updatedAt}`)
+    .join("|");
+}
+
 async function loadPlayers() {
   try {
-    showSkeleton();
+    if (firstLoad) showSkeleton();
 
     const data = await fetchJson(API_PLAYERS);
-    const payload = JSON.stringify(data);
+    const signature = buildSignature(data);
 
-    if (payload === lastPayload) return;
-    lastPayload = payload;
+    if (signature === lastSignature) return;
 
+    lastSignature = signature;
     players = data;
+
     if (!isFiltering) renderPlayerBoard(players);
+    firstLoad = false;
   } catch (err) {
     console.error("Error cargando jugadores:", err);
   }
@@ -106,7 +113,6 @@ function renderPlayerBoard(list = players) {
     const level = safeLevel(p.level);
     const exp = safeExp(p.exp);
     const percent = expProgress(level, exp);
-    const needed = Math.round(expNeededForLevel(level));
     const skills = Array.isArray(p.skills) ? p.skills : [];
 
     const card = document.createElement("div");
@@ -120,7 +126,7 @@ function renderPlayerBoard(list = players) {
 
       <img loading="lazy"
         src="${p.img ? `data:image/jpeg;base64,${p.img}` : '/placeholder.png'}"
-        class="w-full h-44 object-cover object-center rounded mb-3"/>
+        class="w-full h-44 object-cover rounded mb-3"/>
 
       <p class="text-sm">❤️ Salud: ${p.life}</p>
       <p class="text-sm">🏆 ${p.milestones || "-"}</p>
@@ -136,8 +142,7 @@ function renderPlayerBoard(list = players) {
       }
 
       <div class="mt-auto">
-        <p class="text-xs mt-2">⭐ EXP: ${exp}</p>
-        <div class="bg-stone-600 h-3 rounded mt-1 overflow-hidden">
+        <div class="bg-stone-600 h-3 rounded mt-2 overflow-hidden">
           <div class="bg-green-500 h-3 exp-bar" style="width:${percent}%;"></div>
         </div>
 
@@ -165,8 +170,8 @@ function renderPlayerBoard(list = players) {
 function searchPlayer() {
   const name = document.getElementById("searchName").value.toLowerCase();
   const lvl = document.getElementById("searchLevel").value;
-
   isFiltering = true;
+
   renderPlayerBoard(players.filter(p =>
     (!name || p.name.toLowerCase().includes(name)) &&
     (!lvl || p.level == lvl)
@@ -184,7 +189,7 @@ function clearSearch() {
 
 setInterval(() => {
   if (!isFiltering) loadPlayers();
-}, 8000);
+}, 10000);
 
 // =============================================================
 // INIT
