@@ -4,7 +4,7 @@
 
 const BASE_URL = (window.__env && window.__env.API_URL)
   ? window.__env.API_URL
-  : "https://chikaku-d-d-ptyl.onrender.com";
+  : "https://chikaku-d-d-backend-pbe.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 
@@ -38,6 +38,33 @@ function expProgress(level, totalExp) {
 }
 
 // =============================================================
+// SKELETON
+// =============================================================
+
+function showSkeleton(count = 8) {
+  playerBoard.innerHTML = "";
+  playerBoard.className =
+    "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
+
+  for (let i = 0; i < count; i++) {
+    const sk = document.createElement("div");
+    sk.className =
+      "animate-pulse bg-stone-800 rounded-xl p-4 h-[420px]";
+    sk.innerHTML = `
+      <div class="h-6 bg-stone-700 rounded mb-3"></div>
+      <div class="h-44 bg-stone-700 rounded mb-3"></div>
+      <div class="h-4 bg-stone-700 rounded mb-2"></div>
+      <div class="h-4 bg-stone-700 rounded mb-2"></div>
+      <div class="h-4 bg-stone-700 rounded mb-4"></div>
+      <div class="grid grid-cols-6 gap-1">
+        ${"<div class='h-10 bg-stone-700 rounded'></div>".repeat(6)}
+      </div>
+    `;
+    playerBoard.appendChild(sk);
+  }
+}
+
+// =============================================================
 // FETCH
 // =============================================================
 
@@ -48,12 +75,20 @@ async function fetchJson(url) {
 }
 
 async function loadPlayers() {
-  const data = await fetchJson(API_PLAYERS);
-  const payload = JSON.stringify(data);
-  if (payload === lastPayload) return;
-  lastPayload = payload;
-  players = data;
-  if (!isFiltering) renderPlayerBoard(players);
+  try {
+    showSkeleton();
+
+    const data = await fetchJson(API_PLAYERS);
+    const payload = JSON.stringify(data);
+
+    if (payload === lastPayload) return;
+    lastPayload = payload;
+
+    players = data;
+    if (!isFiltering) renderPlayerBoard(players);
+  } catch (err) {
+    console.error("Error cargando jugadores:", err);
+  }
 }
 
 // =============================================================
@@ -62,6 +97,10 @@ async function loadPlayers() {
 
 function renderPlayerBoard(list = players) {
   playerBoard.innerHTML = "";
+  playerBoard.className =
+    "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
+
+  const frag = document.createDocumentFragment();
 
   list.forEach(p => {
     const level = safeLevel(p.level);
@@ -72,114 +111,51 @@ function renderPlayerBoard(list = players) {
 
     const card = document.createElement("div");
     card.className =
-      "inline-block bg-stone-800 p-4 rounded-xl shadow-2xl w-80 text-stone-100 m-2 align-top";
+      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[420px]";
 
     card.innerHTML = `
-      <h2 class="text-2xl font-bold mb-2">${p.name} (Nivel ${level})</h2>
+      <h2 class="text-lg font-bold mb-2 truncate">
+        ${p.name} (Nivel ${level})
+      </h2>
 
       <img loading="lazy"
         src="${p.img ? `data:image/jpeg;base64,${p.img}` : '/placeholder.png'}"
-        class="w-full h-48 object-cover rounded mb-3"/>
+        class="w-full h-44 object-cover object-center rounded mb-3"/>
 
-      <p>❤️ Salud: ${p.life}</p>
-      <p>🏆 Hitos: ${p.milestones || "-"}</p>
-      <p>📜 Características: ${p.attributes || "-"}</p>
+      <p class="text-sm">❤️ Salud: ${p.life}</p>
+      <p class="text-sm">🏆 ${p.milestones || "-"}</p>
 
       ${
         skills.length
           ? `<button
               onclick='openSkillsModal(${JSON.stringify(skills)})'
-              class="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded text-sm font-semibold">
+              class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
               Ver habilidades (${skills.length})
             </button>`
           : ""
       }
 
-      <p class="mt-3 text-sm">⭐ EXP: ${exp}</p>
-      <p class="text-xs text-stone-400">Necesaria: ${needed}</p>
+      <div class="mt-auto">
+        <p class="text-xs mt-2">⭐ EXP: ${exp}</p>
+        <div class="bg-stone-600 h-3 rounded mt-1 overflow-hidden">
+          <div class="bg-green-500 h-3 exp-bar" style="width:${percent}%;"></div>
+        </div>
 
-      <div class="bg-stone-600 h-4 rounded mt-2 overflow-hidden">
-        <div class="bg-green-500 h-4 exp-bar" style="width:${percent}%;"></div>
-      </div>
-
-      <div class="grid grid-cols-6 gap-1 mt-3">
-        ${(p.items || []).slice(0, 6).map((item, i) => `
-          <img loading="lazy"
-            src="${item ? `data:image/jpeg;base64,${item}` : '/placeholder.png'}"
-            class="w-10 h-10 object-cover rounded border cursor-pointer"
-            onclick="openItemModal('${p.itemDescriptions?.[i] || "Sin descripción"}')"/>
-        `).join("")}
+        <div class="grid grid-cols-6 gap-1 mt-3">
+          ${(p.items || []).slice(0, 6).map((item, i) => `
+            <img loading="lazy"
+              src="${item ? `data:image/jpeg;base64,${item}` : '/placeholder.png'}"
+              class="w-10 h-10 object-cover rounded border cursor-pointer"
+              onclick="openItemModal('${p.itemDescriptions?.[i] || "Sin descripción"}')"/>
+          `).join("")}
+        </div>
       </div>
     `;
 
-    playerBoard.appendChild(card);
-  });
-}
-
-// =============================================================
-// MODAL HABILIDADES
-// =============================================================
-
-function openSkillsModal(skills) {
-  closeModal();
-
-  const modal = document.createElement("div");
-  modal.id = "modal";
-  modal.className =
-    "fixed inset-0 bg-black/70 flex items-center justify-center z-50";
-
-  modal.innerHTML = `
-    <div class="bg-zinc-900 rounded-xl p-6 w-96 relative">
-      <button onclick="closeModal()"
-        class="absolute top-2 right-2 text-zinc-400 hover:text-white">✕</button>
-
-      <h3 class="text-xl font-bold mb-4 text-indigo-400">Habilidades</h3>
-
-      <ul class="space-y-2">
-        ${skills.map(s => `
-          <li class="bg-zinc-800 px-3 py-2 rounded">${s}</li>
-        `).join("")}
-      </ul>
-    </div>
-  `;
-
-  modal.addEventListener("click", e => {
-    if (e.target === modal) closeModal();
+    frag.appendChild(card);
   });
 
-  document.body.appendChild(modal);
-}
-
-// =============================================================
-// MODAL ITEMS
-// =============================================================
-
-function openItemModal(text) {
-  closeModal();
-
-  const modal = document.createElement("div");
-  modal.id = "modal";
-  modal.className =
-    "fixed inset-0 bg-black/70 flex items-center justify-center z-50";
-
-  modal.innerHTML = `
-    <div class="bg-zinc-900 rounded-xl p-6 w-96 relative">
-      <button onclick="closeModal()"
-        class="absolute top-2 right-2 text-zinc-400 hover:text-white">✕</button>
-      <h3 class="text-xl font-bold mb-2 text-emerald-400">Objeto</h3>
-      <p>${text}</p>
-    </div>
-  `;
-
-  modal.addEventListener("click", e => {
-    if (e.target === modal) closeModal();
-  });
-
-  document.body.appendChild(modal);
-}
-
-function closeModal() {
-  document.getElementById("modal")?.remove();
+  playerBoard.appendChild(frag);
 }
 
 // =============================================================
@@ -189,6 +165,7 @@ function closeModal() {
 function searchPlayer() {
   const name = document.getElementById("searchName").value.toLowerCase();
   const lvl = document.getElementById("searchLevel").value;
+
   isFiltering = true;
   renderPlayerBoard(players.filter(p =>
     (!name || p.name.toLowerCase().includes(name)) &&

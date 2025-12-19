@@ -41,3 +41,8 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
+
+// keepalive
+setInterval(() => {
+  fetch("https://TU_BACKEND.onrender.com/api/players")
+}, 10 * 60 * 1000); // cada 10 min
