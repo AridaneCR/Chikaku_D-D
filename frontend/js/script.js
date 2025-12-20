@@ -20,7 +20,7 @@ const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 // =============================================================
-// DOM REFERENCES  🔥 CRÍTICO
+// DOM REFERENCES (CRÍTICO)
 // =============================================================
 const charNameInput = document.getElementById("charNameInput");
 const charLifeInput = document.getElementById("charLifeInput");
@@ -43,7 +43,6 @@ const createCard = document.getElementById("createCard");
 // =============================================================
 function toggleCreateCard(forceOpen = false) {
   if (!createCard) return;
-
   if (forceOpen) {
     createCard.classList.remove("hidden");
     createCard.scrollIntoView({ behavior: "smooth" });
@@ -112,7 +111,6 @@ function addPreview(inputId, previewId) {
 // =============================================================
 function addSkillInput(value = "") {
   if (!skillsContainer) return;
-
   if (skillsContainer.children.length >= 8) {
     alert("Máximo 8 habilidades");
     return;
@@ -130,7 +128,6 @@ function addSkillInput(value = "") {
       ✕
     </button>
   `;
-
   skillsContainer.appendChild(div);
 }
 
@@ -167,13 +164,8 @@ function initItems() {
 // =============================================================
 async function refreshPlayers() {
   const data = await fetchJson(API_PLAYERS);
+  if (!Array.isArray(data)) return;
 
-  if (!Array.isArray(data)) {
-    console.error("Respuesta inválida del backend:", data);
-    return;
-  }
-
-  // 🔥 Firma ligera (sin base64)
   const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
   if (signature === lastSignature) return;
 
@@ -183,15 +175,11 @@ async function refreshPlayers() {
 }
 
 function renderPlayersList() {
-  if (!playersList) return;
-
   playersList.innerHTML = "";
   const frag = document.createDocumentFragment();
 
   players.forEach(p => {
-    const skills = Array.isArray(p.skills)
-      ? p.skills
-      : [p.skill1, p.skill2].filter(Boolean);
+    const skills = Array.isArray(p.skills) ? p.skills : [];
 
     const card = document.createElement("div");
     card.className =
@@ -239,15 +227,58 @@ function renderPlayersList() {
 }
 
 // =============================================================
-// CREATE / EDIT
+// EDIT PLAYER  ✅ FIX DEFINITIVO
+// =============================================================
+function editPlayer(id) {
+  const player = players.find(p => p._id === id);
+  if (!player) return;
+
+  formMode = "edit";
+  editingPlayerId = id;
+  toggleCreateCard(true);
+
+  submitCharacterBtn.innerText = "💾 Guardar cambios";
+
+  charNameInput.value = player.name || "";
+  charLifeInput.value = player.life ?? 10;
+  charMilestonesInput.value = player.milestones || "";
+  charAttributesInput.value = player.attributes || "";
+  charExpInput.value = player.exp ?? 0;
+  charLevelInput.value = player.level ?? 1;
+
+  skillsContainer.innerHTML = "";
+  (player.skills || []).forEach(s => addSkillInput(s));
+
+  initItems();
+
+  (player.items || []).forEach((img, i) => {
+    const p = document.getElementById(`previewItem${i + 1}`);
+    if (p && img) {
+      p.src = "data:image/jpeg;base64," + img;
+      p.classList.remove("hidden");
+    }
+  });
+
+  (player.itemDescriptions || []).forEach((d, i) => {
+    const t = document.getElementById(`item${i + 1}Desc`);
+    if (t) t.value = d;
+  });
+
+  if (player.img) {
+    previewCharMain.src = "data:image/jpeg;base64," + player.img;
+    previewCharMain.classList.remove("hidden");
+  }
+}
+
+// =============================================================
+// CREATE / UPDATE
 // =============================================================
 async function submitCharacter() {
   const name = charNameInput.value.trim();
   if (!name) return alert("Nombre obligatorio");
 
   const skills = [...skillsContainer.querySelectorAll("input")]
-    .map(i => i.value.trim())
-    .filter(Boolean);
+    .map(i => i.value.trim()).filter(Boolean);
 
   const itemDescriptions = [];
   for (let i = 1; i <= 6; i++) {
@@ -290,7 +321,7 @@ async function submitCharacter() {
 }
 
 // =============================================================
-// EDIT / RESET / DELETE
+// RESET / DELETE
 // =============================================================
 function resetForm() {
   formMode = "create";
