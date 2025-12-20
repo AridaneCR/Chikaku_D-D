@@ -1,45 +1,92 @@
 const express = require("express");
 const router = express.Router();
-const Player = require("../models/player");
+const multer = require("multer");
 const crypto = require("crypto");
+const Player = require("../models/player");
 
 // ============================================================
-// GET ALL PLAYERS – CACHE + ETAG REAL
+// MULTER
+// ============================================================
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+function toBase64(buffer) {
+  return buffer ? buffer.toString("base64") : null;
+}
+
+// ============================================================
+// CACHE EN MEMORIA (🔥 CLAVE DEL RENDIMIENTO)
+// ============================================================
+
+let playersCache = {
+  data: null,
+  etag: null,
+  timestamp: 0,
+};
+
+const CACHE_TTL = 10_000; // 10 segundos
+
+function buildETag(players) {
+  const signature = players
+    .map(p => `${p._id}:${p.updatedAt?.getTime() || 0}`)
+    .join("|");
+
+  return crypto.createHash("sha1").update(signature).digest("hex");
+}
+
+function invalidateCache() {
+  playersCache.data = null;
+  playersCache.etag = null;
+  playersCache.timestamp = 0;
+}
+
+// ============================================================
+// GET ALL PLAYERS (CACHE + ETAG REAL)
 // ============================================================
 
 router.get("/", async (req, res) => {
   try {
-    const players = await Player.find().sort({ createdAt: -1 }).lean();
+    const now = Date.now();
 
-    // 🔥 Generar firma ligera SOLO con _id + updatedAt
-    const signature = players
-      .map(p => `${p._id}:${p.updatedAt?.getTime() || 0}`)
-      .join("|");
+    // 🔥 1. Cache válida
+    if (
+      playersCache.data &&
+      now - playersCache.timestamp < CACHE_TTL
+    ) {
+      if (req.headers["if-none-match"] === playersCache.etag) {
+        return res.status(304).end();
+      }
 
-    // 🔐 Hash corto → ETag
-    const etag = crypto
-      .createHash("sha1")
-      .update(signature)
-      .digest("hex");
-
-    // 📦 Cache headers
-    res.setHeader("ETag", etag);
-    res.setHeader("Cache-Control", "private, max-age=0, must-revalidate");
-
-    // 🚫 Si el navegador ya tiene esta versión
-    if (req.headers["if-none-match"] === etag) {
-      return res.status(304).end();
+      return res
+        .set("ETag", playersCache.etag)
+        .set("Cache-Control", "private, max-age=0, must-revalidate")
+        .json(playersCache.data);
     }
 
-    res.json(players);
+    // 🐢 2. MongoDB
+    const players = await Player.find()
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const etag = buildETag(players);
+
+    // 🧠 3. Guardar cache
+    playersCache = {
+      data: players,
+      etag,
+      timestamp: now,
+    };
+
+    res
+      .set("ETag", etag)
+      .set("Cache-Control", "private, max-age=0, must-revalidate")
+      .json(players);
+
   } catch (err) {
     console.error("GET PLAYERS ERROR:", err);
     res.status(500).json({ error: "Error obteniendo jugadores" });
   }
 });
-
-module.exports = router;
-
 
 // ============================================================
 // GET PLAYER BY ID
@@ -70,10 +117,7 @@ router.post(
   ]),
   async (req, res) => {
     try {
-      const skills = req.body.skills
-        ? JSON.parse(req.body.skills)
-        : [];
-
+      const skills = req.body.skills ? JSON.parse(req.body.skills) : [];
       const itemDescriptions = req.body.itemDescriptions
         ? JSON.parse(req.body.itemDescriptions)
         : [];
@@ -83,7 +127,7 @@ router.post(
         : null;
 
       const items = req.files?.items
-        ? req.files.items.map((f) => toBase64(f.buffer))
+        ? req.files.items.map(f => toBase64(f.buffer))
         : [];
 
       const player = new Player({
@@ -101,6 +145,9 @@ router.post(
       });
 
       const saved = await player.save();
+
+      invalidateCache(); // 🔥
+
       res.json(saved);
     } catch (err) {
       console.error("CREATE PLAYER ERROR:", err);
@@ -111,7 +158,6 @@ router.post(
 
 // ============================================================
 // UPDATE PLAYER
-// - No borra objetos existentes
 // ============================================================
 
 router.put(
@@ -127,49 +173,43 @@ router.put(
         return res.status(404).json({ error: "Jugador no encontrado" });
 
       player.name = req.body.name ?? player.name;
-      player.life =
-        req.body.life !== undefined
-          ? Number(req.body.life)
-          : player.life;
+      player.life = req.body.life !== undefined
+        ? Number(req.body.life)
+        : player.life;
 
       player.milestones = req.body.milestones ?? player.milestones;
       player.attributes = req.body.attributes ?? player.attributes;
-      player.exp =
-        req.body.exp !== undefined
-          ? Number(req.body.exp)
-          : player.exp;
+      player.exp = req.body.exp !== undefined
+        ? Number(req.body.exp)
+        : player.exp;
 
-      player.level =
-        req.body.level !== undefined
-          ? Number(req.body.level)
-          : player.level;
+      player.level = req.body.level !== undefined
+        ? Number(req.body.level)
+        : player.level;
 
-      // ✅ Skills
       if (req.body.skills) {
         player.skills = JSON.parse(req.body.skills);
       }
 
-      // ✅ Descripciones de objetos
       if (req.body.itemDescriptions) {
-        player.itemDescriptions = JSON.parse(
-          req.body.itemDescriptions
-        );
+        player.itemDescriptions = JSON.parse(req.body.itemDescriptions);
       }
 
-      // ✅ Imagen principal
       if (req.files?.charImg?.[0]) {
         player.img = toBase64(req.files.charImg[0].buffer);
       }
 
-      // ✅ Añadir objetos nuevos sin borrar los antiguos
       if (req.files?.items?.length) {
-        const newItems = req.files.items.map((f) =>
+        const newItems = req.files.items.map(f =>
           toBase64(f.buffer)
         );
         player.items = [...player.items, ...newItems].slice(0, 6);
       }
 
       const saved = await player.save();
+
+      invalidateCache(); // 🔥
+
       res.json(saved);
     } catch (err) {
       console.error("UPDATE PLAYER ERROR:", err);
@@ -187,6 +227,8 @@ router.delete("/:id", async (req, res) => {
     const deleted = await Player.findByIdAndDelete(req.params.id);
     if (!deleted)
       return res.status(404).json({ error: "Jugador no encontrado" });
+
+    invalidateCache(); // 🔥
 
     res.json({ ok: true });
   } catch (err) {
