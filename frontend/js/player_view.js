@@ -39,7 +39,7 @@ function expProgress(level, totalExp) {
 }
 
 // =============================================================
-// SKELETON LOADER (solo primera carga)
+// SKELETON LOADER
 // =============================================================
 
 function showSkeleton(count = 8) {
@@ -50,10 +50,11 @@ function showSkeleton(count = 8) {
   for (let i = 0; i < count; i++) {
     const sk = document.createElement("div");
     sk.className =
-      "animate-pulse bg-stone-800 rounded-xl p-4 h-[420px]";
+      "animate-pulse bg-stone-800 rounded-xl p-4 h-[440px]";
     sk.innerHTML = `
       <div class="h-6 bg-stone-700 rounded mb-3"></div>
       <div class="h-44 bg-stone-700 rounded mb-3"></div>
+      <div class="h-4 bg-stone-700 rounded mb-2"></div>
       <div class="h-4 bg-stone-700 rounded mb-2"></div>
       <div class="h-4 bg-stone-700 rounded mb-2"></div>
       <div class="grid grid-cols-6 gap-1 mt-4">
@@ -74,7 +75,6 @@ function preloadImages(list) {
       const img = new Image();
       img.src = `data:image/jpeg;base64,${p.img}`;
     }
-
     (p.items || []).forEach(item => {
       if (item) {
         const img = new Image();
@@ -85,23 +85,18 @@ function preloadImages(list) {
 }
 
 // =============================================================
-// FETCH (ETag compatible)
+// FETCH
 // =============================================================
 
 async function fetchJson(url) {
   const res = await fetch(url, { cache: "no-cache" });
-
-  // 🔥 Backend: 304 Not Modified
   if (res.status === 304) return null;
-
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 function buildSignature(list) {
-  return list
-    .map(p => `${p._id}:${p.updatedAt}`)
-    .join("|");
+  return list.map(p => `${p._id}:${p.updatedAt}`).join("|");
 }
 
 // =============================================================
@@ -124,7 +119,6 @@ async function loadPlayers() {
     preloadImages(players);
 
     if (!isFiltering) renderPlayerBoard(players);
-
     firstLoad = false;
   } catch (err) {
     console.error("Error cargando jugadores:", err);
@@ -150,7 +144,7 @@ function renderPlayerBoard(list = players) {
 
     const card = document.createElement("div");
     card.className =
-      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[420px]";
+      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[440px]";
 
     card.innerHTML = `
       <h2 class="text-lg font-bold mb-2 truncate">
@@ -163,23 +157,30 @@ function renderPlayerBoard(list = players) {
         class="w-full h-44 object-cover object-center rounded mb-3"
       />
 
-      <p class="text-sm">❤️ Salud: ${p.life}</p>
-      <p class="text-sm">🏆 ${p.milestones || "-"}</p>
+      <div class="space-y-1 text-sm">
+        <p>❤️ <strong>Salud:</strong> ${p.life}</p>
+        <p>🏆 <strong>Hitos:</strong> ${p.milestones || "-"}</p>
+        <p>📜 <strong>Características:</strong> ${p.attributes || "-"}</p>
+        <p>⭐ <strong>EXP:</strong> ${exp}</p>
+      </div>
 
       ${
         skills.length
           ? `<button
               onclick='openSkillsModal(${JSON.stringify(skills)})'
-              class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
+              class="mt-3 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs w-full">
               Ver habilidades (${skills.length})
             </button>`
           : ""
       }
 
       <div class="mt-auto">
-        <div class="bg-stone-600 h-3 rounded mt-2 overflow-hidden">
-          <div class="bg-green-500 h-3 exp-bar" style="width:${percent}%;"></div>
+        <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
+          <div class="bg-green-500 h-3" style="width:${percent}%;"></div>
         </div>
+        <p class="text-xs text-stone-400 mt-1">
+          Progreso de nivel: ${percent.toFixed(1)}%
+        </p>
 
         <div class="grid grid-cols-6 gap-1 mt-3">
           ${(p.items || []).slice(0, 6).map((item, i) => `
