@@ -61,16 +61,17 @@ const PlayerSchema = new mongoose.Schema(
     // 🔥 IMAGEN PRINCIPAL
     // -------------------------
 
-    // ✅ NUEVO → Cloudinary URL
+    // ✅ NUEVO → URL Cloudinary
     img: {
       type: String,
       default: null,
     },
 
-    // 🟡 LEGACY → base64 (se eliminará tras migración)
+    // 🟡 LEGACY → base64 (migración)
     imgBase64: {
       type: String,
       default: null,
+      select: false, // 🔒 no se envía salvo que se pida explícito
     },
 
     // -------------------------
@@ -87,6 +88,7 @@ const PlayerSchema = new mongoose.Schema(
     itemsBase64: {
       type: [String],
       default: [],
+      select: false,
     },
 
     itemDescriptions: {
@@ -95,36 +97,8 @@ const PlayerSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true, // createdAt + updatedAt (🔥 para cache + ETag)
+    timestamps: true, // 🔥 necesario para cache + ETag
   }
 );
-
-// ============================================================
-// 🔁 NORMALIZACIÓN AUTOMÁTICA
-// (para que el frontend SIEMPRE reciba lo mismo)
-// ============================================================
-
-PlayerSchema.methods.toJSON = function () {
-  const obj = this.toObject();
-
-  // Imagen principal
-  obj.img =
-    obj.img ||
-    (obj.imgBase64 ? `data:image/jpeg;base64,${obj.imgBase64}` : null);
-
-  // Objetos
-  obj.items =
-    obj.items && obj.items.length
-      ? obj.items
-      : (obj.itemsBase64 || []).map((b64) =>
-          b64 ? `data:image/jpeg;base64,${b64}` : null
-        );
-
-  // Limpio legacy si quieres ocultarlo al frontend
-  delete obj.imgBase64;
-  delete obj.itemsBase64;
-
-  return obj;
-};
 
 module.exports = mongoose.model("Player", PlayerSchema);
