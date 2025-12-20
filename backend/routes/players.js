@@ -4,40 +4,50 @@ const multer = require("multer");
 const crypto = require("crypto");
 const Player = require("../models/player");
 
+const upload = multer({ storage: multer.memoryStorage() });
+
 // ============================================================
-// MULTER
+// 🔥 CACHE EN MEMORIA
 // ============================================================
 
-const upload = multer({ storage: multer.memoryStorage() });
+let CACHE = {
+  etag: null,
+  data: null,
+};
+
+function invalidateCache() {
+  CACHE = { etag: null, data: null };
+}
+
+// ============================================================
+// UTIL
+// ============================================================
 
 function toBase64(buffer) {
   return buffer ? buffer.toString("base64") : null;
 }
 
 // ============================================================
-// CACHE EN MEMORIA (🔥 CLAVE DEL RENDIMIENTO)
+// NORMALIZADOR (CDN → BASE64 FALLBACK)
 // ============================================================
 
-let playersCache = {
-  data: null,
-  etag: null,
-  timestamp: 0,
-};
+function normalizePlayer(p) {
+  return {
+    ...p,
 
-const CACHE_TTL = 10_000; // 10 segundos
+    // 🖼️ Imagen principal
+    img:
+      p.imgUrl ||
+      (p.imgBase64 ? `data:image/jpeg;base64,${p.imgBase64}` : null),
 
-function buildETag(players) {
-  const signature = players
-    .map(p => `${p._id}:${p.updatedAt?.getTime() || 0}`)
-    .join("|");
-
-  return crypto.createHash("sha1").update(signature).digest("hex");
-}
-
-function invalidateCache() {
-  playersCache.data = null;
-  playersCache.etag = null;
-  playersCache.timestamp = 0;
+    // 🎒 Objetos
+    items:
+      p.itemsUrls?.length
+        ? p.itemsUrls
+        : (p.itemsBase64 || []).map(b64 =>
+            b64 ? `data:image/jpeg;base64,${b64}` : null
+          ),
+  };
 }
 
 // ============================================================
@@ -46,42 +56,49 @@ function invalidateCache() {
 
 router.get("/", async (req, res) => {
   try {
-    const now = Date.now();
-
-    // 🔥 1. Cache válida
-    if (
-      playersCache.data &&
-      now - playersCache.timestamp < CACHE_TTL
-    ) {
-      if (req.headers["if-none-match"] === playersCache.etag) {
-        return res.status(304).end();
-      }
-
-      return res
-        .set("ETag", playersCache.etag)
-        .set("Cache-Control", "private, max-age=0, must-revalidate")
-        .json(playersCache.data);
+    // 1️⃣ ETag coincide → 304
+    if (CACHE.etag && req.headers["if-none-match"] === CACHE.etag) {
+      return res.status(304).end();
     }
 
-    // 🐢 2. MongoDB
+    // 2️⃣ Cache caliente
+    if (CACHE.data) {
+      res.setHeader("ETag", CACHE.etag);
+      res.setHeader("Cache-Control", "private, must-revalidate");
+      return res.json(CACHE.data);
+    }
+
+    // 3️⃣ DB
     const players = await Player.find()
       .sort({ createdAt: -1 })
       .lean();
 
-    const etag = buildETag(players);
+    const normalized = players.map(normalizePlayer);
 
-    // 🧠 3. Guardar cache
-    playersCache = {
-      data: players,
+    // 4️⃣ Firma ligera
+    const signature = normalized
+      .map(p => `${p._id}:${p.updatedAt?.getTime() || 0}`)
+      .join("|");
+
+    const etag = crypto
+      .createHash("sha1")
+      .update(signature)
+      .digest("hex");
+
+    // 5️⃣ Guardar cache
+    CACHE = {
       etag,
-      timestamp: now,
+      data: normalized,
     };
 
-    res
-      .set("ETag", etag)
-      .set("Cache-Control", "private, max-age=0, must-revalidate")
-      .json(players);
+    res.setHeader("ETag", etag);
+    res.setHeader("Cache-Control", "private, must-revalidate");
 
+    if (req.headers["if-none-match"] === etag) {
+      return res.status(304).end();
+    }
+
+    res.json(normalized);
   } catch (err) {
     console.error("GET PLAYERS ERROR:", err);
     res.status(500).json({ error: "Error obteniendo jugadores" });
@@ -94,11 +111,11 @@ router.get("/", async (req, res) => {
 
 router.get("/id/:id", async (req, res) => {
   try {
-    const player = await Player.findById(req.params.id);
+    const player = await Player.findById(req.params.id).lean();
     if (!player)
       return res.status(404).json({ error: "Jugador no encontrado" });
 
-    res.json(player);
+    res.json(normalizePlayer(player));
   } catch (err) {
     console.error("GET PLAYER ERROR:", err);
     res.status(500).json({ error: "Error obteniendo jugador" });
@@ -122,11 +139,11 @@ router.post(
         ? JSON.parse(req.body.itemDescriptions)
         : [];
 
-      const img = req.files?.charImg?.[0]
+      const imgBase64 = req.files?.charImg?.[0]
         ? toBase64(req.files.charImg[0].buffer)
         : null;
 
-      const items = req.files?.items
+      const itemsBase64 = req.files?.items
         ? req.files.items.map(f => toBase64(f.buffer))
         : [];
 
@@ -134,21 +151,19 @@ router.post(
         campaign: req.body.campaign || "default",
         name: req.body.name,
         life: Number(req.body.life) || 10,
-        skills,
         milestones: req.body.milestones || "",
         attributes: req.body.attributes || "",
         exp: Number(req.body.exp) || 0,
         level: Number(req.body.level) || 1,
-        img,
-        items,
+        skills,
+        imgBase64,
+        itemsBase64,
         itemDescriptions,
       });
 
       const saved = await player.save();
-
-      invalidateCache(); // 🔥
-
-      res.json(saved);
+      invalidateCache();
+      res.json(normalizePlayer(saved.toObject()));
     } catch (err) {
       console.error("CREATE PLAYER ERROR:", err);
       res.status(400).json({ error: "Error creando jugador" });
@@ -173,19 +188,11 @@ router.put(
         return res.status(404).json({ error: "Jugador no encontrado" });
 
       player.name = req.body.name ?? player.name;
-      player.life = req.body.life !== undefined
-        ? Number(req.body.life)
-        : player.life;
-
+      player.life = req.body.life !== undefined ? Number(req.body.life) : player.life;
       player.milestones = req.body.milestones ?? player.milestones;
       player.attributes = req.body.attributes ?? player.attributes;
-      player.exp = req.body.exp !== undefined
-        ? Number(req.body.exp)
-        : player.exp;
-
-      player.level = req.body.level !== undefined
-        ? Number(req.body.level)
-        : player.level;
+      player.exp = req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
+      player.level = req.body.level !== undefined ? Number(req.body.level) : player.level;
 
       if (req.body.skills) {
         player.skills = JSON.parse(req.body.skills);
@@ -196,21 +203,17 @@ router.put(
       }
 
       if (req.files?.charImg?.[0]) {
-        player.img = toBase64(req.files.charImg[0].buffer);
+        player.imgBase64 = toBase64(req.files.charImg[0].buffer);
       }
 
       if (req.files?.items?.length) {
-        const newItems = req.files.items.map(f =>
-          toBase64(f.buffer)
-        );
-        player.items = [...player.items, ...newItems].slice(0, 6);
+        const newItems = req.files.items.map(f => toBase64(f.buffer));
+        player.itemsBase64 = [...player.itemsBase64, ...newItems].slice(0, 6);
       }
 
       const saved = await player.save();
-
-      invalidateCache(); // 🔥
-
-      res.json(saved);
+      invalidateCache();
+      res.json(normalizePlayer(saved.toObject()));
     } catch (err) {
       console.error("UPDATE PLAYER ERROR:", err);
       res.status(500).json({ error: "Error actualizando jugador" });
@@ -228,8 +231,7 @@ router.delete("/:id", async (req, res) => {
     if (!deleted)
       return res.status(404).json({ error: "Jugador no encontrado" });
 
-    invalidateCache(); // 🔥
-
+    invalidateCache();
     res.json({ ok: true });
   } catch (err) {
     console.error("DELETE PLAYER ERROR:", err);

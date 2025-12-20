@@ -1,28 +1,106 @@
 const mongoose = require("mongoose");
 
-const PlayerSchema = new mongoose.Schema({
-  campaign: { type: String, default: "default" },
+const PlayerSchema = new mongoose.Schema(
+  {
+    // ============================================================
+    // BÁSICO
+    // ============================================================
 
-  name: { type: String, required: true, trim: true },
-  life: { type: Number, default: 10 },
+    campaign: {
+      type: String,
+      default: "default",
+      index: true,
+    },
 
-  // ✅ NUEVO SISTEMA DE HABILIDADES
-  skills: { type: [String], default: [] },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-  milestones: { type: String, default: "" },
-  attributes: { type: String, default: "" },
+    life: {
+      type: Number,
+      default: 10,
+    },
 
-  exp: { type: Number, default: 0 },
-  level: { type: Number, default: 1 },
+    level: {
+      type: Number,
+      default: 1,
+    },
 
-  img: { type: String, default: null },        // base64
-  items: { type: [String], default: [] },      // base64 imágenes
+    exp: {
+      type: Number,
+      default: 0,
+    },
 
-  // ✅ DESCRIPCIÓN DE OBJETOS
-  itemDescriptions: { type: [String], default: [] },
+    milestones: {
+      type: String,
+      default: "",
+    },
 
-}, {
-  timestamps: true
-});
+    attributes: {
+      type: String,
+      default: "",
+    },
 
-module.exports = mongoose.model("player", PlayerSchema);
+    // ============================================================
+    // HABILIDADES
+    // ============================================================
+
+    skills: {
+      type: [String],
+      default: [],
+    },
+
+    // ============================================================
+    // 🖼️ IMAGEN PRINCIPAL
+    // ============================================================
+
+    // 🔥 NUEVO (CDN)
+    imgUrl: {
+      type: String,
+      default: null,
+    },
+
+    // 🧓 LEGACY (base64)
+    imgBase64: {
+      type: String,
+      default: null,
+      select: true, // lo seguimos enviando de momento
+    },
+
+    // ============================================================
+    // 🎒 OBJETOS
+    // ============================================================
+
+    // 🔥 NUEVO (CDN)
+    itemsUrls: {
+      type: [String],
+      default: [],
+    },
+
+    // 🧓 LEGACY (base64)
+    itemsBase64: {
+      type: [String],
+      default: [],
+      select: true,
+    },
+
+    itemDescriptions: {
+      type: [String],
+      default: [],
+    },
+  },
+  {
+    timestamps: true, // createdAt / updatedAt (🔥 clave para ETag)
+  }
+);
+
+// ============================================================
+// 🔥 ÍNDICES (OPTIMIZACIÓN)
+// ============================================================
+
+PlayerSchema.index({ updatedAt: 1 });
+PlayerSchema.index({ campaign: 1 });
+
+module.exports = mongoose.model("Player", PlayerSchema);
