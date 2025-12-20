@@ -40,7 +40,7 @@ function expProgress(level, totalExp) {
 }
 
 // =============================================================
-// SKELETON LOADER (solo primera carga)
+// SKELETON LOADER
 // =============================================================
 
 function showSkeleton(count = 8) {
@@ -51,14 +51,13 @@ function showSkeleton(count = 8) {
   for (let i = 0; i < count; i++) {
     const sk = document.createElement("div");
     sk.className =
-      "animate-pulse bg-stone-800 rounded-xl p-4 h-[440px]";
+      "animate-pulse bg-stone-800 rounded-xl p-4 h-[420px]";
     sk.innerHTML = `
       <div class="h-6 bg-stone-700 rounded mb-3"></div>
       <div class="h-44 bg-stone-700 rounded mb-3"></div>
       <div class="h-4 bg-stone-700 rounded mb-2"></div>
       <div class="h-4 bg-stone-700 rounded mb-2"></div>
-      <div class="h-4 bg-stone-700 rounded mb-4"></div>
-      <div class="grid grid-cols-6 gap-1">
+      <div class="grid grid-cols-6 gap-1 mt-4">
         ${"<div class='h-10 bg-stone-700 rounded'></div>".repeat(6)}
       </div>
     `;
@@ -76,7 +75,6 @@ function preloadImages(list) {
       const img = new Image();
       img.src = `data:image/jpeg;base64,${p.img}`;
     }
-
     (p.items || []).forEach(item => {
       if (item) {
         const img = new Image();
@@ -87,23 +85,18 @@ function preloadImages(list) {
 }
 
 // =============================================================
-// FETCH (ETAG COMPATIBLE)
+// FETCH (ETAG READY)
 // =============================================================
 
 async function fetchJson(url) {
   const res = await fetch(url, { cache: "no-cache" });
-
-  // 🔥 Backend devuelve 304
   if (res.status === 304) return null;
-
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 function buildSignature(list) {
-  return list
-    .map(p => `${p._id}:${p.updatedAt}`)
-    .join("|");
+  return list.map(p => `${p._id}:${p.updatedAt}`).join("|");
 }
 
 // =============================================================
@@ -152,7 +145,7 @@ function renderPlayerBoard(list = players) {
 
     const card = document.createElement("div");
     card.className =
-      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[440px]";
+      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[420px]";
 
     card.innerHTML = `
       <h2 class="text-lg font-bold mb-2 truncate">
@@ -161,12 +154,13 @@ function renderPlayerBoard(list = players) {
 
       <img
         loading="lazy"
-        src="${p.img ? `data:image/jpeg;base64,${p.img}` : '/placeholder.png'}"
+        src="${p.img ? `data:image/jpeg;base64,${p.img}` : "/placeholder.png"}"
         class="w-full h-44 object-cover object-center rounded mb-3"
       />
 
+      <p class="text-sm">❤️ Salud: ${p.life ?? "-"}</p>
       <p class="text-sm">🏆 Hitos: ${p.milestones || "-"}</p>
-      <p class="text-sm">📜 ${p.attributes || "-"}</p>
+      <p class="text-sm">📜 Características: ${p.attributes || "-"}</p>
 
       ${
         skills.length
@@ -179,7 +173,7 @@ function renderPlayerBoard(list = players) {
       }
 
       <div class="mt-auto">
-        <p class="text-xs mt-2">⭐ EXP: ${exp}</p>
+        <p class="mt-2 text-sm">⭐ EXP: ${exp}</p>
 
         <div class="bg-stone-600 h-3 rounded mt-1 overflow-hidden">
           <div class="bg-green-500 h-3" style="width:${percent}%;"></div>
@@ -189,7 +183,7 @@ function renderPlayerBoard(list = players) {
           ${(p.items || []).slice(0, 6).map((item, i) => `
             <img
               loading="lazy"
-              src="${item ? `data:image/jpeg;base64,${item}` : '/placeholder.png'}"
+              src="${item ? `data:image/jpeg;base64,${item}` : "/placeholder.png"}"
               class="w-10 h-10 object-cover rounded border cursor-pointer"
               onclick="openItemModal('${p.itemDescriptions?.[i] || "Sin descripción"}')"
             />
@@ -224,9 +218,9 @@ function openSkillsModal(skills) {
       <h3 class="text-xl font-bold mb-4 text-indigo-400">Habilidades</h3>
 
       <ul class="space-y-2">
-        ${skills.map(s => `
-          <li class="bg-zinc-800 px-3 py-2 rounded">${s}</li>
-        `).join("")}
+        ${skills.map(s =>
+          `<li class="bg-zinc-800 px-3 py-2 rounded">${s}</li>`
+        ).join("")}
       </ul>
     </div>
   `;
