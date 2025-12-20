@@ -9,7 +9,7 @@ let lastSignature = "";
 // CONFIG
 // =============================================================
 const BASE_URL =
-  window.__env && window.__env.API_URL
+  (window.__env && window.__env.API_URL)
     ? window.__env.API_URL
     : "https://chikaku-d-d-backend-pbe.onrender.com";
 
@@ -20,7 +20,7 @@ const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 // =============================================================
-// DOM REFERENCES (CRÍTICO)
+// DOM REFERENCES
 // =============================================================
 const charNameInput = document.getElementById("charNameInput");
 const charLifeInput = document.getElementById("charLifeInput");
@@ -43,6 +43,7 @@ const createCard = document.getElementById("createCard");
 // =============================================================
 function toggleCreateCard(forceOpen = false) {
   if (!createCard) return;
+
   if (forceOpen) {
     createCard.classList.remove("hidden");
     createCard.scrollIntoView({ behavior: "smooth" });
@@ -97,6 +98,7 @@ function addPreview(inputId, previewId) {
       preview.classList.add("hidden");
       return;
     }
+
     const reader = new FileReader();
     reader.onload = () => {
       preview.src = reader.result;
@@ -111,6 +113,7 @@ function addPreview(inputId, previewId) {
 // =============================================================
 function addSkillInput(value = "") {
   if (!skillsContainer) return;
+
   if (skillsContainer.children.length >= 8) {
     alert("Máximo 8 habilidades");
     return;
@@ -128,6 +131,7 @@ function addSkillInput(value = "") {
       ✕
     </button>
   `;
+
   skillsContainer.appendChild(div);
 }
 
@@ -166,6 +170,7 @@ async function refreshPlayers() {
   const data = await fetchJson(API_PLAYERS);
   if (!Array.isArray(data)) return;
 
+  // 🔥 Firma ligera (NO base64)
   const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
   if (signature === lastSignature) return;
 
@@ -175,6 +180,8 @@ async function refreshPlayers() {
 }
 
 function renderPlayersList() {
+  if (!playersList) return;
+
   playersList.innerHTML = "";
   const frag = document.createDocumentFragment();
 
@@ -227,7 +234,7 @@ function renderPlayersList() {
 }
 
 // =============================================================
-// EDIT PLAYER  ✅ FIX DEFINITIVO
+// EDIT PLAYER
 // =============================================================
 function editPlayer(id) {
   const player = players.find(p => p._id === id);
@@ -252,10 +259,10 @@ function editPlayer(id) {
   initItems();
 
   (player.items || []).forEach((img, i) => {
-    const p = document.getElementById(`previewItem${i + 1}`);
-    if (p && img) {
-      p.src = "data:image/jpeg;base64," + img;
-      p.classList.remove("hidden");
+    const prev = document.getElementById(`previewItem${i + 1}`);
+    if (prev && img) {
+      prev.src = "data:image/jpeg;base64," + img;
+      prev.classList.remove("hidden");
     }
   });
 
@@ -278,7 +285,8 @@ async function submitCharacter() {
   if (!name) return alert("Nombre obligatorio");
 
   const skills = [...skillsContainer.querySelectorAll("input")]
-    .map(i => i.value.trim()).filter(Boolean);
+    .map(i => i.value.trim())
+    .filter(Boolean);
 
   const itemDescriptions = [];
   for (let i = 1; i <= 6; i++) {

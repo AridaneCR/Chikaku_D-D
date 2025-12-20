@@ -1,53 +1,45 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
 const Player = require("../models/player");
+const crypto = require("crypto");
 
 // ============================================================
-// CONFIG MULTER (MEMORIA)
-// ============================================================
-
-const upload = multer({ storage: multer.memoryStorage() });
-
-const toBase64 = (buffer) =>
-  buffer ? buffer.toString("base64") : null;
-
-// ============================================================
-// GET ALL PLAYERS
-// - Normaliza skills legacy
+// GET ALL PLAYERS – CACHE + ETAG REAL
 // ============================================================
 
 router.get("/", async (req, res) => {
   try {
-    const players = await Player.find().sort({ createdAt: -1 });
+    const players = await Player.find().sort({ createdAt: -1 }).lean();
 
-    const normalized = players.map((p) => {
-      const obj = p.toObject();
+    // 🔥 Generar firma ligera SOLO con _id + updatedAt
+    const signature = players
+      .map(p => `${p._id}:${p.updatedAt?.getTime() || 0}`)
+      .join("|");
 
-      // 🔥 Compatibilidad legacy (skill1 / skill2)
-      if (!Array.isArray(obj.skills)) {
-        obj.skills = [];
-      }
+    // 🔐 Hash corto → ETag
+    const etag = crypto
+      .createHash("sha1")
+      .update(signature)
+      .digest("hex");
 
-      if (obj.skills.length === 0) {
-        if (obj.skill1) obj.skills.push(obj.skill1);
-        if (obj.skill2) obj.skills.push(obj.skill2);
-      }
+    // 📦 Cache headers
+    res.setHeader("ETag", etag);
+    res.setHeader("Cache-Control", "private, max-age=0, must-revalidate");
 
-      // Seguridad extra
-      if (!Array.isArray(obj.itemDescriptions)) {
-        obj.itemDescriptions = [];
-      }
+    // 🚫 Si el navegador ya tiene esta versión
+    if (req.headers["if-none-match"] === etag) {
+      return res.status(304).end();
+    }
 
-      return obj;
-    });
-
-    res.json(normalized);
+    res.json(players);
   } catch (err) {
     console.error("GET PLAYERS ERROR:", err);
     res.status(500).json({ error: "Error obteniendo jugadores" });
   }
 });
+
+module.exports = router;
+
 
 // ============================================================
 // GET PLAYER BY ID

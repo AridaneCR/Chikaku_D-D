@@ -2,9 +2,10 @@
 // CONFIG
 // =============================================================
 
-const BASE_URL = (window.__env && window.__env.API_URL)
-  ? window.__env.API_URL
-  : "https://chikaku-d-d-backend-pbe.onrender.com";
+const BASE_URL =
+  (window.__env && window.__env.API_URL)
+    ? window.__env.API_URL
+    : "https://chikaku-d-d-backend-pbe.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 
@@ -39,7 +40,7 @@ function expProgress(level, totalExp) {
 }
 
 // =============================================================
-// SKELETON LOADER
+// SKELETON LOADER (solo primera carga)
 // =============================================================
 
 function showSkeleton(count = 8) {
@@ -56,8 +57,8 @@ function showSkeleton(count = 8) {
       <div class="h-44 bg-stone-700 rounded mb-3"></div>
       <div class="h-4 bg-stone-700 rounded mb-2"></div>
       <div class="h-4 bg-stone-700 rounded mb-2"></div>
-      <div class="h-4 bg-stone-700 rounded mb-2"></div>
-      <div class="grid grid-cols-6 gap-1 mt-4">
+      <div class="h-4 bg-stone-700 rounded mb-4"></div>
+      <div class="grid grid-cols-6 gap-1">
         ${"<div class='h-10 bg-stone-700 rounded'></div>".repeat(6)}
       </div>
     `;
@@ -75,6 +76,7 @@ function preloadImages(list) {
       const img = new Image();
       img.src = `data:image/jpeg;base64,${p.img}`;
     }
+
     (p.items || []).forEach(item => {
       if (item) {
         const img = new Image();
@@ -85,18 +87,23 @@ function preloadImages(list) {
 }
 
 // =============================================================
-// FETCH
+// FETCH (ETAG COMPATIBLE)
 // =============================================================
 
 async function fetchJson(url) {
   const res = await fetch(url, { cache: "no-cache" });
+
+  // 🔥 Backend devuelve 304
   if (res.status === 304) return null;
+
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 function buildSignature(list) {
-  return list.map(p => `${p._id}:${p.updatedAt}`).join("|");
+  return list
+    .map(p => `${p._id}:${p.updatedAt}`)
+    .join("|");
 }
 
 // =============================================================
@@ -119,6 +126,7 @@ async function loadPlayers() {
     preloadImages(players);
 
     if (!isFiltering) renderPlayerBoard(players);
+
     firstLoad = false;
   } catch (err) {
     console.error("Error cargando jugadores:", err);
@@ -157,30 +165,25 @@ function renderPlayerBoard(list = players) {
         class="w-full h-44 object-cover object-center rounded mb-3"
       />
 
-      <div class="space-y-1 text-sm">
-        <p>❤️ <strong>Salud:</strong> ${p.life}</p>
-        <p>🏆 <strong>Hitos:</strong> ${p.milestones || "-"}</p>
-        <p>📜 <strong>Características:</strong> ${p.attributes || "-"}</p>
-        <p>⭐ <strong>EXP:</strong> ${exp}</p>
-      </div>
+      <p class="text-sm">🏆 Hitos: ${p.milestones || "-"}</p>
+      <p class="text-sm">📜 ${p.attributes || "-"}</p>
 
       ${
         skills.length
           ? `<button
               onclick='openSkillsModal(${JSON.stringify(skills)})'
-              class="mt-3 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs w-full">
+              class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
               Ver habilidades (${skills.length})
             </button>`
           : ""
       }
 
       <div class="mt-auto">
-        <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
+        <p class="text-xs mt-2">⭐ EXP: ${exp}</p>
+
+        <div class="bg-stone-600 h-3 rounded mt-1 overflow-hidden">
           <div class="bg-green-500 h-3" style="width:${percent}%;"></div>
         </div>
-        <p class="text-xs text-stone-400 mt-1">
-          Progreso de nivel: ${percent.toFixed(1)}%
-        </p>
 
         <div class="grid grid-cols-6 gap-1 mt-3">
           ${(p.items || []).slice(0, 6).map((item, i) => `
