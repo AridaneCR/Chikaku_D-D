@@ -6,30 +6,6 @@ let editingPlayerId = null;
 let lastSignature = "";
 
 // =============================================================
-// UI ACTIONS
-// =============================================================
-function toggleCreateCard(forceOpen = false) {
-  const card = document.getElementById("createCard");
-  if (!card) return;
-
-  if (forceOpen) {
-    card.classList.remove("hidden");
-    card.scrollIntoView({ behavior: "smooth" });
-  } else {
-    card.classList.toggle("hidden");
-  }
-}
-
-function openCreateForm() {
-  resetForm();
-  toggleCreateCard(true);
-}
-
-function openPlayerBoard() {
-  window.open("../Player/player_view.html", "_blank");
-}
-
-// =============================================================
 // CONFIG
 // =============================================================
 const BASE_URL =
@@ -44,27 +20,54 @@ const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 // =============================================================
-// LOADER (solo para acciones importantes)
+// DOM REFERENCES  🔥 CRÍTICO
 // =============================================================
-function showLoader() {
-  document.getElementById("loader")?.classList.remove("hidden");
+const charNameInput = document.getElementById("charNameInput");
+const charLifeInput = document.getElementById("charLifeInput");
+const charMilestonesInput = document.getElementById("charMilestonesInput");
+const charAttributesInput = document.getElementById("charAttributesInput");
+const charExpInput = document.getElementById("charExpInput");
+const charLevelInput = document.getElementById("charLevelInput");
+
+const charImgInput = document.getElementById("charImgInput");
+const previewCharMain = document.getElementById("previewCharMain");
+
+const skillsContainer = document.getElementById("skillsContainer");
+const submitCharacterBtn = document.getElementById("submitCharacterBtn");
+
+const playersList = document.getElementById("playersList");
+const createCard = document.getElementById("createCard");
+
+// =============================================================
+// UI ACTIONS
+// =============================================================
+function toggleCreateCard(forceOpen = false) {
+  if (!createCard) return;
+
+  if (forceOpen) {
+    createCard.classList.remove("hidden");
+    createCard.scrollIntoView({ behavior: "smooth" });
+  } else {
+    createCard.classList.toggle("hidden");
+  }
 }
-function hideLoader() {
-  document.getElementById("loader")?.classList.add("hidden");
+
+function openCreateForm() {
+  resetForm();
+  toggleCreateCard(true);
+}
+
+function openPlayerBoard() {
+  window.open("../Player/player_view.html", "_blank");
 }
 
 // =============================================================
 // FETCH
 // =============================================================
-async function fetchJson(url, opts = {}, showLoading = false) {
-  if (showLoading) showLoader();
-  try {
-    const res = await fetch(url, opts);
-    if (!res.ok) throw new Error(await res.text());
-    return await res.json();
-  } finally {
-    if (showLoading) hideLoader();
-  }
+async function fetchJson(url, opts = {}) {
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
 
 // =============================================================
@@ -108,10 +111,9 @@ function addPreview(inputId, previewId) {
 // SKILLS
 // =============================================================
 function addSkillInput(value = "") {
-  const container = document.getElementById("skillsContainer");
-  if (!container) return;
+  if (!skillsContainer) return;
 
-  if (container.children.length >= 8) {
+  if (skillsContainer.children.length >= 8) {
     alert("Máximo 8 habilidades");
     return;
   }
@@ -129,7 +131,7 @@ function addSkillInput(value = "") {
     </button>
   `;
 
-  container.appendChild(div);
+  skillsContainer.appendChild(div);
 }
 
 // =============================================================
@@ -148,9 +150,11 @@ function initItems() {
     div.innerHTML = `
       <label class="label-sm">Objeto ${i}</label>
       <input id="item${i}Input" type="file" class="file" />
-      <textarea id="item${i}Desc" class="input mt-2 resize-none"
-        rows="2" placeholder="Descripción del objeto..."></textarea>
-      <img id="previewItem${i}" class="preview mt-3" />
+      <textarea id="item${i}Desc"
+        class="input mt-2 resize-none"
+        rows="2"
+        placeholder="Descripción del objeto..."></textarea>
+      <img id="previewItem${i}" class="preview mt-3 hidden" />
     `;
 
     container.appendChild(div);
@@ -164,7 +168,12 @@ function initItems() {
 async function refreshPlayers() {
   const data = await fetchJson(API_PLAYERS);
 
-  // 🔥 Firma ligera (no base64)
+  if (!Array.isArray(data)) {
+    console.error("Respuesta inválida del backend:", data);
+    return;
+  }
+
+  // 🔥 Firma ligera (sin base64)
   const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
   if (signature === lastSignature) return;
 
@@ -174,9 +183,9 @@ async function refreshPlayers() {
 }
 
 function renderPlayersList() {
-  const list = document.getElementById("playersList");
-  list.innerHTML = "";
+  if (!playersList) return;
 
+  playersList.innerHTML = "";
   const frag = document.createDocumentFragment();
 
   players.forEach(p => {
@@ -226,7 +235,7 @@ function renderPlayersList() {
     frag.appendChild(card);
   });
 
-  list.appendChild(frag);
+  playersList.appendChild(frag);
 }
 
 // =============================================================
@@ -236,8 +245,9 @@ async function submitCharacter() {
   const name = charNameInput.value.trim();
   if (!name) return alert("Nombre obligatorio");
 
-  const skills = [...document.querySelectorAll("#skillsContainer input")]
-    .map(i => i.value.trim()).filter(Boolean);
+  const skills = [...skillsContainer.querySelectorAll("input")]
+    .map(i => i.value.trim())
+    .filter(Boolean);
 
   const itemDescriptions = [];
   for (let i = 1; i <= 6; i++) {
@@ -266,12 +276,12 @@ async function submitCharacter() {
   }
 
   if (formMode === "create") {
-    await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
+    await fetchJson(API_PLAYERS, { method: "POST", body: fd });
   } else {
     await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
       method: "PUT",
       body: fd
-    }, true);
+    });
   }
 
   resetForm();
@@ -280,7 +290,7 @@ async function submitCharacter() {
 }
 
 // =============================================================
-// RESET / DELETE
+// EDIT / RESET / DELETE
 // =============================================================
 function resetForm() {
   formMode = "create";
@@ -302,7 +312,7 @@ function resetForm() {
 
 async function deletePlayer(id) {
   if (!confirm("¿Eliminar personaje?")) return;
-  await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" }, true);
+  await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" });
   refreshPlayers();
 }
 
