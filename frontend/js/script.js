@@ -6,13 +6,6 @@ let editingPlayerId = null;
 let lastSignature = "";
 
 // =============================================================
-// 🔥 SYNC MASTER → PLAYER (LOCAL)
-// =============================================================
-function notifyPlayersUpdate() {
-  localStorage.setItem("players_updated", Date.now().toString());
-}
-
-// =============================================================
 // UI ACTIONS
 // =============================================================
 function toggleCreateCard(forceOpen = false) {
@@ -69,33 +62,13 @@ async function fetchJson(url, opts = {}, showLoading = false) {
     const res = await fetch(url, opts);
     if (!res.ok) throw new Error(await res.text());
     return await res.json();
-  } catch (err) {
-    alert("❌ Error al comunicar con el servidor");
-    throw err;
   } finally {
     if (showLoading) hideLoader();
   }
 }
 
 // =============================================================
-// IMAGE NORMALIZER (🔥 NUEVO)
-// =============================================================
-function resolveImage(img) {
-  if (!img) return "/placeholder.png";
-
-  if (typeof img === "object") {
-    return img.secure_url || img.url || "/placeholder.png";
-  }
-
-  if (typeof img === "string") {
-    return img.startsWith("http") ? img : "/placeholder.png";
-  }
-
-  return "/placeholder.png";
-}
-
-// =============================================================
-// IMÁGENES (PREVIEW)
+// IMÁGENES (solo preview local)
 // =============================================================
 function validateImage(file) {
   if (!file) return true;
@@ -208,19 +181,27 @@ function renderPlayersList() {
       "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
 
     card.innerHTML = `
-      <img src="${resolveImage(p.img)}"
+      <img
+        src="${p.img || "/placeholder.png"}"
         class="w-full h-40 object-cover rounded mb-2">
 
-      <h3 class="font-bold text-lg">${p.name} (Nivel ${p.level})</h3>
+      <h3 class="font-bold text-lg truncate">
+        ${p.name} (Nivel ${p.level})
+      </h3>
+
       <p>❤️ Vida: ${p.life}</p>
       <p>⭐ EXP: ${p.exp}</p>
 
       <div class="mt-auto">
         <button onclick="editPlayer('${p._id}')"
-          class="mt-3 w-full bg-green-600 p-2 rounded">Editar</button>
+          class="mt-3 w-full bg-green-600 p-2 rounded">
+          Editar
+        </button>
 
         <button onclick="deletePlayer('${p._id}')"
-          class="mt-2 w-full bg-red-600 p-2 rounded">Eliminar</button>
+          class="mt-2 w-full bg-red-600 p-2 rounded">
+          Eliminar
+        </button>
       </div>
     `;
 
@@ -229,7 +210,7 @@ function renderPlayersList() {
 }
 
 // =============================================================
-// 🔥 EDIT PLAYER (NUEVO)
+// EDIT PLAYER (🔥 SOLO AÑADIDO)
 // =============================================================
 function editPlayer(id) {
   const player = players.find(p => p._id === id);
@@ -251,11 +232,12 @@ function editPlayer(id) {
   (player.skills || []).forEach(s => addSkillInput(s));
 
   previewCharMain.classList.add("hidden");
+  charImgInput.value = "";
 
   initItems();
   (player.itemDescriptions || []).forEach((desc, i) => {
-    const textarea = document.getElementById(`item${i + 1}Desc`);
-    if (textarea) textarea.value = desc;
+    const t = document.getElementById(`item${i + 1}Desc`);
+    if (t) t.value = desc;
   });
 }
 
@@ -263,58 +245,52 @@ function editPlayer(id) {
 // CREATE / EDIT
 // =============================================================
 async function submitCharacter() {
-  try {
-    const name = charNameInput.value.trim();
-    if (!name) return alert("Nombre obligatorio");
+  const name = charNameInput.value.trim();
+  if (!name) return alert("Nombre obligatorio");
 
-    const skills = [...document.querySelectorAll("#skillsContainer input")]
-      .map(i => i.value.trim()).filter(Boolean);
+  const skills = [...document.querySelectorAll("#skillsContainer input")]
+    .map(i => i.value.trim()).filter(Boolean);
 
-    const itemDescriptions = [];
-    for (let i = 1; i <= 6; i++) {
-      itemDescriptions.push(
-        document.getElementById(`item${i}Desc`)?.value.trim() || ""
-      );
-    }
-
-    const fd = new FormData();
-    fd.append("name", name);
-    fd.append("life", charLifeInput.value);
-    fd.append("milestones", charMilestonesInput.value);
-    fd.append("attributes", charAttributesInput.value);
-    fd.append("exp", charExpInput.value);
-    fd.append("level", charLevelInput.value);
-    fd.append("skills", JSON.stringify(skills));
-    fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
-
-    if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
-      fd.append("charImg", charImgInput.files[0]);
-    }
-
-    for (let i = 1; i <= 6; i++) {
-      const f = document.getElementById(`item${i}Input`)?.files[0];
-      if (f && validateImage(f)) fd.append("items", f);
-    }
-
-    if (formMode === "create") {
-      await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
-      alert("✅ Personaje creado correctamente");
-    } else {
-      await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
-        method: "PUT",
-        body: fd
-      }, true);
-      alert("✏️ Personaje editado correctamente");
-    }
-
-    notifyPlayersUpdate();
-    resetForm();
-    toggleCreateCard();
-    refreshPlayers();
-
-  } catch (err) {
-    console.error(err);
+  const itemDescriptions = [];
+  for (let i = 1; i <= 6; i++) {
+    itemDescriptions.push(
+      document.getElementById(`item${i}Desc`)?.value.trim() || ""
+    );
   }
+
+  const fd = new FormData();
+  fd.append("name", name);
+  fd.append("life", charLifeInput.value);
+  fd.append("milestones", charMilestonesInput.value);
+  fd.append("attributes", charAttributesInput.value);
+  fd.append("exp", charExpInput.value);
+  fd.append("level", charLevelInput.value);
+  fd.append("skills", JSON.stringify(skills));
+  fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
+
+  if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
+    fd.append("charImg", charImgInput.files[0]);
+  }
+
+  for (let i = 1; i <= 6; i++) {
+    const f = document.getElementById(`item${i}Input`)?.files[0];
+    if (f && validateImage(f)) fd.append("items", f);
+  }
+
+  if (formMode === "create") {
+    await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
+    alert("✅ Personaje creado");
+  } else {
+    await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
+      method: "PUT",
+      body: fd
+    }, true);
+    alert("✏️ Personaje editado");
+  }
+
+  resetForm();
+  toggleCreateCard();
+  refreshPlayers();
 }
 
 // =============================================================
@@ -322,12 +298,8 @@ async function submitCharacter() {
 // =============================================================
 async function deletePlayer(id) {
   if (!confirm("¿Eliminar personaje?")) return;
-
   await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" }, true);
-  notifyPlayersUpdate();
   refreshPlayers();
-
-  alert("🗑️ Personaje eliminado");
 }
 
 // =============================================================
