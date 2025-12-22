@@ -6,7 +6,7 @@ let editingPlayerId = null;
 let lastSignature = "";
 
 // =============================================================
-// 🔥 SYNC MASTER → PLAYER
+// 🔥 SYNC MASTER → PLAYER (LOCAL)
 // =============================================================
 function notifyPlayersUpdate() {
   localStorage.setItem("players_updated", Date.now().toString());
@@ -78,7 +78,24 @@ async function fetchJson(url, opts = {}, showLoading = false) {
 }
 
 // =============================================================
-// IMÁGENES
+// IMAGE NORMALIZER (🔥 NUEVO)
+// =============================================================
+function resolveImage(img) {
+  if (!img) return "/placeholder.png";
+
+  if (typeof img === "object") {
+    return img.secure_url || img.url || "/placeholder.png";
+  }
+
+  if (typeof img === "string") {
+    return img.startsWith("http") ? img : "/placeholder.png";
+  }
+
+  return "/placeholder.png";
+}
+
+// =============================================================
+// IMÁGENES (PREVIEW)
 // =============================================================
 function validateImage(file) {
   if (!file) return true;
@@ -191,7 +208,7 @@ function renderPlayersList() {
       "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
 
     card.innerHTML = `
-      <img src="${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}"
+      <img src="${resolveImage(p.img)}"
         class="w-full h-40 object-cover rounded mb-2">
 
       <h3 class="font-bold text-lg">${p.name} (Nivel ${p.level})</h3>
@@ -208,6 +225,37 @@ function renderPlayersList() {
     `;
 
     list.appendChild(card);
+  });
+}
+
+// =============================================================
+// 🔥 EDIT PLAYER (NUEVO)
+// =============================================================
+function editPlayer(id) {
+  const player = players.find(p => p._id === id);
+  if (!player) return alert("Jugador no encontrado");
+
+  formMode = "edit";
+  editingPlayerId = id;
+
+  toggleCreateCard(true);
+
+  charNameInput.value = player.name || "";
+  charLifeInput.value = player.life || 10;
+  charMilestonesInput.value = player.milestones || "";
+  charAttributesInput.value = player.attributes || "";
+  charExpInput.value = player.exp || 0;
+  charLevelInput.value = player.level || 1;
+
+  skillsContainer.innerHTML = "";
+  (player.skills || []).forEach(s => addSkillInput(s));
+
+  previewCharMain.classList.add("hidden");
+
+  initItems();
+  (player.itemDescriptions || []).forEach((desc, i) => {
+    const textarea = document.getElementById(`item${i + 1}Desc`);
+    if (textarea) textarea.value = desc;
   });
 }
 
