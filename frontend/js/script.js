@@ -108,13 +108,14 @@ function addSkillInput(value = "") {
 
   const div = document.createElement("div");
   div.className = "relative";
-
   div.innerHTML = `
     <input class="input pr-10" value="${value}">
     <button type="button"
       onclick="this.parentElement.remove()"
       class="absolute right-2 top-1/2 -translate-y-1/2
-             px-2 py-1 rounded bg-red-600 font-bold">✕</button>
+             px-2 py-1 rounded bg-red-600 hover:bg-red-700 font-bold">
+      ✕
+    </button>
   `;
   container.appendChild(div);
 }
@@ -127,46 +128,29 @@ function initItems() {
   if (!container) return;
 
   container.innerHTML = "";
-
   for (let i = 1; i <= 6; i++) {
     const div = document.createElement("div");
     div.className = "object-card";
-
     div.innerHTML = `
       <label class="label-sm">Objeto ${i}</label>
       <input id="item${i}Input" type="file" class="file" />
-      <textarea id="item${i}Desc"
-        class="input mt-2 resize-none"
-        rows="2"
-        placeholder="Descripción del objeto..."></textarea>
+      <textarea id="item${i}Desc" class="input mt-2 resize-none"
+        rows="2" placeholder="Descripción del objeto..."></textarea>
       <img id="previewItem${i}" class="preview mt-3" />
     `;
-
     container.appendChild(div);
     addPreview(`item${i}Input`, `previewItem${i}`);
   }
 }
 
 // =============================================================
-// PLAYERS LIST + DEBUG
+// PLAYERS LIST
 // =============================================================
 async function refreshPlayers(force = false) {
-  const data = await fetchJson(
-    API_PLAYERS,
-    force ? { headers: { "Cache-Control": "no-cache" } } : {}
-  );
-
-  // 🔍 DEBUG COMPLETO
-  console.group("🧪 DEBUG PLAYERS FROM API");
-  data.forEach(p => {
-    console.log("Jugador:", p.name);
-    console.log("img:", p.img);
-    console.log("items:", p.items);
-  });
-  console.groupEnd();
-
+  const data = await fetchJson(API_PLAYERS);
   const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
-  if (signature === lastSignature) return;
+
+  if (!force && signature === lastSignature) return;
 
   lastSignature = signature;
   players = data;
@@ -178,15 +162,12 @@ function renderPlayersList() {
   list.innerHTML = "";
 
   players.forEach(p => {
-    console.log("🖼️ RENDER IMG SRC:", p.img);
-
     const card = document.createElement("div");
     card.className =
       "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
 
     card.innerHTML = `
-      <img
-        src="${p.img || "/placeholder.png"}"
+      <img src="${p.img || "/placeholder.png"}"
         class="w-full h-40 object-cover rounded mb-2">
 
       <h3 class="font-bold text-lg">${p.name} (Nivel ${p.level})</h3>
@@ -198,14 +179,12 @@ function renderPlayersList() {
           class="mt-3 w-full bg-green-600 p-2 rounded">
           Editar
         </button>
-
         <button onclick="deletePlayer('${p._id}')"
           class="mt-2 w-full bg-red-600 p-2 rounded">
           Eliminar
         </button>
       </div>
     `;
-
     list.appendChild(card);
   });
 }
@@ -243,16 +222,16 @@ function editPlayer(id) {
 
   initItems();
   (player.items || []).forEach((img, i) => {
-    const preview = document.getElementById(`previewItem${i + 1}`);
-    if (preview && img) {
-      preview.src = img;
-      preview.classList.remove("hidden");
+    const p = document.getElementById(`previewItem${i + 1}`);
+    if (p && img) {
+      p.src = img;
+      p.classList.remove("hidden");
     }
   });
 
-  (player.itemDescriptions || []).forEach((desc, i) => {
+  (player.itemDescriptions || []).forEach((d, i) => {
     const t = document.getElementById(`item${i + 1}Desc`);
-    if (t) t.value = desc;
+    if (t) t.value = d;
   });
 }
 
@@ -303,7 +282,6 @@ async function submitCharacter() {
 
   resetForm();
   toggleCreateCard();
-  lastSignature = "";
   refreshPlayers(true);
 }
 
@@ -313,7 +291,6 @@ async function submitCharacter() {
 async function deletePlayer(id) {
   if (!confirm("¿Eliminar personaje?")) return;
   await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" }, true);
-  lastSignature = "";
   refreshPlayers(true);
 }
 
