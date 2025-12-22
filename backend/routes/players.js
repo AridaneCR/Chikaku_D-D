@@ -35,7 +35,7 @@ function normalizePlayer(p) {
     milestones: p.milestones || "",
     attributes: p.attributes || "",
     skills: Array.isArray(p.skills) ? p.skills : [],
-    img: p.img || null,
+    img: p.img || null,              // 👈 URL Cloudinary
     items: Array.isArray(p.items) ? p.items : [],
     itemDescriptions: Array.isArray(p.itemDescriptions)
       ? p.itemDescriptions
@@ -96,6 +96,7 @@ router.get("/id/:id", async (req, res) => {
     if (!p) return res.status(404).json({ error: "Jugador no encontrado" });
     res.json(normalizePlayer(p));
   } catch (err) {
+    console.error("GET PLAYER ERROR:", err);
     res.status(500).json({ error: "Error obteniendo jugador" });
   }
 });
@@ -131,6 +132,7 @@ router.post(
       }
 
       const player = new Player({
+        campaign: req.body.campaign || "default",
         name: req.body.name,
         life: Number(req.body.life) || 10,
         milestones: req.body.milestones || "",
@@ -140,24 +142,24 @@ router.post(
         skills,
         img,
         items,
-        itemDescriptions,
+        itemDescriptions: itemDescriptions.slice(0, 6),
       });
 
       const saved = await player.save();
 
       invalidateCache();
-      notify("create", { id: saved._id });
+      notify?.("create", { id: saved._id });
 
       res.json(normalizePlayer(saved.toObject()));
     } catch (err) {
-      console.error(err);
+      console.error("CREATE PLAYER ERROR:", err);
       res.status(400).json({ error: "Error creando jugador" });
     }
   }
 );
 
 // ============================================================
-// UPDATE PLAYER
+// UPDATE PLAYER (🔥 FIX DEFINITIVO)
 // ============================================================
 router.put(
   "/:id",
@@ -173,21 +175,27 @@ router.put(
       if (!player)
         return res.status(404).json({ error: "Jugador no encontrado" });
 
-      Object.assign(player, {
-        name: req.body.name ?? player.name,
-        life: req.body.life ?? player.life,
-        milestones: req.body.milestones ?? player.milestones,
-        attributes: req.body.attributes ?? player.attributes,
-        exp: req.body.exp ?? player.exp,
-        level: req.body.level ?? player.level,
-      });
+      player.name = req.body.name ?? player.name;
+      player.life = req.body.life !== undefined ? Number(req.body.life) : player.life;
+      player.milestones = req.body.milestones ?? player.milestones;
+      player.attributes = req.body.attributes ?? player.attributes;
+      player.exp = req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
+      player.level = req.body.level !== undefined ? Number(req.body.level) : player.level;
 
       if (req.body.skills) {
         player.skills = JSON.parse(req.body.skills);
       }
 
+      // 🔥 FIX CRÍTICO: sincronizar descripciones con items
       if (req.body.itemDescriptions) {
-        player.itemDescriptions = JSON.parse(req.body.itemDescriptions);
+        let desc = JSON.parse(req.body.itemDescriptions);
+        const itemsLength = Array.isArray(player.items) ? player.items.length : 0;
+
+        while (desc.length < itemsLength) {
+          desc.push("");
+        }
+
+        player.itemDescriptions = desc.slice(0, 6);
       }
 
       if (req.files?.charImg?.[0]) {
@@ -208,10 +216,11 @@ router.put(
       const saved = await player.save();
 
       invalidateCache();
-      notify("update", { id: saved._id });
+      notify?.("update", { id: saved._id });
 
       res.json(normalizePlayer(saved.toObject()));
     } catch (err) {
+      console.error("UPDATE PLAYER ERROR:", err);
       res.status(500).json({ error: "Error actualizando jugador" });
     }
   }
@@ -236,10 +245,11 @@ router.delete("/:id", async (req, res) => {
     await player.deleteOne();
 
     invalidateCache();
-    notify("delete", { id: player._id });
+    notify?.("delete", { id: player._id });
 
     res.json({ ok: true });
   } catch (err) {
+    console.error("DELETE PLAYER ERROR:", err);
     res.status(500).json({ error: "Error eliminando jugador" });
   }
 });
