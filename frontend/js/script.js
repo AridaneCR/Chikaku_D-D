@@ -164,6 +164,7 @@ function initItems() {
 async function refreshPlayers() {
   const data = await fetchJson(API_PLAYERS);
   const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
+
   if (signature === lastSignature) return;
 
   lastSignature = signature;
@@ -181,8 +182,7 @@ function renderPlayersList() {
       "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
 
     card.innerHTML = `
-      <img
-        src="${p.img || "/placeholder.png"}"
+      <img src="${p.img || "/placeholder.png"}"
         class="w-full h-40 object-cover rounded mb-2">
 
       <h3 class="font-bold text-lg">${p.name} (Nivel ${p.level})</h3>
@@ -229,10 +229,25 @@ function editPlayer(id) {
   skillsContainer.innerHTML = "";
   (player.skills || []).forEach(s => addSkillInput(s));
 
+  // Imagen principal actual
   charImgInput.value = "";
-  previewCharMain.classList.add("hidden");
+  if (player.img) {
+    previewCharMain.src = player.img;
+    previewCharMain.classList.remove("hidden");
+  } else {
+    previewCharMain.classList.add("hidden");
+  }
 
+  // Objetos actuales
   initItems();
+  (player.items || []).forEach((img, i) => {
+    const preview = document.getElementById(`previewItem${i + 1}`);
+    if (preview && img) {
+      preview.src = img;
+      preview.classList.remove("hidden");
+    }
+  });
+
   (player.itemDescriptions || []).forEach((desc, i) => {
     const t = document.getElementById(`item${i + 1}Desc`);
     if (t) t.value = desc;
@@ -243,11 +258,6 @@ function editPlayer(id) {
 // CREATE / EDIT
 // =============================================================
 async function submitCharacter() {
-  if (formMode === "edit" && !editingPlayerId) {
-    alert("Error interno: ID no definido");
-    return;
-  }
-
   const name = charNameInput.value.trim();
   if (!name) return alert("Nombre obligatorio");
 
@@ -293,6 +303,7 @@ async function submitCharacter() {
 
   resetForm();
   toggleCreateCard();
+  lastSignature = ""; // 🔥 forzar refresh
   refreshPlayers();
 }
 
@@ -303,6 +314,7 @@ async function deletePlayer(id) {
   if (!confirm("¿Eliminar personaje?")) return;
   await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" }, true);
   alert("🗑️ Personaje eliminado");
+  lastSignature = "";
   refreshPlayers();
 }
 
