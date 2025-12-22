@@ -23,16 +23,18 @@ let sseConnected = false;
 const playerBoard = document.getElementById("playerBoard");
 
 // =============================================================
-// IMAGE NORMALIZER (🔥 FIX REAL)
+// IMAGE NORMALIZER (Cloudinary / fallback)
 // =============================================================
 
 function resolveImage(img) {
   if (!img) return "/placeholder.png";
 
+  // Cloudinary object
   if (typeof img === "object") {
     return img.secure_url || img.url || "/placeholder.png";
   }
 
+  // Cloudinary URL directa
   if (typeof img === "string") {
     return img.startsWith("http") ? img : "/placeholder.png";
   }
@@ -41,7 +43,7 @@ function resolveImage(img) {
 }
 
 // =============================================================
-// TOAST
+// TOAST SYSTEM
 // =============================================================
 
 function showToast(message, type = "info") {
@@ -71,9 +73,7 @@ function showToast(message, type = "info") {
 
   container.appendChild(toast);
 
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
+  setTimeout(() => toast.remove(), 3000);
 }
 
 // =============================================================
@@ -133,9 +133,47 @@ async function loadPlayers(fromRealtime = false) {
 
     firstLoad = false;
   } catch (err) {
-    console.error(err);
+    console.error("Error cargando jugadores:", err);
     showToast("❌ Error cargando jugadores", "error");
   }
+}
+
+// =============================================================
+// SKILLS MODAL
+// =============================================================
+
+function openSkillsModal(skills = []) {
+  if (!skills.length) return;
+
+  let modal = document.getElementById("skillsModal");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "skillsModal";
+    modal.className =
+      "fixed inset-0 bg-black/80 z-50 flex items-center justify-center";
+    modal.innerHTML = `
+      <div class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-sm w-full relative">
+        <button
+          onclick="document.getElementById('skillsModal').remove()"
+          class="absolute top-2 right-2 text-xl text-white">✕</button>
+        <h3 class="text-lg font-bold mb-4 text-center">Habilidades</h3>
+        <ul id="skillsList" class="space-y-2"></ul>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  const list = modal.querySelector("#skillsList");
+  list.innerHTML = "";
+
+  skills.forEach(s => {
+    const li = document.createElement("li");
+    li.className =
+      "bg-stone-700 rounded px-3 py-2 text-sm text-white";
+    li.textContent = s;
+    list.appendChild(li);
+  });
 }
 
 // =============================================================
@@ -151,6 +189,7 @@ function renderPlayerBoard(list = players) {
     const level = safeLevel(p.level);
     const exp = safeExp(p.exp);
     const percent = expProgress(level, exp);
+    const skills = Array.isArray(p.skills) ? p.skills : [];
 
     const card = document.createElement("div");
     card.className =
@@ -170,16 +209,24 @@ function renderPlayerBoard(list = players) {
       <p class="text-sm">❤️ Salud: ${p.life}</p>
       <p class="text-sm">🏆 ${p.milestones || "-"}</p>
 
+      ${skills.length ? `
+        <button
+          onclick='openSkillsModal(${JSON.stringify(skills)})'
+          class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
+          Ver habilidades (${skills.length})
+        </button>
+      ` : ""}
+
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-2 overflow-hidden">
           <div class="bg-green-500 h-3" style="width:${percent}%"></div>
         </div>
 
         <div class="grid grid-cols-6 gap-1 mt-3">
-          ${(p.items || []).slice(0, 6).map((item, i) => `
+          ${(p.items || []).slice(0, 6).map(item => `
             <img
               src="${resolveImage(item)}"
-              class="w-10 h-10 object-cover rounded border cursor-pointer"
+              class="w-10 h-10 object-cover rounded border"
               loading="lazy"
             />
           `).join("")}
