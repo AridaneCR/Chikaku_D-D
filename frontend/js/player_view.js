@@ -10,7 +10,7 @@ const API_PLAYERS = `${BASE_URL}/api/players`;
 
 let players = [];
 let isFiltering = false;
-let lastSignature = ""; // 🔥 firma ligera (NO base64)
+let lastSignature = ""; // firma ligera (NO base64)
 let firstLoad = true;
 
 const playerBoard = document.getElementById("playerBoard");
@@ -73,20 +73,22 @@ async function fetchJson(url) {
 }
 
 function buildSignature(list) {
-  // 🔥 SOLO datos ligeros
-  return list
-    .map(p => `${p._id}:${p.updatedAt}`)
-    .join("|");
+  // SOLO datos ligeros → rápido
+  return list.map(p => `${p._id}:${p.updatedAt}`).join("|");
 }
 
-async function loadPlayers() {
+// =============================================================
+// LOAD PLAYERS (OPTIMIZADO)
+// =============================================================
+
+async function loadPlayers(force = false) {
   try {
     if (firstLoad) showSkeleton();
 
     const data = await fetchJson(API_PLAYERS);
     const signature = buildSignature(data);
 
-    if (signature === lastSignature) return;
+    if (!force && signature === lastSignature) return;
 
     lastSignature = signature;
     players = data;
@@ -94,7 +96,7 @@ async function loadPlayers() {
     if (!isFiltering) renderPlayerBoard(players);
     firstLoad = false;
   } catch (err) {
-    console.error("Error cargando jugadores:", err);
+    console.error("❌ Error cargando jugadores:", err);
   }
 }
 
@@ -172,10 +174,12 @@ function searchPlayer() {
   const lvl = document.getElementById("searchLevel").value;
   isFiltering = true;
 
-  renderPlayerBoard(players.filter(p =>
-    (!name || p.name.toLowerCase().includes(name)) &&
-    (!lvl || p.level == lvl)
-  ));
+  renderPlayerBoard(
+    players.filter(p =>
+      (!name || p.name.toLowerCase().includes(name)) &&
+      (!lvl || p.level == lvl)
+    )
+  );
 }
 
 function clearSearch() {
@@ -184,7 +188,18 @@ function clearSearch() {
 }
 
 // =============================================================
-// AUTO UPDATE
+// 🔥 INSTANT SYNC DESDE MASTER
+// =============================================================
+
+window.addEventListener("storage", (e) => {
+  if (e.key === "players_updated") {
+    console.log("🔄 Actualización detectada desde el panel Master");
+    loadPlayers(true); // fuerza actualización
+  }
+});
+
+// =============================================================
+// AUTO UPDATE (BACKUP)
 // =============================================================
 
 setInterval(() => {
@@ -192,7 +207,17 @@ setInterval(() => {
 }, 10000);
 
 // =============================================================
+// VISIBILITY REFRESH (EXTRA UX)
+// =============================================================
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) loadPlayers(true);
+});
+
+// =============================================================
 // INIT
 // =============================================================
 
-window.addEventListener("load", loadPlayers);
+window.addEventListener("load", () => {
+  loadPlayers();
+});
