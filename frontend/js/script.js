@@ -212,6 +212,46 @@ function renderPlayersList() {
 }
 
 // =============================================================
+// EDIT PLAYER (ABRIR FORMULARIO)
+// =============================================================
+function editPlayer(id) {
+  const player = players.find(p => p._id === id);
+  if (!player) {
+    alert("Jugador no encontrado");
+    return;
+  }
+
+  formMode = "edit";
+  editingPlayerId = id;
+
+  toggleCreateCard(true);
+
+  // Rellenar campos
+  charNameInput.value = player.name || "";
+  charLifeInput.value = player.life ?? 10;
+  charMilestonesInput.value = player.milestones || "";
+  charAttributesInput.value = player.attributes || "";
+  charExpInput.value = player.exp ?? 0;
+  charLevelInput.value = player.level ?? 1;
+
+  // Skills
+  skillsContainer.innerHTML = "";
+  (player.skills || []).forEach(skill => addSkillInput(skill));
+
+  // Imagen principal (NO tocar, solo ocultar preview)
+  charImgInput.value = "";
+  previewCharMain.classList.add("hidden");
+
+  // Objetos
+  initItems();
+  (player.itemDescriptions || []).forEach((desc, i) => {
+    const textarea = document.getElementById(`item${i + 1}Desc`);
+    if (textarea) textarea.value = desc;
+  });
+}
+
+
+// =============================================================
 // CREATE / EDIT
 // =============================================================
 async function submitCharacter() {
