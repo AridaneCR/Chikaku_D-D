@@ -8,7 +8,7 @@ const BASE_URL =
     : "https://chikaku-d-d-backend-pbe.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
-const SSE_URL = `${BASE_URL}/api/players/stream`; // ✅ endpoint correcto
+const SSE_URL = `${BASE_URL}/api/players/stream`;
 
 // =============================================================
 // STATE
@@ -23,17 +23,25 @@ let sseConnected = false;
 const playerBoard = document.getElementById("playerBoard");
 
 // =============================================================
-// HELPERS (IMÁGENES SEGURAS)
+// IMAGE NORMALIZER (🔥 FIX REAL)
 // =============================================================
 
-function safeImg(src) {
-  return typeof src === "string" && src.startsWith("http")
-    ? src
-    : "/placeholder.png";
+function resolveImage(img) {
+  if (!img) return "/placeholder.png";
+
+  if (typeof img === "object") {
+    return img.secure_url || img.url || "/placeholder.png";
+  }
+
+  if (typeof img === "string") {
+    return img.startsWith("http") ? img : "/placeholder.png";
+  }
+
+  return "/placeholder.png";
 }
 
 // =============================================================
-// TOAST SYSTEM
+// TOAST
 // =============================================================
 
 function showToast(message, type = "info") {
@@ -56,17 +64,15 @@ function showToast(message, type = "info") {
 
   const toast = document.createElement("div");
   toast.className = `
-    ${colors[type] || colors.info}
+    ${colors[type]}
     text-white px-4 py-3 rounded-xl shadow-xl
-    animate-fade-in
   `;
   toast.textContent = message;
 
   container.appendChild(toast);
 
   setTimeout(() => {
-    toast.classList.add("opacity-0");
-    setTimeout(() => toast.remove(), 300);
+    toast.remove();
   }, 3000);
 }
 
@@ -92,33 +98,7 @@ function expProgress(level, totalExp) {
 }
 
 // =============================================================
-// SKELETON (PRIMERA CARGA)
-// =============================================================
-
-function showSkeleton(count = 8) {
-  playerBoard.innerHTML = "";
-  playerBoard.className =
-    "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
-
-  for (let i = 0; i < count; i++) {
-    const sk = document.createElement("div");
-    sk.className =
-      "animate-pulse bg-stone-800 rounded-xl p-4 h-[420px]";
-    sk.innerHTML = `
-      <div class="h-6 bg-stone-700 rounded mb-3"></div>
-      <div class="h-44 bg-stone-700 rounded mb-3"></div>
-      <div class="h-4 bg-stone-700 rounded mb-2"></div>
-      <div class="h-4 bg-stone-700 rounded mb-2"></div>
-      <div class="grid grid-cols-6 gap-1 mt-4">
-        ${"<div class='h-10 bg-stone-700 rounded'></div>".repeat(6)}
-      </div>
-    `;
-    playerBoard.appendChild(sk);
-  }
-}
-
-// =============================================================
-// FETCH + FIRMA
+// FETCH
 // =============================================================
 
 async function fetchJson(url) {
@@ -128,9 +108,7 @@ async function fetchJson(url) {
 }
 
 function buildSignature(list) {
-  return list
-    .map(p => `${p._id}:${p.updatedAt}`)
-    .join("|");
+  return list.map(p => `${p._id}:${p.updatedAt}`).join("|");
 }
 
 // =============================================================
@@ -139,8 +117,6 @@ function buildSignature(list) {
 
 async function loadPlayers(fromRealtime = false) {
   try {
-    if (firstLoad) showSkeleton();
-
     const data = await fetchJson(API_PLAYERS);
     const signature = buildSignature(data);
 
@@ -157,7 +133,7 @@ async function loadPlayers(fromRealtime = false) {
 
     firstLoad = false;
   } catch (err) {
-    console.error("Error cargando jugadores:", err);
+    console.error(err);
     showToast("❌ Error cargando jugadores", "error");
   }
 }
@@ -171,13 +147,10 @@ function renderPlayerBoard(list = players) {
   playerBoard.className =
     "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
 
-  const frag = document.createDocumentFragment();
-
   list.forEach(p => {
     const level = safeLevel(p.level);
     const exp = safeExp(p.exp);
     const percent = expProgress(level, exp);
-    const skills = Array.isArray(p.skills) ? p.skills : [];
 
     const card = document.createElement("div");
     card.className =
@@ -188,92 +161,57 @@ function renderPlayerBoard(list = players) {
         ${p.name} (Nivel ${level})
       </h2>
 
-      <img loading="lazy"
-        src="${safeImg(p.img)}"
-        class="w-full h-44 object-cover rounded mb-3"/>
+      <img
+        src="${resolveImage(p.img)}"
+        class="w-full h-44 object-cover rounded mb-3"
+        loading="lazy"
+      />
 
       <p class="text-sm">❤️ Salud: ${p.life}</p>
       <p class="text-sm">🏆 ${p.milestones || "-"}</p>
 
-      ${
-        skills.length
-          ? `<button
-              onclick='openSkillsModal(${JSON.stringify(skills)})'
-              class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
-              Ver habilidades (${skills.length})
-            </button>`
-          : ""
-      }
-
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-2 overflow-hidden">
-          <div class="bg-green-500 h-3 exp-bar" style="width:${percent}%;"></div>
+          <div class="bg-green-500 h-3" style="width:${percent}%"></div>
         </div>
 
         <div class="grid grid-cols-6 gap-1 mt-3">
           ${(p.items || []).slice(0, 6).map((item, i) => `
-            <img loading="lazy"
-              src="${safeImg(item)}"
+            <img
+              src="${resolveImage(item)}"
               class="w-10 h-10 object-cover rounded border cursor-pointer"
-              onclick="openItemModal('${p.itemDescriptions?.[i] || "Sin descripción"}')"/>
+              loading="lazy"
+            />
           `).join("")}
         </div>
       </div>
     `;
 
-    frag.appendChild(card);
+    playerBoard.appendChild(card);
   });
-
-  playerBoard.appendChild(frag);
 }
 
 // =============================================================
-// SEARCH
-// =============================================================
-
-function searchPlayer() {
-  const name = document.getElementById("searchName").value.toLowerCase();
-  const lvl = document.getElementById("searchLevel").value;
-  isFiltering = true;
-
-  renderPlayerBoard(players.filter(p =>
-    (!name || p.name.toLowerCase().includes(name)) &&
-    (!lvl || p.level == lvl)
-  ));
-}
-
-function clearSearch() {
-  isFiltering = false;
-  renderPlayerBoard(players);
-}
-
-// =============================================================
-// SSE (TIEMPO REAL)
+// SSE
 // =============================================================
 
 function initSSE() {
-  try {
-    const source = new EventSource(SSE_URL);
+  const source = new EventSource(SSE_URL);
 
-    source.onopen = () => {
-      sseConnected = true;
-      showToast("🟢 Conectado en tiempo real", "info");
-    };
+  source.onopen = () => {
+    sseConnected = true;
+    showToast("🟢 Conectado en tiempo real");
+  };
 
-    source.addEventListener("playersUpdated", () => {
-      loadPlayers(true);
-    });
+  source.addEventListener("playersUpdated", () => {
+    loadPlayers(true);
+  });
 
-    source.onerror = () => {
-      if (sseConnected) {
-        showToast("⚠️ Conexión en tiempo real perdida", "warning");
-      }
-      sseConnected = false;
-      source.close();
-    };
-  } catch (err) {
-    console.error("SSE no disponible:", err);
-  }
+  source.onerror = () => {
+    sseConnected = false;
+    source.close();
+    showToast("⚠️ SSE desconectado, usando polling", "warning");
+  };
 }
 
 // =============================================================
