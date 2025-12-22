@@ -13,6 +13,24 @@
     .exp-bar {
       transition: width 1s ease-in-out;
     }
+
+    /* =============================================================
+       TOAST ANIMATIONS
+       ============================================================= */
+    .toast-enter {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    .toast-enter-active {
+      opacity: 1;
+      transform: translateY(0);
+      transition: all 0.3s ease;
+    }
+    .toast-exit {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+    }
   </style>
 </head>
 
@@ -77,7 +95,7 @@
 
     <!-- TABLERO -->
     <section id="playerBoard" class="relative min-h-screen">
-      <!-- Las cards se renderizan desde player_view.js -->
+      <!-- Cards renderizadas desde player_view.js -->
     </section>
 
   </main>
@@ -114,6 +132,14 @@
         class="text-stone-200 text-sm whitespace-pre-line">
       </p>
     </div>
+  </div>
+
+  <!-- =============================================================
+  TOAST CONTAINER (🔥 NUEVO)
+  ============================================================= -->
+  <div
+    id="toastContainer"
+    class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none">
   </div>
 
   <!-- =============================================================

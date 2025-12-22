@@ -1,49 +1,66 @@
 // =============================================================
 // CONFIG
 // =============================================================
-
-const BASE_URL = (window.__env && window.__env.API_URL)
-  ? window.__env.API_URL
-  : "https://chikaku-d-d-backend-pbe.onrender.com";
+const BASE_URL =
+  window.__env && window.__env.API_URL
+    ? window.__env.API_URL
+    : "https://chikaku-d-d-backend-pbe.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
-
-// =============================================================
-// STATE
-// =============================================================
-
-let players = [];
-let isFiltering = false;
-let lastSignature = "";
-let firstLoad = true;
+const SSE_URL = `${API_PLAYERS}/stream`;
 
 const playerBoard = document.getElementById("playerBoard");
 
 // =============================================================
+// STATE
+// =============================================================
+let players = [];
+let isFiltering = false;
+let lastSignature = "";
+let firstLoad = true;
+let eventSource = null;
+
+// =============================================================
 // EXP SYSTEM
 // =============================================================
-
 const BASE_EXP = 100;
 
-const safeLevel = l => (!l || l < 1) ? 1 : Number(l);
-const safeExp = e => (!e || e < 0) ? 0 : Number(e);
+const safeLevel = l => (!l || l < 1 ? 1 : Number(l));
+const safeExp = e => (!e || e < 0 ? 0 : Number(e));
 
 const expNeededForLevel = lvl =>
   BASE_EXP * Math.pow(1.05, lvl - 1);
 
 function expProgress(level, totalExp) {
   let expBefore = 0;
-  for (let i = 1; i < level; i++) expBefore += expNeededForLevel(i);
+  for (let i = 1; i < level; i++) {
+    expBefore += expNeededForLevel(i);
+  }
   let current = totalExp - expBefore;
   if (current < 0) current = 0;
-  const required = expNeededForLevel(level);
-  return Math.min(100, (current / required) * 100);
+  return Math.min(100, (current / expNeededForLevel(level)) * 100);
 }
 
 // =============================================================
-// SKELETON (solo primera carga)
+// UI HELPERS
 // =============================================================
+function showToast(text) {
+  const toast = document.createElement("div");
+  toast.className =
+    "fixed bottom-6 right-6 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-xl z-50 animate-fade-in";
+  toast.textContent = text;
 
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("opacity-0");
+    setTimeout(() => toast.remove(), 500);
+  }, 2500);
+}
+
+// =============================================================
+// SKELETON
+// =============================================================
 function showSkeleton(count = 8) {
   playerBoard.innerHTML = "";
   playerBoard.className =
@@ -58,9 +75,6 @@ function showSkeleton(count = 8) {
       <div class="h-44 bg-stone-700 rounded mb-3"></div>
       <div class="h-4 bg-stone-700 rounded mb-2"></div>
       <div class="h-4 bg-stone-700 rounded mb-2"></div>
-      <div class="grid grid-cols-6 gap-1 mt-4">
-        ${"<div class='h-10 bg-stone-700 rounded'></div>".repeat(6)}
-      </div>
     `;
     playerBoard.appendChild(sk);
   }
@@ -69,23 +83,26 @@ function showSkeleton(count = 8) {
 // =============================================================
 // FETCH
 // =============================================================
-
-async function fetchJson(url) {
-  const res = await fetch(url, { cache: "no-store" });
+async function fetchPlayers() {
+  const res = await fetch(API_PLAYERS, { cache: "no-store" });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 function buildSignature(list) {
-  // 🔥 SOLO datos ligeros (NO base64)
-  return list.map(p => `${p._id}:${p.updatedAt}`).join("|");
+  return list
+    .map(p => `${p._id}:${p.updatedAt}`)
+    .join("|");
 }
 
+// =============================================================
+// LOAD + RENDER
+// =============================================================
 async function loadPlayers(force = false) {
   try {
     if (firstLoad) showSkeleton();
 
-    const data = await fetchJson(API_PLAYERS);
+    const data = await fetchPlayers();
     const signature = buildSignature(data);
 
     if (!force && signature === lastSignature) return;
@@ -100,11 +117,7 @@ async function loadPlayers(force = false) {
   }
 }
 
-// =============================================================
-// RENDER
-// =============================================================
-
-function renderPlayerBoard(list = players) {
+function renderPlayerBoard(list) {
   playerBoard.innerHTML = "";
   playerBoard.className =
     "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
@@ -126,9 +139,11 @@ function renderPlayerBoard(list = players) {
         ${p.name} (Nivel ${level})
       </h2>
 
-      <img loading="lazy"
-        src="${p.img ? `data:image/jpeg;base64,${p.img}` : '/placeholder.png'}"
-        class="w-full h-44 object-cover rounded mb-3"/>
+      <img
+        loading="lazy"
+        src="${p.img || "/placeholder.png"}"
+        class="w-full h-44 object-cover rounded mb-3"
+      />
 
       <p class="text-sm">❤️ Salud: ${p.life}</p>
       <p class="text-sm">🏆 ${p.milestones || "-"}</p>
@@ -136,7 +151,7 @@ function renderPlayerBoard(list = players) {
       ${
         skills.length
           ? `<button
-              onclick='openSkillsModal(${JSON.stringify(skills)})'
+              onclick='alert(${JSON.stringify(skills.join(", "))})'
               class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
               Ver habilidades (${skills.length})
             </button>`
@@ -146,15 +161,6 @@ function renderPlayerBoard(list = players) {
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-2 overflow-hidden">
           <div class="bg-green-500 h-3 exp-bar" style="width:${percent}%;"></div>
-        </div>
-
-        <div class="grid grid-cols-6 gap-1 mt-3">
-          ${(p.items || []).slice(0, 6).map((item, i) => `
-            <img loading="lazy"
-              src="${item ? `data:image/jpeg;base64,${item}` : '/placeholder.png'}"
-              class="w-10 h-10 object-cover rounded border cursor-pointer"
-              onclick="openItemModal('${p.itemDescriptions?.[i] || "Sin descripción"}')"/>
-          `).join("")}
         </div>
       </div>
     `;
@@ -168,16 +174,17 @@ function renderPlayerBoard(list = players) {
 // =============================================================
 // SEARCH
 // =============================================================
-
 function searchPlayer() {
   const name = document.getElementById("searchName").value.toLowerCase();
   const lvl = document.getElementById("searchLevel").value;
   isFiltering = true;
 
-  renderPlayerBoard(players.filter(p =>
-    (!name || p.name.toLowerCase().includes(name)) &&
-    (!lvl || p.level == lvl)
-  ));
+  renderPlayerBoard(
+    players.filter(p =>
+      (!name || p.name.toLowerCase().includes(name)) &&
+      (!lvl || p.level == lvl)
+    )
+  );
 }
 
 function clearSearch() {
@@ -186,26 +193,30 @@ function clearSearch() {
 }
 
 // =============================================================
-// 🔥 REAL-TIME SYNC (MASTER → PLAYER)
+// SSE
 // =============================================================
+function initSSE() {
+  if (eventSource) eventSource.close();
 
-window.addEventListener("storage", (e) => {
-  if (e.key === "players_updated") {
-    console.log("🔄 Actualización recibida desde Master");
+  eventSource = new EventSource(SSE_URL);
+
+  eventSource.addEventListener("playersUpdated", () => {
+    console.log("🔄 Actualización recibida por SSE");
     loadPlayers(true);
-  }
-});
+    showToast("Jugadores actualizados");
+  });
 
-// =============================================================
-// AUTO UPDATE (fallback)
-// =============================================================
-
-setInterval(() => {
-  if (!isFiltering) loadPlayers();
-}, 15000);
+  eventSource.onerror = err => {
+    console.warn("⚠️ SSE desconectado, reintentando…", err);
+    eventSource.close();
+    setTimeout(initSSE, 3000);
+  };
+}
 
 // =============================================================
 // INIT
 // =============================================================
-
-window.addEventListener("load", loadPlayers);
+window.addEventListener("load", () => {
+  loadPlayers();
+  initSSE();
+});

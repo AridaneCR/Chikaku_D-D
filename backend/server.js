@@ -44,5 +44,38 @@ app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`))
 
 // keepalive
 setInterval(() => {
-  fetch("https://TU_BACKEND.onrender.com/api/players")
+  fetch("https://chikaku-d-d-backend-pbe.onrender.com")
 }, 10 * 60 * 1000); // cada 10 min
+
+
+// =============================================================
+// SSE CLIENTS
+// =============================================================
+
+let sseClients = [];
+
+// Endpoint SSE
+app.get("/api/players/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  res.flushHeaders();
+
+  const clientId = Date.now();
+  const client = { id: clientId, res };
+
+  sseClients.push(client);
+
+  req.on("close", () => {
+    sseClients = sseClients.filter(c => c.id !== clientId);
+  });
+});
+
+// Función para avisar cambios
+function notifyPlayersUpdate() {
+  sseClients.forEach(client => {
+    client.res.write(`event: playersUpdated\ndata: update\n\n`);
+  });
+}
