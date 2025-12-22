@@ -2,62 +2,18 @@
 // CONFIG
 // =============================================================
 
-const BASE_URL =
-  window.__env && window.__env.API_URL
-    ? window.__env.API_URL
-    : "https://chikaku-d-d-backend-pbe.onrender.com";
+const BASE_URL = (window.__env && window.__env.API_URL)
+  ? window.__env.API_URL
+  : "https://chikaku-d-d-backend-pbe.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
-const SSE_URL = `${BASE_URL}/api/players/sse`; // 👈 endpoint SSE
-
-// =============================================================
-// STATE
-// =============================================================
 
 let players = [];
-let lastSignature = "";
 let isFiltering = false;
+let lastSignature = ""; // 🔥 firma ligera (NO base64)
 let firstLoad = true;
-let sseConnected = false;
 
 const playerBoard = document.getElementById("playerBoard");
-
-// =============================================================
-// TOAST SYSTEM
-// =============================================================
-
-function showToast(message, type = "info") {
-  const container = document.getElementById("toastContainer");
-  if (!container) return;
-
-  const colors = {
-    info: "bg-indigo-600",
-    success: "bg-green-600",
-    warning: "bg-yellow-600",
-    error: "bg-red-600",
-  };
-
-  const toast = document.createElement("div");
-  toast.className = `
-    toast-enter pointer-events-auto
-    ${colors[type] || colors.info}
-    text-white px-4 py-3 rounded-xl shadow-xl
-    flex items-center gap-3 min-w-[220px]
-  `;
-
-  toast.innerHTML = `<span class="font-semibold">${message}</span>`;
-  container.appendChild(toast);
-
-  requestAnimationFrame(() => {
-    toast.classList.remove("toast-enter");
-    toast.classList.add("toast-enter-active");
-  });
-
-  setTimeout(() => {
-    toast.classList.add("toast-exit");
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
-}
 
 // =============================================================
 // EXP SYSTEM
@@ -81,7 +37,7 @@ function expProgress(level, totalExp) {
 }
 
 // =============================================================
-// SKELETON (primera carga)
+// SKELETON (solo primera carga)
 // =============================================================
 
 function showSkeleton(count = 8) {
@@ -107,7 +63,7 @@ function showSkeleton(count = 8) {
 }
 
 // =============================================================
-// FETCH + FIRMA
+// FETCH
 // =============================================================
 
 async function fetchJson(url) {
@@ -117,16 +73,13 @@ async function fetchJson(url) {
 }
 
 function buildSignature(list) {
+  // 🔥 SOLO datos ligeros
   return list
     .map(p => `${p._id}:${p.updatedAt}`)
     .join("|");
 }
 
-// =============================================================
-// LOAD PLAYERS
-// =============================================================
-
-async function loadPlayers(fromRealtime = false) {
+async function loadPlayers() {
   try {
     if (firstLoad) showSkeleton();
 
@@ -139,15 +92,9 @@ async function loadPlayers(fromRealtime = false) {
     players = data;
 
     if (!isFiltering) renderPlayerBoard(players);
-
-    if (fromRealtime) {
-      showToast("⚡ Jugadores actualizados", "success");
-    }
-
     firstLoad = false;
   } catch (err) {
     console.error("Error cargando jugadores:", err);
-    showToast("❌ Error cargando jugadores", "error");
   }
 }
 
@@ -178,7 +125,7 @@ function renderPlayerBoard(list = players) {
       </h2>
 
       <img loading="lazy"
-        src="${p.img || "/placeholder.png"}"
+        src="${p.img ? `data:image/jpeg;base64,${p.img}` : '/placeholder.png'}"
         class="w-full h-44 object-cover rounded mb-3"/>
 
       <p class="text-sm">❤️ Salud: ${p.life}</p>
@@ -196,13 +143,13 @@ function renderPlayerBoard(list = players) {
 
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-2 overflow-hidden">
-          <div class="bg-green-500 h-3" style="width:${percent}%;"></div>
+          <div class="bg-green-500 h-3 exp-bar" style="width:${percent}%;"></div>
         </div>
 
         <div class="grid grid-cols-6 gap-1 mt-3">
           ${(p.items || []).slice(0, 6).map((item, i) => `
             <img loading="lazy"
-              src="${item || "/placeholder.png"}"
+              src="${item ? `data:image/jpeg;base64,${item}` : '/placeholder.png'}"
               class="w-10 h-10 object-cover rounded border cursor-pointer"
               onclick="openItemModal('${p.itemDescriptions?.[i] || "Sin descripción"}')"/>
           `).join("")}
@@ -237,49 +184,15 @@ function clearSearch() {
 }
 
 // =============================================================
-// SSE (TIEMPO REAL)
-// =============================================================
-
-function initSSE() {
-  try {
-    const source = new EventSource(SSE_URL);
-
-    source.onopen = () => {
-      sseConnected = true;
-      showToast("🟢 Conectado en tiempo real", "info");
-    };
-
-    source.addEventListener("playersUpdated", () => {
-      loadPlayers(true);
-    });
-
-    source.onerror = () => {
-      if (sseConnected) {
-        showToast("⚠️ Conexión en tiempo real perdida", "warning");
-      }
-      sseConnected = false;
-      source.close();
-    };
-  } catch (err) {
-    console.error("SSE no disponible:", err);
-  }
-}
-
-// =============================================================
-// POLLING BACKUP (solo si SSE cae)
+// AUTO UPDATE
 // =============================================================
 
 setInterval(() => {
-  if (!sseConnected && !isFiltering) {
-    loadPlayers();
-  }
+  if (!isFiltering) loadPlayers();
 }, 10000);
 
 // =============================================================
 // INIT
 // =============================================================
 
-window.addEventListener("load", () => {
-  loadPlayers();
-  initSSE();
-});
+window.addEventListener("load", loadPlayers);
