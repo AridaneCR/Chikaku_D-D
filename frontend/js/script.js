@@ -1,9 +1,45 @@
 // =============================================================
 // STATE
 // =============================================================
-let formMode = "create"; // "create" | "edit"
+let formMode = "create";
 let editingPlayerId = null;
 let lastSignature = "";
+
+// =============================================================
+// TOAST SYSTEM
+// =============================================================
+function showToast(message, type = "info") {
+  const colors = {
+    success: "bg-green-600",
+    info: "bg-indigo-600",
+    warning: "bg-yellow-600",
+    error: "bg-red-600",
+  };
+
+  let container = document.getElementById("toastContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toastContainer";
+    container.className =
+      "fixed top-5 right-5 z-50 flex flex-col gap-3";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `
+    ${colors[type] || colors.info}
+    text-white px-4 py-3 rounded-xl shadow-xl
+    font-semibold animate-fade-in
+  `;
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("opacity-0");
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
 
 // =============================================================
 // UI ACTIONS
@@ -33,9 +69,8 @@ function openPlayerBoard() {
 // CONFIG
 // =============================================================
 const BASE_URL =
-  window.__env && window.__env.API_URL
-    ? window.__env.API_URL
-    : "https://chikaku-d-d-backend-pbe.onrender.com";
+  window.__env?.API_URL ||
+  "https://chikaku-d-d-backend-pbe.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 let players = [];
@@ -73,11 +108,11 @@ async function fetchJson(url, opts = {}, showLoading = false) {
 function validateImage(file) {
   if (!file) return true;
   if (!ALLOWED_TYPES.includes(file.type)) {
-    alert("Solo PNG, JPG, JPEG o WEBP");
+    showToast("Formato de imagen no válido", "warning");
     return false;
   }
   if (file.size > MAX_IMAGE_SIZE) {
-    alert("Máx 2MB");
+    showToast("Imagen mayor de 2MB", "warning");
     return false;
   }
   return true;
@@ -109,12 +144,7 @@ function addPreview(inputId, previewId) {
 // =============================================================
 function addSkillInput(value = "") {
   const container = document.getElementById("skillsContainer");
-  if (!container) return;
-
-  if (container.children.length >= 8) {
-    alert("Máximo 8 habilidades");
-    return;
-  }
+  if (!container || container.children.length >= 8) return;
 
   const div = document.createElement("div");
   div.className = "relative";
@@ -128,7 +158,6 @@ function addSkillInput(value = "") {
       ✕
     </button>
   `;
-
   container.appendChild(div);
 }
 
@@ -140,11 +169,9 @@ function initItems() {
   if (!container) return;
 
   container.innerHTML = "";
-
   for (let i = 1; i <= 6; i++) {
     const div = document.createElement("div");
     div.className = "object-card";
-
     div.innerHTML = `
       <label class="label-sm">Objeto ${i}</label>
       <input id="item${i}Input" type="file" class="file" />
@@ -152,7 +179,6 @@ function initItems() {
         rows="2" placeholder="Descripción del objeto..."></textarea>
       <img id="previewItem${i}" class="preview mt-3" />
     `;
-
     container.appendChild(div);
     addPreview(`item${i}Input`, `previewItem${i}`);
   }
@@ -161,10 +187,13 @@ function initItems() {
 // =============================================================
 // PLAYERS LIST
 // =============================================================
-async function refreshPlayers() {
-  const data = await fetchJson(API_PLAYERS);
-  const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
+async function refreshPlayers(force = false) {
+  const data = await fetchJson(
+    API_PLAYERS,
+    force ? { headers: { "Cache-Control": "no-cache" } } : {}
+  );
 
+  const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
   if (signature === lastSignature) return;
 
   lastSignature = signature;
@@ -177,32 +206,28 @@ function renderPlayersList() {
   list.innerHTML = "";
 
   players.forEach(p => {
-    const card = document.createElement("div");
-    card.className =
-      "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
+    list.innerHTML += `
+      <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col">
+        <img src="${p.img || "/placeholder.png"}"
+          class="w-full h-40 object-cover rounded mb-2">
 
-    card.innerHTML = `
-      <img src="${p.img || "/placeholder.png"}"
-        class="w-full h-40 object-cover rounded mb-2">
+        <h3 class="font-bold text-lg">${p.name} (Nivel ${p.level})</h3>
+        <p>❤️ Vida: ${p.life}</p>
+        <p>⭐ EXP: ${p.exp}</p>
 
-      <h3 class="font-bold text-lg">${p.name} (Nivel ${p.level})</h3>
-      <p>❤️ Vida: ${p.life}</p>
-      <p>⭐ EXP: ${p.exp}</p>
+        <div class="mt-auto">
+          <button onclick="editPlayer('${p._id}')"
+            class="mt-3 w-full bg-green-600 p-2 rounded">
+            Editar
+          </button>
 
-      <div class="mt-auto">
-        <button onclick="editPlayer('${p._id}')"
-          class="mt-3 w-full bg-green-600 p-2 rounded">
-          Editar
-        </button>
-
-        <button onclick="deletePlayer('${p._id}')"
-          class="mt-2 w-full bg-red-600 p-2 rounded">
-          Eliminar
-        </button>
+          <button onclick="deletePlayer('${p._id}')"
+            class="mt-2 w-full bg-red-600 p-2 rounded">
+            Eliminar
+          </button>
+        </div>
       </div>
     `;
-
-    list.appendChild(card);
   });
 }
 
@@ -211,11 +236,10 @@ function renderPlayersList() {
 // =============================================================
 function editPlayer(id) {
   const player = players.find(p => p._id === id);
-  if (!player) return alert("Jugador no encontrado");
+  if (!player) return;
 
   formMode = "edit";
   editingPlayerId = id;
-
   toggleCreateCard(true);
   submitCharacterBtn.textContent = "✏️ Guardar cambios";
 
@@ -227,30 +251,26 @@ function editPlayer(id) {
   charLevelInput.value = player.level ?? 1;
 
   skillsContainer.innerHTML = "";
-  (player.skills || []).forEach(s => addSkillInput(s));
+  (player.skills || []).forEach(addSkillInput);
 
-  // Imagen principal actual
   charImgInput.value = "";
   if (player.img) {
     previewCharMain.src = player.img;
     previewCharMain.classList.remove("hidden");
-  } else {
-    previewCharMain.classList.add("hidden");
   }
 
-  // Objetos actuales
   initItems();
   (player.items || []).forEach((img, i) => {
-    const preview = document.getElementById(`previewItem${i + 1}`);
-    if (preview && img) {
-      preview.src = img;
-      preview.classList.remove("hidden");
+    const p = document.getElementById(`previewItem${i + 1}`);
+    if (p && img) {
+      p.src = img;
+      p.classList.remove("hidden");
     }
   });
 
-  (player.itemDescriptions || []).forEach((desc, i) => {
+  (player.itemDescriptions || []).forEach((d, i) => {
     const t = document.getElementById(`item${i + 1}Desc`);
-    if (t) t.value = desc;
+    if (t) t.value = d;
   });
 }
 
@@ -259,7 +279,7 @@ function editPlayer(id) {
 // =============================================================
 async function submitCharacter() {
   const name = charNameInput.value.trim();
-  if (!name) return alert("Nombre obligatorio");
+  if (!name) return showToast("Nombre obligatorio", "warning");
 
   const skills = [...document.querySelectorAll("#skillsContainer input")]
     .map(i => i.value.trim()).filter(Boolean);
@@ -292,19 +312,19 @@ async function submitCharacter() {
 
   if (formMode === "create") {
     await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
-    alert("✅ Personaje creado");
+    showToast("Personaje creado", "success");
   } else {
     await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
       method: "PUT",
       body: fd
     }, true);
-    alert("✏️ Personaje editado");
+    showToast("Personaje editado", "info");
   }
 
   resetForm();
   toggleCreateCard();
-  lastSignature = ""; // 🔥 forzar refresh
-  refreshPlayers();
+  lastSignature = "";
+  refreshPlayers(true);
 }
 
 // =============================================================
@@ -313,9 +333,9 @@ async function submitCharacter() {
 async function deletePlayer(id) {
   if (!confirm("¿Eliminar personaje?")) return;
   await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" }, true);
-  alert("🗑️ Personaje eliminado");
+  showToast("Personaje eliminado", "error");
   lastSignature = "";
-  refreshPlayers();
+  refreshPlayers(true);
 }
 
 // =============================================================
