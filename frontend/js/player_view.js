@@ -2,18 +2,73 @@
 // CONFIG
 // =============================================================
 
-const BASE_URL = (window.__env && window.__env.API_URL)
-  ? window.__env.API_URL
-  : "https://chikaku-d-d-backend-pbe.onrender.com";
+const BASE_URL =
+  window.__env && window.__env.API_URL
+    ? window.__env.API_URL
+    : "https://chikaku-d-d-backend-pbe.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
+const SSE_URL = `${BASE_URL}/api/players/stream`; // ✅ endpoint correcto
+
+// =============================================================
+// STATE
+// =============================================================
 
 let players = [];
+let lastSignature = "";
 let isFiltering = false;
-let lastSignature = ""; // 🔥 firma ligera (NO base64)
 let firstLoad = true;
+let sseConnected = false;
 
 const playerBoard = document.getElementById("playerBoard");
+
+// =============================================================
+// HELPERS (IMÁGENES SEGURAS)
+// =============================================================
+
+function safeImg(src) {
+  return typeof src === "string" && src.startsWith("http")
+    ? src
+    : "/placeholder.png";
+}
+
+// =============================================================
+// TOAST SYSTEM
+// =============================================================
+
+function showToast(message, type = "info") {
+  let container = document.getElementById("toastContainer");
+
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toastContainer";
+    container.className =
+      "fixed top-4 right-4 z-50 flex flex-col gap-3";
+    document.body.appendChild(container);
+  }
+
+  const colors = {
+    info: "bg-indigo-600",
+    success: "bg-green-600",
+    warning: "bg-yellow-600",
+    error: "bg-red-600",
+  };
+
+  const toast = document.createElement("div");
+  toast.className = `
+    ${colors[type] || colors.info}
+    text-white px-4 py-3 rounded-xl shadow-xl
+    animate-fade-in
+  `;
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("opacity-0");
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
 
 // =============================================================
 // EXP SYSTEM
@@ -37,7 +92,7 @@ function expProgress(level, totalExp) {
 }
 
 // =============================================================
-// SKELETON (solo primera carga)
+// SKELETON (PRIMERA CARGA)
 // =============================================================
 
 function showSkeleton(count = 8) {
@@ -63,7 +118,7 @@ function showSkeleton(count = 8) {
 }
 
 // =============================================================
-// FETCH
+// FETCH + FIRMA
 // =============================================================
 
 async function fetchJson(url) {
@@ -73,13 +128,16 @@ async function fetchJson(url) {
 }
 
 function buildSignature(list) {
-  // 🔥 SOLO datos ligeros
   return list
     .map(p => `${p._id}:${p.updatedAt}`)
     .join("|");
 }
 
-async function loadPlayers() {
+// =============================================================
+// LOAD PLAYERS
+// =============================================================
+
+async function loadPlayers(fromRealtime = false) {
   try {
     if (firstLoad) showSkeleton();
 
@@ -92,9 +150,15 @@ async function loadPlayers() {
     players = data;
 
     if (!isFiltering) renderPlayerBoard(players);
+
+    if (fromRealtime) {
+      showToast("⚡ Jugadores actualizados", "success");
+    }
+
     firstLoad = false;
   } catch (err) {
     console.error("Error cargando jugadores:", err);
+    showToast("❌ Error cargando jugadores", "error");
   }
 }
 
@@ -125,7 +189,7 @@ function renderPlayerBoard(list = players) {
       </h2>
 
       <img loading="lazy"
-        src="${p.img ? `data:image/jpeg;base64,${p.img}` : '/placeholder.png'}"
+        src="${safeImg(p.img)}"
         class="w-full h-44 object-cover rounded mb-3"/>
 
       <p class="text-sm">❤️ Salud: ${p.life}</p>
@@ -149,7 +213,7 @@ function renderPlayerBoard(list = players) {
         <div class="grid grid-cols-6 gap-1 mt-3">
           ${(p.items || []).slice(0, 6).map((item, i) => `
             <img loading="lazy"
-              src="${item ? `data:image/jpeg;base64,${item}` : '/placeholder.png'}"
+              src="${safeImg(item)}"
               class="w-10 h-10 object-cover rounded border cursor-pointer"
               onclick="openItemModal('${p.itemDescriptions?.[i] || "Sin descripción"}')"/>
           `).join("")}
@@ -184,15 +248,49 @@ function clearSearch() {
 }
 
 // =============================================================
-// AUTO UPDATE
+// SSE (TIEMPO REAL)
+// =============================================================
+
+function initSSE() {
+  try {
+    const source = new EventSource(SSE_URL);
+
+    source.onopen = () => {
+      sseConnected = true;
+      showToast("🟢 Conectado en tiempo real", "info");
+    };
+
+    source.addEventListener("playersUpdated", () => {
+      loadPlayers(true);
+    });
+
+    source.onerror = () => {
+      if (sseConnected) {
+        showToast("⚠️ Conexión en tiempo real perdida", "warning");
+      }
+      sseConnected = false;
+      source.close();
+    };
+  } catch (err) {
+    console.error("SSE no disponible:", err);
+  }
+}
+
+// =============================================================
+// POLLING BACKUP
 // =============================================================
 
 setInterval(() => {
-  if (!isFiltering) loadPlayers();
+  if (!sseConnected && !isFiltering) {
+    loadPlayers();
+  }
 }, 10000);
 
 // =============================================================
 // INIT
 // =============================================================
 
-window.addEventListener("load", loadPlayers);
+window.addEventListener("load", () => {
+  loadPlayers();
+  initSSE();
+});
