@@ -35,8 +35,8 @@ function normalizePlayer(p) {
     milestones: p.milestones || "",
     attributes: p.attributes || "",
     skills: Array.isArray(p.skills) ? p.skills : [],
-    img: p.img || null,              // 👈 URL Cloudinary
-    items: Array.isArray(p.items) ? p.items : [],
+    img: typeof p.img === "string" ? p.img : null,
+    items: Array.isArray(p.items) ? p.items.filter(Boolean) : [],
     itemDescriptions: Array.isArray(p.itemDescriptions)
       ? p.itemDescriptions
       : [],
@@ -50,6 +50,11 @@ function normalizePlayer(p) {
 // ============================================================
 router.get("/", async (req, res) => {
   try {
+    // 🔥 Si viene de SSE, forzamos recarga
+    if (req.headers["x-realtime"] === "1") {
+      invalidateCache();
+    }
+
     if (CACHE.etag && req.headers["if-none-match"] === CACHE.etag) {
       return res.status(304).end();
     }
@@ -148,7 +153,7 @@ router.post(
       const saved = await player.save();
 
       invalidateCache();
-      notify?.("create", { id: saved._id });
+      if (notify) notify();
 
       res.json(normalizePlayer(saved.toObject()));
     } catch (err) {
@@ -159,7 +164,7 @@ router.post(
 );
 
 // ============================================================
-// UPDATE PLAYER (🔥 FIX DEFINITIVO)
+// UPDATE PLAYER
 // ============================================================
 router.put(
   "/:id",
@@ -186,24 +191,17 @@ router.put(
         player.skills = JSON.parse(req.body.skills);
       }
 
-      // 🔥 FIX CRÍTICO: sincronizar descripciones con items
       if (req.body.itemDescriptions) {
         let desc = JSON.parse(req.body.itemDescriptions);
         const itemsLength = Array.isArray(player.items) ? player.items.length : 0;
 
-        while (desc.length < itemsLength) {
-          desc.push("");
-        }
-
+        while (desc.length < itemsLength) desc.push("");
         player.itemDescriptions = desc.slice(0, 6);
       }
 
       if (req.files?.charImg?.[0]) {
         if (player.img) await deleteImage(player.img);
-        player.img = await uploadImage(
-          req.files.charImg[0].buffer,
-          "players"
-        );
+        player.img = await uploadImage(req.files.charImg[0].buffer, "players");
       }
 
       if (req.files?.items?.length) {
@@ -216,7 +214,7 @@ router.put(
       const saved = await player.save();
 
       invalidateCache();
-      notify?.("update", { id: saved._id });
+      if (notify) notify();
 
       res.json(normalizePlayer(saved.toObject()));
     } catch (err) {
@@ -245,7 +243,7 @@ router.delete("/:id", async (req, res) => {
     await player.deleteOne();
 
     invalidateCache();
-    notify?.("delete", { id: player._id });
+    if (notify) notify();
 
     res.json({ ok: true });
   } catch (err) {
