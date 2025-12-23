@@ -102,6 +102,10 @@ function expDetails(level, totalExp) {
     remaining: Math.max(0, required - current),
   };
 }
+function roundExp(value) {
+  return Math.max(0, Math.round(value));
+}
+
 
 // =============================================================
 // FETCH
@@ -210,7 +214,7 @@ function renderPlayerBoard(list = players) {
   playerBoard.className =
     "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
 
-  list.forEach(p => {
+  list.forEach((p, playerIndex) => {
     const level = safeLevel(p.level);
     const exp = safeExp(p.exp);
     const percent = expProgress(level, exp);
@@ -219,11 +223,11 @@ function renderPlayerBoard(list = players) {
 
     const card = document.createElement("div");
     card.className =
-      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[420px]";
+      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[440px]";
 
     card.innerHTML = `
-      <h2 class="text-lg font-bold mb-2 truncate">
-        ${p.name} (Nivel ${level})
+      <h2 class="text-lg font-bold mb-2 text-white truncate">
+        ${p.name || "Sin nombre"} (Nivel ${level})
       </h2>
 
       <img
@@ -232,13 +236,12 @@ function renderPlayerBoard(list = players) {
         loading="lazy"
       />
 
-      <p class="text-sm">❤️ Salud: ${p.life}</p>
-      <p class="text-sm">🏆 ${p.milestones || "-"}</p>
+      <p class="text-sm text-white">❤️ Salud: ${p.life}</p>
+      <p class="text-sm text-white">🏆 ${p.milestones || "-"}</p>
 
       ${skills.length ? `
         <button
-          onclick='openSkillsModal(${JSON.stringify(skills)})'
-          class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
+          class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs text-white skills-btn">
           Ver habilidades (${skills.length})
         </button>
       ` : ""}
@@ -248,19 +251,18 @@ function renderPlayerBoard(list = players) {
           <div class="bg-green-500 h-3" style="width:${percent}%"></div>
         </div>
 
-        <p class="text-xs text-stone-400 mt-1 text-center">
-          ${expInfo.current} / ${expInfo.required} EXP · faltan ${expInfo.remaining}
+        <p class="text-xs text-stone-300 mt-1 text-center">
+          ${roundExp(expInfo.current)} / ${roundExp(expInfo.required)} EXP
+          · faltan ${roundExp(expInfo.remaining)}
         </p>
 
         <div class="grid grid-cols-6 gap-1 mt-3">
           ${(p.items || []).slice(0, 6).map((item, i) => `
             <img
               src="${resolveImage(item)}"
-              class="w-10 h-10 object-cover rounded border cursor-pointer"
-              onclick="openItemModal(
-                '${resolveImage(item)}',
-                ${JSON.stringify(p.itemDescriptions?.[i] || "Sin descripción")}
-              )"
+              class="w-10 h-10 object-cover rounded border cursor-pointer item-img"
+              data-player="${playerIndex}"
+              data-item="${i}"
               loading="lazy"
             />
           `).join("")}
@@ -268,9 +270,29 @@ function renderPlayerBoard(list = players) {
       </div>
     `;
 
+    // 🔥 eventos seguros (sin strings rotos)
+    card.querySelectorAll(".item-img").forEach(img => {
+      img.addEventListener("click", e => {
+        const pIndex = e.target.dataset.player;
+        const iIndex = e.target.dataset.item;
+        openItemModal(
+          resolveImage(players[pIndex].items[iIndex]),
+          players[pIndex].itemDescriptions?.[iIndex] || "Sin descripción"
+        );
+      });
+    });
+
+    const skillsBtn = card.querySelector(".skills-btn");
+    if (skillsBtn) {
+      skillsBtn.addEventListener("click", () => {
+        openSkillsModal(skills);
+      });
+    }
+
     playerBoard.appendChild(card);
   });
 }
+
 
 // =============================================================
 // SSE
