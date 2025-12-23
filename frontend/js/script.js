@@ -308,18 +308,47 @@ async function submitCharacter() {
     if (f && validateImage(f)) fd.append("items", f);
   }
 
-  if (formMode === "create") {
-    await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
-  } else {
-    await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
-      method: "PUT",
-      body: fd
-    }, true);
-  }
+  let updatedPlayer;
 
-  resetForm();
-  toggleCreateCard();
-  refreshPlayers(true);
+  try {
+    if (formMode === "create") {
+      updatedPlayer = await fetchJson(
+        API_PLAYERS,
+        { method: "POST", body: fd },
+        true
+      );
+
+      // 🔥 INSERTA INMEDIATAMENTE EN MEMORIA
+      players.unshift(updatedPlayer);
+    } else {
+      updatedPlayer = await fetchJson(
+        `${API_PLAYERS}/${editingPlayerId}`,
+        { method: "PUT", body: fd },
+        true
+      );
+
+      // 🔥 ACTUALIZA EN MEMORIA
+      const index = players.findIndex(p => p._id === editingPlayerId);
+      if (index !== -1) {
+        players[index] = updatedPlayer;
+      }
+    }
+
+    // 🔥 RENDER INMEDIATO (SIN ESPERAR RED)
+    renderPlayersList();
+
+    resetForm();
+    toggleCreateCard();
+
+    // 🔄 SINCRONIZACIÓN SILENCIOSA
+    setTimeout(() => {
+      lastSignature = "";
+      refreshPlayers(true);
+    }, 1500);
+
+  } catch (err) {
+    console.error("Error guardando personaje:", err);
+  }
 }
 
 // =============================================================
