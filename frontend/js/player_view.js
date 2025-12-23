@@ -66,56 +66,43 @@ function showToast(message, type = "info") {
 }
 
 // =============================================================
-// 🔥 EXP SYSTEM (ACUMULATIVO REAL)
+// 🔥 EXP SYSTEM (ACUMULATIVO, EXACTO)
 // =============================================================
 
 const BASE_EXP = 100;
 const EXP_GROWTH = 1.08;
 
-// tabla de costes por nivel
-function buildExpTable(maxLevel = 50) {
-  const table = [];
+// Tabla exacta de coste por nivel
+function buildExpTable(max = 50) {
   let cost = BASE_EXP;
-
-  for (let i = 1; i <= maxLevel; i++) {
-    table.push(Math.round(cost));
+  return Array.from({ length: max }, () => {
+    const value = Math.round(cost);
     cost *= EXP_GROWTH;
-  }
-  return table;
+    return value;
+  });
 }
 
 const EXP_TABLE = buildExpTable();
 
-// nivel desde EXP TOTAL
-function levelFromExp(totalExp) {
-  let acc = 0;
-
-  for (let i = 0; i < EXP_TABLE.length; i++) {
-    acc += EXP_TABLE[i];
-    if (totalExp < acc) return i + 1;
-  }
-
-  return EXP_TABLE.length + 1;
-}
-
-// progreso real
-function expProgress(totalExp) {
-  let acc = 0;
+// Calcula nivel y progreso DESDE EXP TOTAL
+function calculateExpState(totalExp) {
+  let accumulated = 0;
 
   for (let lvl = 1; lvl <= EXP_TABLE.length; lvl++) {
-    const cost = EXP_TABLE[lvl - 1];
+    const required = EXP_TABLE[lvl - 1];
 
-    if (totalExp < acc + cost) {
-      const current = totalExp - acc;
+    if (totalExp < accumulated + required) {
+      const current = totalExp - accumulated;
       return {
         level: lvl,
         current,
-        required: cost,
-        remaining: cost - current,
-        percent: Math.min(100, Math.round((current / cost) * 100)),
+        required,
+        remaining: required - current,
+        percent: Math.round((current / required) * 100),
       };
     }
-    acc += cost;
+
+    accumulated += required;
   }
 
   return {
@@ -132,7 +119,14 @@ function expProgress(totalExp) {
 // =============================================================
 
 async function fetchJson(url) {
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+  });
+
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -180,6 +174,7 @@ function openSkillsModal(skills = []) {
     modal.id = "skillsModal";
     modal.className =
       "fixed inset-0 bg-black/80 z-50 flex items-center justify-center";
+
     modal.innerHTML = `
       <div class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-sm w-full relative">
         <button
@@ -189,6 +184,7 @@ function openSkillsModal(skills = []) {
         <ul id="skillsList" class="space-y-2"></ul>
       </div>
     `;
+
     document.body.appendChild(modal);
   }
 
@@ -235,27 +231,27 @@ function renderPlayerBoard(list = players) {
     "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
 
   list.forEach(p => {
-    const totalExp = Number(p.exp) || 0;
-    const exp = expProgress(totalExp);
+    const expState = calculateExpState(Number(p.exp) || 0);
     const skills = Array.isArray(p.skills) ? p.skills : [];
 
     const card = document.createElement("div");
     card.className =
-      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[460px]";
+      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[470px]";
 
     card.innerHTML = `
-      <h2 class="text-lg font-bold mb-2 truncate text-white">
-        ${p.name} (Nivel ${exp.level})
+      <h2 class="text-lg font-bold truncate text-white">
+        ${p.name} (Nivel ${expState.level})
       </h2>
 
       <img
         src="${resolveImage(p.img)}"
-        class="w-full h-44 object-cover rounded mb-3"
+        class="w-full h-44 object-cover rounded my-2"
         loading="lazy"
       />
 
-      <p class="text-sm">❤️ Salud: ${p.life}</p>
-      <p class="text-sm">⭐ EXP total: ${totalExp}</p>
+      <p>❤️ Salud: ${p.life}</p>
+      <p>🏆 ${p.milestones || "-"}</p>
+      <p>⭐ EXP total: ${Math.round(p.exp)}</p>
 
       ${skills.length ? `
         <button
@@ -267,12 +263,15 @@ function renderPlayerBoard(list = players) {
 
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
-          <div class="bg-green-500 h-3 transition-all" style="width:${exp.percent}%"></div>
+          <div
+            class="bg-green-500 h-3 transition-all"
+            style="width:${expState.percent}%">
+          </div>
         </div>
 
-        <p class="text-xs text-stone-300 mt-1 text-center">
-          ${Math.round(exp.current)} / ${Math.round(exp.required)}
-          · faltan ${Math.round(exp.remaining)}
+        <p class="text-xs text-stone-300 text-center mt-1">
+          ${Math.round(expState.current)} / ${Math.round(expState.required)}
+          · faltan ${Math.round(expState.remaining)}
         </p>
 
         <div class="grid grid-cols-6 gap-1 mt-3">
@@ -314,7 +313,7 @@ function initSSE() {
   source.onerror = () => {
     sseConnected = false;
     source.close();
-    showToast("⚠️ Conexión tiempo real perdida, usando polling", "warning");
+    showToast("⚠️ Conexión perdida, usando polling", "warning");
   };
 }
 
