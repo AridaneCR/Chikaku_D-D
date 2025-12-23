@@ -235,35 +235,28 @@ function renderPlayerBoard(list = players) {
     "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
 
   list.forEach(p => {
-    const level = safeLevel(p.level);
-    const exp = safeExp(p.exp);
-
-    const percent = expProgress(level, exp);
-    const expInfo = expDetails(level, exp);
+    const totalExp = Number(p.exp) || 0;
+    const exp = expProgress(totalExp);
     const skills = Array.isArray(p.skills) ? p.skills : [];
 
     const card = document.createElement("div");
     card.className =
-      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[440px]";
+      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[460px]";
 
     card.innerHTML = `
-      <!-- NOMBRE -->
       <h2 class="text-lg font-bold mb-2 truncate text-white">
-        ${p.name} (Nivel ${level})
+        ${p.name} (Nivel ${exp.level})
       </h2>
 
-      <!-- IMAGEN -->
       <img
         src="${resolveImage(p.img)}"
         class="w-full h-44 object-cover rounded mb-3"
         loading="lazy"
       />
 
-      <!-- INFO -->
       <p class="text-sm">❤️ Salud: ${p.life}</p>
-      <p class="text-sm">🏆 ${p.milestones || "-"}</p>
+      <p class="text-sm">⭐ EXP total: ${totalExp}</p>
 
-      <!-- HABILIDADES -->
       ${skills.length ? `
         <button
           onclick='openSkillsModal(${JSON.stringify(skills)})'
@@ -272,33 +265,25 @@ function renderPlayerBoard(list = players) {
         </button>
       ` : ""}
 
-      <!-- EXP -->
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
-          <div
-            class="bg-green-500 h-3 transition-all exp-bar"
-            style="width:${percent}%">
-          </div>
+          <div class="bg-green-500 h-3 transition-all" style="width:${exp.percent}%"></div>
         </div>
 
         <p class="text-xs text-stone-300 mt-1 text-center">
-          EXP total: ${Math.round(exp)}
+          ${Math.round(exp.current)} / ${Math.round(exp.required)}
+          · faltan ${Math.round(exp.remaining)}
         </p>
 
-        <p class="text-xs text-stone-400 text-center">
-          ${Math.round(expInfo.current)} / ${Math.round(expInfo.required)}
-          · faltan ${Math.round(expInfo.remaining)}
-        </p>
-
-        <!-- OBJETOS -->
         <div class="grid grid-cols-6 gap-1 mt-3">
           ${(p.items || []).slice(0, 6).map((item, i) => `
             <img
               src="${resolveImage(item)}"
-              data-img="${resolveImage(item)}"
-              data-desc="${(p.itemDescriptions?.[i] || "Sin descripción")
-                .replace(/"/g, "&quot;")}"
-              class="w-10 h-10 object-cover rounded border cursor-pointer hover:scale-105 transition object-item"
+              class="w-10 h-10 object-cover rounded border cursor-pointer"
+              onclick="openItemModal(
+                '${resolveImage(item)}',
+                ${JSON.stringify(p.itemDescriptions?.[i] || "Sin descripción")}
+              )"
               loading="lazy"
             />
           `).join("")}
@@ -307,19 +292,8 @@ function renderPlayerBoard(list = players) {
     `;
 
     playerBoard.appendChild(card);
-
-    // 🔥 NUEVO: listener seguro para objetos (sin romper nada)
-    card.querySelectorAll(".object-item").forEach(img => {
-      img.addEventListener("click", () => {
-        openItemModal(
-          img.dataset.img,
-          img.dataset.desc
-        );
-      });
-    });
   });
 }
-
 
 // =============================================================
 // SSE
