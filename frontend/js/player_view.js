@@ -86,6 +86,23 @@ function expProgress(level, totalExp) {
   return Math.min(100, (current / required) * 100);
 }
 
+function expDetails(level, totalExp) {
+  let expBefore = 0;
+
+  for (let i = 1; i < level; i++) {
+    expBefore += expNeededForLevel(i);
+  }
+
+  const required = expNeededForLevel(level);
+  const current = Math.max(0, totalExp - expBefore);
+
+  return {
+    current,
+    required,
+    remaining: Math.max(0, required - current),
+  };
+}
+
 // =============================================================
 // FETCH
 // =============================================================
@@ -197,6 +214,7 @@ function renderPlayerBoard(list = players) {
     const level = safeLevel(p.level);
     const exp = safeExp(p.exp);
     const percent = expProgress(level, exp);
+    const expInfo = expDetails(level, exp);
     const skills = Array.isArray(p.skills) ? p.skills : [];
 
     const card = document.createElement("div");
@@ -228,6 +246,10 @@ function renderPlayerBoard(list = players) {
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-2 overflow-hidden">
           <div class="bg-green-500 h-3" style="width:${percent}%"></div>
+          <p class="text-xs text-stone-400 mt-1 text-center">
+            ${expInfo.current} / ${expInfo.required} EXP
+              · faltan ${expInfo.remaining}
+</p>
         </div>
 
         <div class="grid grid-cols-6 gap-1 mt-3">

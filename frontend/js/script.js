@@ -6,29 +6,13 @@ let editingPlayerId = null;
 let lastSignature = "";
 
 // =============================================================
-// UI ACTIONS
-// =============================================================
-
-// =============================================================
 // XP SYSTEM (ACUMULATIVO)
 // =============================================================
-
-
-function toggleCreateCard(forceOpen = false) {
-  const card = document.getElementById("createCard");
-  if (!card) return;
-
-  if (forceOpen) {
-    card.classList.remove("hidden");
-    card.scrollIntoView({ behavior: "smooth" });
-  } else {
-    card.classList.toggle("hidden");
-  }
-}
 
 const BASE_EXP = 100;
 const EXP_GROWTH = 1.08;
 
+// Calcula el nivel en base a la experiencia TOTAL acumulada
 function calculateLevelFromExp(totalExp) {
   let level = 1;
   let required = BASE_EXP;
@@ -43,6 +27,21 @@ function calculateLevelFromExp(totalExp) {
   return level;
 }
 
+// =============================================================
+// UI ACTIONS
+// =============================================================
+
+function toggleCreateCard(forceOpen = false) {
+  const card = document.getElementById("createCard");
+  if (!card) return;
+
+  if (forceOpen) {
+    card.classList.remove("hidden");
+    card.scrollIntoView({ behavior: "smooth" });
+  } else {
+    card.classList.toggle("hidden");
+  }
+}
 
 function openCreateForm() {
   resetForm();
@@ -56,6 +55,7 @@ function openPlayerBoard() {
 // =============================================================
 // CONFIG
 // =============================================================
+
 const BASE_URL =
   window.__env && window.__env.API_URL
     ? window.__env.API_URL
@@ -70,6 +70,7 @@ const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 // =============================================================
 // LOADER
 // =============================================================
+
 function showLoader() {
   document.getElementById("loader")?.classList.remove("hidden");
 }
@@ -80,6 +81,7 @@ function hideLoader() {
 // =============================================================
 // FETCH
 // =============================================================
+
 async function fetchJson(url, opts = {}, showLoading = false) {
   if (showLoading) showLoader();
   try {
@@ -94,6 +96,7 @@ async function fetchJson(url, opts = {}, showLoading = false) {
 // =============================================================
 // IMÁGENES
 // =============================================================
+
 function validateImage(file) {
   if (!file) return true;
   if (!ALLOWED_TYPES.includes(file.type)) return false;
@@ -125,6 +128,7 @@ function addPreview(inputId, previewId) {
 // =============================================================
 // SKILLS
 // =============================================================
+
 function addSkillInput(value = "") {
   const container = document.getElementById("skillsContainer");
   if (!container) return;
@@ -147,6 +151,7 @@ function addSkillInput(value = "") {
 // =============================================================
 // OBJETOS
 // =============================================================
+
 function initItems() {
   const container = document.getElementById("objectsContainer");
   if (!container) return;
@@ -170,9 +175,16 @@ function initItems() {
 // =============================================================
 // PLAYERS LIST
 // =============================================================
+
 async function refreshPlayers(force = false) {
   const data = await fetchJson(API_PLAYERS);
   const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
+
+  console.log("🔄 refreshPlayers", {
+    force,
+    old: lastSignature,
+    new: signature
+  });
 
   if (!force && signature === lastSignature) return;
 
@@ -194,7 +206,10 @@ function renderPlayersList() {
       <img src="${p.img || "/placeholder.png"}"
         class="w-full h-40 object-cover rounded mb-2">
 
-      <h3 class="font-bold text-lg">${p.name} (Nivel ${p.level})</h3>
+      <h3 class="font-bold text-lg">
+        ${p.name} (Nivel ${p.level})
+      </h3>
+
       <p>❤️ Vida: ${p.life}</p>
       <p>⭐ EXP: ${p.exp}</p>
 
@@ -203,12 +218,14 @@ function renderPlayersList() {
           class="mt-3 w-full bg-green-600 p-2 rounded">
           Editar
         </button>
+
         <button onclick="deletePlayer('${p._id}')"
           class="mt-2 w-full bg-red-600 p-2 rounded">
           Eliminar
         </button>
       </div>
     `;
+
     list.appendChild(card);
   });
 }
@@ -216,6 +233,7 @@ function renderPlayersList() {
 // =============================================================
 // EDIT PLAYER
 // =============================================================
+
 function editPlayer(id) {
   const player = players.find(p => p._id === id);
   if (!player) return;
@@ -231,7 +249,6 @@ function editPlayer(id) {
   charMilestonesInput.value = player.milestones || "";
   charAttributesInput.value = player.attributes || "";
   charExpInput.value = player.exp ?? 0;
-  charLevelInput.value = player.level ?? 1;
 
   skillsContainer.innerHTML = "";
   (player.skills || []).forEach(addSkillInput);
@@ -262,12 +279,14 @@ function editPlayer(id) {
 // =============================================================
 // CREATE / EDIT
 // =============================================================
+
 async function submitCharacter() {
   const name = charNameInput.value.trim();
   if (!name) return;
 
   const skills = [...document.querySelectorAll("#skillsContainer input")]
-    .map(i => i.value.trim()).filter(Boolean);
+    .map(i => i.value.trim())
+    .filter(Boolean);
 
   const itemDescriptions = [];
   for (let i = 1; i <= 6; i++) {
@@ -276,13 +295,14 @@ async function submitCharacter() {
     );
   }
 
+  const totalExp = Number(charExpInput.value) || 0;
+  const calculatedLevel = calculateLevelFromExp(totalExp);
+
   const fd = new FormData();
   fd.append("name", name);
   fd.append("life", charLifeInput.value);
   fd.append("milestones", charMilestonesInput.value);
   fd.append("attributes", charAttributesInput.value);
-  const totalExp = Number(charExpInput.value) || 0;
-  const calculatedLevel = calculateLevelFromExp(totalExp);
   fd.append("exp", totalExp);
   fd.append("level", calculatedLevel);
   fd.append("skills", JSON.stringify(skills));
@@ -314,6 +334,7 @@ async function submitCharacter() {
 // =============================================================
 // DELETE
 // =============================================================
+
 async function deletePlayer(id) {
   if (!confirm("¿Eliminar personaje?")) return;
   await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" }, true);
@@ -323,6 +344,7 @@ async function deletePlayer(id) {
 // =============================================================
 // RESET
 // =============================================================
+
 function resetForm() {
   formMode = "create";
   editingPlayerId = null;
@@ -333,7 +355,6 @@ function resetForm() {
   charMilestonesInput.value = "";
   charAttributesInput.value = "";
   charExpInput.value = 0;
-  charLevelInput.value = 1;
 
   skillsContainer.innerHTML = "";
   charImgInput.value = "";
@@ -345,6 +366,7 @@ function resetForm() {
 // =============================================================
 // INIT
 // =============================================================
+
 window.addEventListener("load", () => {
   refreshPlayers(true);
   initItems();
