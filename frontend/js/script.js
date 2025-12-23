@@ -6,47 +6,30 @@ let editingPlayerId = null;
 let lastSignature = "";
 
 // =============================================================
-// XP SYSTEM (ACUMULATIVO REAL)
+// UI ACTIONS
 // =============================================================
 
+// =============================================================
+// XP SYSTEM (ACUMULATIVO)
+// =============================================================
 const BASE_EXP = 100;
 const EXP_GROWTH = 1.08;
 
-function expForLevel(level) {
-  return BASE_EXP * Math.pow(EXP_GROWTH, level - 1);
-}
-
 function calculateLevelFromExp(totalExp) {
   let level = 1;
-  let accumulated = 0;
+  let required = BASE_EXP;
+  let remainingExp = totalExp;
 
-  while (true) {
-    const needed = expForLevel(level);
-    if (totalExp < accumulated + needed) break;
-    accumulated += needed;
+  while (remainingExp >= required) {
+    remainingExp -= required;
+    required = Math.round(required * EXP_GROWTH);
     level++;
   }
 
   return level;
 }
 
-function expProgressPercent(totalExp) {
-  let level = calculateLevelFromExp(totalExp);
-  let accumulated = 0;
 
-  for (let i = 1; i < level; i++) {
-    accumulated += expForLevel(i);
-  }
-
-  const current = totalExp - accumulated;
-  const needed = expForLevel(level);
-
-  return Math.min(100, (current / needed) * 100);
-}
-
-// =============================================================
-// UI ACTIONS
-// =============================================================
 
 function toggleCreateCard(forceOpen = false) {
   const card = document.getElementById("createCard");
@@ -72,7 +55,6 @@ function openPlayerBoard() {
 // =============================================================
 // CONFIG
 // =============================================================
-
 const BASE_URL =
   window.__env && window.__env.API_URL
     ? window.__env.API_URL
@@ -87,7 +69,6 @@ const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 // =============================================================
 // LOADER
 // =============================================================
-
 function showLoader() {
   document.getElementById("loader")?.classList.remove("hidden");
 }
@@ -98,7 +79,6 @@ function hideLoader() {
 // =============================================================
 // FETCH
 // =============================================================
-
 async function fetchJson(url, opts = {}, showLoading = false) {
   if (showLoading) showLoader();
   try {
@@ -113,7 +93,6 @@ async function fetchJson(url, opts = {}, showLoading = false) {
 // =============================================================
 // IMÁGENES
 // =============================================================
-
 function validateImage(file) {
   if (!file) return true;
   if (!ALLOWED_TYPES.includes(file.type)) return false;
@@ -145,10 +124,10 @@ function addPreview(inputId, previewId) {
 // =============================================================
 // SKILLS
 // =============================================================
-
 function addSkillInput(value = "") {
   const container = document.getElementById("skillsContainer");
-  if (!container || container.children.length >= 8) return;
+  if (!container) return;
+  if (container.children.length >= 8) return;
 
   const div = document.createElement("div");
   div.className = "relative";
@@ -157,7 +136,9 @@ function addSkillInput(value = "") {
     <button type="button"
       onclick="this.parentElement.remove()"
       class="absolute right-2 top-1/2 -translate-y-1/2
-             px-2 py-1 rounded bg-red-600 hover:bg-red-700 font-bold">✕</button>
+             px-2 py-1 rounded bg-red-600 hover:bg-red-700 font-bold">
+      ✕
+    </button>
   `;
   container.appendChild(div);
 }
@@ -165,7 +146,6 @@ function addSkillInput(value = "") {
 // =============================================================
 // OBJETOS
 // =============================================================
-
 function initItems() {
   const container = document.getElementById("objectsContainer");
   if (!container) return;
@@ -189,10 +169,10 @@ function initItems() {
 // =============================================================
 // PLAYERS LIST
 // =============================================================
-
 async function refreshPlayers(force = false) {
   const data = await fetchJson(API_PLAYERS);
   const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
+
   if (!force && signature === lastSignature) return;
 
   lastSignature = signature;
@@ -205,9 +185,6 @@ function renderPlayersList() {
   list.innerHTML = "";
 
   players.forEach(p => {
-    const level = calculateLevelFromExp(p.exp);
-    const percent = expProgressPercent(p.exp);
-
     const card = document.createElement("div");
     card.className =
       "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
@@ -216,24 +193,21 @@ function renderPlayersList() {
       <img src="${p.img || "/placeholder.png"}"
         class="w-full h-40 object-cover rounded mb-2">
 
-      <h3 class="font-bold text-lg">
-        ${p.name} (Nivel ${level})
-      </h3>
-
-      <p>⭐ EXP total: ${Math.floor(p.exp)}</p>
-
-      <div class="bg-zinc-700 h-2 rounded mt-2 overflow-hidden">
-        <div class="bg-green-500 h-2" style="width:${percent}%"></div>
-      </div>
+      <h3 class="font-bold text-lg">${p.name} (Nivel ${p.level})</h3>
+      <p>❤️ Vida: ${p.life}</p>
+      <p>⭐ EXP: ${p.exp}</p>
 
       <div class="mt-auto">
         <button onclick="editPlayer('${p._id}')"
-          class="mt-3 w-full bg-green-600 p-2 rounded">Editar</button>
+          class="mt-3 w-full bg-green-600 p-2 rounded">
+          Editar
+        </button>
         <button onclick="deletePlayer('${p._id}')"
-          class="mt-2 w-full bg-red-600 p-2 rounded">Eliminar</button>
+          class="mt-2 w-full bg-red-600 p-2 rounded">
+          Eliminar
+        </button>
       </div>
     `;
-
     list.appendChild(card);
   });
 }
@@ -241,13 +215,13 @@ function renderPlayersList() {
 // =============================================================
 // EDIT PLAYER
 // =============================================================
-
 function editPlayer(id) {
   const player = players.find(p => p._id === id);
   if (!player) return;
 
   formMode = "edit";
   editingPlayerId = id;
+
   toggleCreateCard(true);
   submitCharacterBtn.textContent = "✏️ Guardar cambios";
 
@@ -256,17 +230,37 @@ function editPlayer(id) {
   charMilestonesInput.value = player.milestones || "";
   charAttributesInput.value = player.attributes || "";
   charExpInput.value = player.exp ?? 0;
+  charLevelInput.value = player.level ?? 1;
 
   skillsContainer.innerHTML = "";
   (player.skills || []).forEach(addSkillInput);
 
+  charImgInput.value = "";
+  if (player.img) {
+    previewCharMain.src = player.img;
+    previewCharMain.classList.remove("hidden");
+  } else {
+    previewCharMain.classList.add("hidden");
+  }
+
   initItems();
+  (player.items || []).forEach((img, i) => {
+    const p = document.getElementById(`previewItem${i + 1}`);
+    if (p && img) {
+      p.src = img;
+      p.classList.remove("hidden");
+    }
+  });
+
+  (player.itemDescriptions || []).forEach((d, i) => {
+    const t = document.getElementById(`item${i + 1}Desc`);
+    if (t) t.value = d;
+  });
 }
 
 // =============================================================
 // CREATE / EDIT
 // =============================================================
-
 async function submitCharacter() {
   const name = charNameInput.value.trim();
   if (!name) return;
@@ -286,7 +280,8 @@ async function submitCharacter() {
   fd.append("life", charLifeInput.value);
   fd.append("milestones", charMilestonesInput.value);
   fd.append("attributes", charAttributesInput.value);
-  fd.append("exp", charExpInput.value); // 🔥 SOLO EXP
+  fd.append("exp", charExpInput.value);
+  fd.append("level", charLevelInput.value);
   fd.append("skills", JSON.stringify(skills));
   fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
 
@@ -299,46 +294,32 @@ async function submitCharacter() {
     if (f && validateImage(f)) fd.append("items", f);
   }
 
-  let updatedPlayer;
-
   if (formMode === "create") {
-    updatedPlayer = await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
-    players.unshift(updatedPlayer);
+    await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
   } else {
-    updatedPlayer = await fetchJson(
-      `${API_PLAYERS}/${editingPlayerId}`,
-      { method: "PUT", body: fd },
-      true
-    );
-    const i = players.findIndex(p => p._id === editingPlayerId);
-    if (i !== -1) players[i] = updatedPlayer;
+    await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
+      method: "PUT",
+      body: fd
+    }, true);
   }
 
-  renderPlayersList();
   resetForm();
   toggleCreateCard();
-
-  setTimeout(() => {
-    lastSignature = "";
-    refreshPlayers(true);
-  }, 1500);
+  refreshPlayers(true);
 }
 
 // =============================================================
 // DELETE
 // =============================================================
-
 async function deletePlayer(id) {
   if (!confirm("¿Eliminar personaje?")) return;
   await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" }, true);
-  lastSignature = "";
   refreshPlayers(true);
 }
 
 // =============================================================
 // RESET
 // =============================================================
-
 function resetForm() {
   formMode = "create";
   editingPlayerId = null;
@@ -349,6 +330,7 @@ function resetForm() {
   charMilestonesInput.value = "";
   charAttributesInput.value = "";
   charExpInput.value = 0;
+  charLevelInput.value = 1;
 
   skillsContainer.innerHTML = "";
   charImgInput.value = "";
@@ -360,7 +342,6 @@ function resetForm() {
 // =============================================================
 // INIT
 // =============================================================
-
 window.addEventListener("load", () => {
   refreshPlayers(true);
   initItems();
