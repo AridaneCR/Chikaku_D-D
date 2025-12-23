@@ -65,6 +65,21 @@ function showToast(message, type = "info") {
   setTimeout(() => toast.remove(), 3000);
 }
 
+
+// =============================================================
+// SAFE HELPERS (🔥 FIX)
+// =============================================================
+
+function safeLevel(lvl) {
+  const n = Number(lvl);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
+
+function safeExp(exp) {
+  const n = Number(exp);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
 // =============================================================
 // 🔥 EXP SYSTEM (ACUMULATIVO, EXACTO)
 // =============================================================
