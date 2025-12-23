@@ -97,4 +97,4 @@ app.listen(PORT, () =>
 // =============================================================
 setInterval(() => {
   fetch("https://chikaku-d-d-backend-pbe.onrender.com").catch(() => {});
-}, 10 * 60 * 100);
+}, 10 * 60 * 1000);

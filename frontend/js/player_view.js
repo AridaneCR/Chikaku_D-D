@@ -66,46 +66,66 @@ function showToast(message, type = "info") {
 }
 
 // =============================================================
-// EXP SYSTEM
+// 🔥 EXP SYSTEM (ACUMULATIVO REAL)
 // =============================================================
 
 const BASE_EXP = 100;
+const EXP_GROWTH = 1.08;
 
-const safeLevel = l => (!l || l < 1) ? 1 : Number(l);
-const safeExp = e => (!e || e < 0) ? 0 : Number(e);
+// tabla de costes por nivel
+function buildExpTable(maxLevel = 50) {
+  const table = [];
+  let cost = BASE_EXP;
 
-const expNeededForLevel = lvl =>
-  BASE_EXP * Math.pow(1.05, lvl - 1);
-
-function expProgress(level, totalExp) {
-  let expBefore = 0;
-  for (let i = 1; i < level; i++) expBefore += expNeededForLevel(i);
-  let current = totalExp - expBefore;
-  if (current < 0) current = 0;
-  const required = expNeededForLevel(level);
-  return Math.min(100, (current / required) * 100);
+  for (let i = 1; i <= maxLevel; i++) {
+    table.push(Math.round(cost));
+    cost *= EXP_GROWTH;
+  }
+  return table;
 }
 
-function expDetails(level, totalExp) {
-  let expBefore = 0;
+const EXP_TABLE = buildExpTable();
 
-  for (let i = 1; i < level; i++) {
-    expBefore += expNeededForLevel(i);
+// nivel desde EXP TOTAL
+function levelFromExp(totalExp) {
+  let acc = 0;
+
+  for (let i = 0; i < EXP_TABLE.length; i++) {
+    acc += EXP_TABLE[i];
+    if (totalExp < acc) return i + 1;
   }
 
-  const required = expNeededForLevel(level);
-  const current = Math.max(0, totalExp - expBefore);
+  return EXP_TABLE.length + 1;
+}
+
+// progreso real
+function expProgress(totalExp) {
+  let acc = 0;
+
+  for (let lvl = 1; lvl <= EXP_TABLE.length; lvl++) {
+    const cost = EXP_TABLE[lvl - 1];
+
+    if (totalExp < acc + cost) {
+      const current = totalExp - acc;
+      return {
+        level: lvl,
+        current,
+        required: cost,
+        remaining: cost - current,
+        percent: Math.min(100, Math.round((current / cost) * 100)),
+      };
+    }
+    acc += cost;
+  }
 
   return {
-    current,
-    required,
-    remaining: Math.max(0, required - current),
+    level: EXP_TABLE.length + 1,
+    current: 0,
+    required: 0,
+    remaining: 0,
+    percent: 100,
   };
 }
-function roundExp(value) {
-  return Math.max(0, Math.round(value));
-}
-
 
 // =============================================================
 // FETCH
@@ -215,35 +235,28 @@ function renderPlayerBoard(list = players) {
     "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
 
   list.forEach(p => {
-    const level = safeLevel(p.level);
-    const exp = safeExp(p.exp);
-
-    const percent = expProgress(level, exp);
-    const expInfo = expDetails(level, exp);
+    const totalExp = Number(p.exp) || 0;
+    const exp = expProgress(totalExp);
     const skills = Array.isArray(p.skills) ? p.skills : [];
 
     const card = document.createElement("div");
     card.className =
-      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[440px]";
+      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[460px]";
 
     card.innerHTML = `
-      <!-- NOMBRE -->
       <h2 class="text-lg font-bold mb-2 truncate text-white">
-        ${p.name} (Nivel ${level})
+        ${p.name} (Nivel ${exp.level})
       </h2>
 
-      <!-- IMAGEN -->
       <img
         src="${resolveImage(p.img)}"
         class="w-full h-44 object-cover rounded mb-3"
         loading="lazy"
       />
 
-      <!-- INFO -->
       <p class="text-sm">❤️ Salud: ${p.life}</p>
-      <p class="text-sm">🏆 ${p.milestones || "-"}</p>
+      <p class="text-sm">⭐ EXP total: ${totalExp}</p>
 
-      <!-- HABILIDADES -->
       ${skills.length ? `
         <button
           onclick='openSkillsModal(${JSON.stringify(skills)})'
@@ -252,25 +265,16 @@ function renderPlayerBoard(list = players) {
         </button>
       ` : ""}
 
-      <!-- EXP -->
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
-          <div
-            class="bg-green-500 h-3 transition-all"
-            style="width:${percent}%">
-          </div>
+          <div class="bg-green-500 h-3 transition-all" style="width:${exp.percent}%"></div>
         </div>
 
         <p class="text-xs text-stone-300 mt-1 text-center">
-          EXP total: ${Math.round(exp)}
+          ${Math.round(exp.current)} / ${Math.round(exp.required)}
+          · faltan ${Math.round(exp.remaining)}
         </p>
 
-        <p class="text-xs text-stone-400 text-center">
-          ${Math.round(expInfo.current)} / ${Math.round(expInfo.required)}
-          · faltan ${Math.round(expInfo.remaining)}
-        </p>
-
-        <!-- OBJETOS -->
         <div class="grid grid-cols-6 gap-1 mt-3">
           ${(p.items || []).slice(0, 6).map((item, i) => `
             <img
@@ -290,8 +294,6 @@ function renderPlayerBoard(list = players) {
     playerBoard.appendChild(card);
   });
 }
-
-
 
 // =============================================================
 // SSE
