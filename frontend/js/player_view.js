@@ -65,59 +65,57 @@ function showToast(message, type = "info") {
   setTimeout(() => toast.remove(), 3000);
 }
 
-
 // =============================================================
-// SAFE HELPERS (🔥 FIX)
-// =============================================================
-
-function safeLevel(lvl) {
-  const n = Number(lvl);
-  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
-}
-
-function safeExp(exp) {
-  const n = Number(exp);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
-}
-
-// =============================================================
-// 🔥 EXP SYSTEM (ACUMULATIVO, EXACTO)
+// 🔥 EXP SYSTEM (ACUMULATIVO REAL)
 // =============================================================
 
 const BASE_EXP = 100;
 const EXP_GROWTH = 1.08;
 
-// Tabla exacta de coste por nivel
-function buildExpTable(max = 50) {
+// tabla de costes por nivel
+function buildExpTable(maxLevel = 50) {
+  const table = [];
   let cost = BASE_EXP;
-  return Array.from({ length: max }, () => {
-    const value = Math.round(cost);
+
+  for (let i = 1; i <= maxLevel; i++) {
+    table.push(Math.round(cost));
     cost *= EXP_GROWTH;
-    return value;
-  });
+  }
+  return table;
 }
 
 const EXP_TABLE = buildExpTable();
 
-// Calcula nivel y progreso DESDE EXP TOTAL
-function calculateExpState(totalExp) {
-  let accumulated = 0;
+// nivel desde EXP TOTAL
+function levelFromExp(totalExp) {
+  let acc = 0;
+
+  for (let i = 0; i < EXP_TABLE.length; i++) {
+    acc += EXP_TABLE[i];
+    if (totalExp < acc) return i + 1;
+  }
+
+  return EXP_TABLE.length + 1;
+}
+
+// progreso real
+function expProgress(totalExp) {
+  let acc = 0;
 
   for (let lvl = 1; lvl <= EXP_TABLE.length; lvl++) {
-    const required = EXP_TABLE[lvl - 1];
+    const cost = EXP_TABLE[lvl - 1];
 
-    if (totalExp < accumulated + required) {
-      const current = totalExp - accumulated;
+    if (totalExp < acc + cost) {
+      const current = totalExp - acc;
       return {
         level: lvl,
         current,
-        required,
-        remaining: required - current,
-        percent: Math.round((current / required) * 100),
+        required: cost,
+        remaining: cost - current,
+        percent: Math.min(100, Math.round((current / cost) * 100)),
       };
     }
-
-    accumulated += required;
+    acc += cost;
   }
 
   return {
@@ -134,14 +132,7 @@ function calculateExpState(totalExp) {
 // =============================================================
 
 async function fetchJson(url) {
-  const res = await fetch(url, {
-    cache: "no-store",
-    headers: {
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
-  });
-
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -189,7 +180,6 @@ function openSkillsModal(skills = []) {
     modal.id = "skillsModal";
     modal.className =
       "fixed inset-0 bg-black/80 z-50 flex items-center justify-center";
-
     modal.innerHTML = `
       <div class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-sm w-full relative">
         <button
@@ -199,7 +189,6 @@ function openSkillsModal(skills = []) {
         <ul id="skillsList" class="space-y-2"></ul>
       </div>
     `;
-
     document.body.appendChild(modal);
   }
 
@@ -351,7 +340,7 @@ function initSSE() {
   source.onerror = () => {
     sseConnected = false;
     source.close();
-    showToast("⚠️ Conexión perdida, usando polling", "warning");
+    showToast("⚠️ Conexión tiempo real perdida, usando polling", "warning");
   };
 }
 
