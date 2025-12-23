@@ -28,7 +28,8 @@ const playerBoard = document.getElementById("playerBoard");
 function resolveImage(img) {
   if (!img) return "/placeholder.png";
   if (typeof img === "string" && img.startsWith("http")) return img;
-  if (typeof img === "object") return img.secure_url || img.url || "/placeholder.png";
+  if (typeof img === "object")
+    return img.secure_url || img.url || "/placeholder.png";
   return "/placeholder.png";
 }
 
@@ -42,8 +43,7 @@ function showToast(message, type = "info") {
   if (!container) {
     container = document.createElement("div");
     container.id = "toastContainer";
-    container.className =
-      "fixed top-4 right-4 z-50 flex flex-col gap-3";
+    container.className = "fixed top-4 right-4 z-50 flex flex-col gap-3";
     document.body.appendChild(container);
   }
 
@@ -131,14 +131,15 @@ function expProgress(totalExp) {
 // FETCH
 // =============================================================
 
-async function fetchJson(url) {
-  const res = await fetch(url, { cache: "no-store" });
+async function fetchJson(url, realtime = false) {
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: realtime
+      ? { "x-realtime": "1" } // 🔥 fuerza invalidar cache en backend
+      : {},
+  });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
-}
-
-function buildSignature(list) {
-  return list.map(p => `${p._id}:${p.updatedAt}`).join("|");
 }
 
 // =============================================================
@@ -147,7 +148,7 @@ function buildSignature(list) {
 
 async function loadPlayers(fromRealtime = false) {
   try {
-    const data = await fetchJson(API_PLAYERS);
+    const data = await fetchJson(API_PLAYERS, fromRealtime);
     const signature = buildSignature(data);
 
     if (!fromRealtime && signature === lastSignature) return;
@@ -163,7 +164,6 @@ async function loadPlayers(fromRealtime = false) {
     console.error("Error cargando jugadores:", err);
   }
 }
-
 
 // =============================================================
 // SKILLS MODAL
@@ -194,7 +194,7 @@ function openSkillsModal(skills = []) {
   const list = modal.querySelector("#skillsList");
   list.innerHTML = "";
 
-  skills.forEach(s => {
+  skills.forEach((s) => {
     const li = document.createElement("li");
     li.className = "bg-stone-700 rounded px-3 py-2 text-sm";
     li.textContent = s;
@@ -233,7 +233,7 @@ function renderPlayerBoard(list = players) {
   playerBoard.className =
     "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
 
-  list.forEach(p => {
+  list.forEach((p) => {
     const totalExp = Number(p.exp) || 0;
     const exp = expProgress(totalExp);
     const skills = Array.isArray(p.skills) ? p.skills : [];
@@ -264,13 +264,17 @@ function renderPlayerBoard(list = players) {
       <p class="text-sm">⭐ EXP total: ${totalExp}</p>
 
       <!-- HABILIDADES -->
-      ${skills.length ? `
+      ${
+        skills.length
+          ? `
         <button
           onclick='openSkillsModal(${JSON.stringify(skills)})'
           class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
           Ver habilidades (${skills.length})
         </button>
-      ` : ""}
+      `
+          : ""
+      }
 
       <!-- EXP -->
       <div class="mt-auto">
@@ -288,34 +292,37 @@ function renderPlayerBoard(list = players) {
 
         <!-- OBJETOS -->
         <div class="grid grid-cols-6 gap-1 mt-3" data-items>
-          ${(p.items || []).slice(0, 6).map((item, i) => `
+          ${(p.items || [])
+            .slice(0, 6)
+            .map(
+              (item, i) => `
             <img
               src="${resolveImage(item)}"
               data-img="${resolveImage(item)}"
-              data-desc="${(p.itemDescriptions?.[i] || "Sin descripción").replace(/"/g, '&quot;')}"
+              data-desc="${(
+                p.itemDescriptions?.[i] || "Sin descripción"
+              ).replace(/"/g, "&quot;")}"
               class="w-10 h-10 object-cover rounded border cursor-pointer"
               loading="lazy"
             />
-          `).join("")}
+          `
+            )
+            .join("")}
         </div>
       </div>
     `;
 
     // 🔥 FIX DEFINITIVO: binding de clicks por JS (no inline)
     const itemImgs = card.querySelectorAll("[data-img]");
-    itemImgs.forEach(imgEl => {
+    itemImgs.forEach((imgEl) => {
       imgEl.addEventListener("click", () => {
-        openItemModal(
-          imgEl.dataset.img,
-          imgEl.dataset.desc
-        );
+        openItemModal(imgEl.dataset.img, imgEl.dataset.desc);
       });
     });
 
     playerBoard.appendChild(card);
   });
 }
-
 
 // =============================================================
 // SSE
