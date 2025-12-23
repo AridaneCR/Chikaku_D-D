@@ -243,7 +243,8 @@ async function submitCharacter() {
   if (!name) return;
 
   const skills = [...document.querySelectorAll("#skillsContainer input")]
-    .map(i => i.value.trim()).filter(Boolean);
+    .map(i => i.value.trim())
+    .filter(Boolean);
 
   const itemDescriptions = [];
   for (let i = 1; i <= 6; i++) {
@@ -271,19 +272,54 @@ async function submitCharacter() {
     if (f && validateImage(f)) fd.append("items", f);
   }
 
-  if (formMode === "create") {
-    await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
-  } else {
-    await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
-      method: "PUT",
-      body: fd
-    }, true);
-  }
+  let updatedPlayer;
 
-  resetForm();
-  toggleCreateCard();
-  refreshPlayers(true);
+  try {
+    if (formMode === "create") {
+      updatedPlayer = await fetchJson(
+        API_PLAYERS,
+        { method: "POST", body: fd },
+        true
+      );
+
+      // 🔥 aparece instantáneo
+      players.unshift(updatedPlayer);
+      showToast("✅ Personaje creado");
+
+    } else {
+      updatedPlayer = await fetchJson(
+        `${API_PLAYERS}/${editingPlayerId}`,
+        { method: "PUT", body: fd },
+        true
+      );
+
+      // 🔥 actualizar en memoria
+      const index = players.findIndex(p => p._id === editingPlayerId);
+      if (index !== -1) {
+        players[index] = updatedPlayer;
+      }
+
+      showToast("✏️ Personaje actualizado");
+    }
+
+    // Render inmediato (SIN esperar backend)
+    renderPlayersList();
+
+    resetForm();
+    toggleCreateCard();
+
+    // 🔄 sincronización silenciosa en segundo plano
+    setTimeout(() => {
+      lastSignature = "";
+      refreshPlayers(true);
+    }, 2000);
+
+  } catch (err) {
+    console.error("Error guardando personaje:", err);
+    showToast("❌ Error al guardar personaje");
+  }
 }
+
 
 // =============================================================
 // DELETE

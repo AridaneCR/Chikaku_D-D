@@ -17,28 +17,18 @@ const SSE_URL = `${BASE_URL}/api/players/stream`;
 let players = [];
 let lastSignature = "";
 let isFiltering = false;
-let firstLoad = true;
 let sseConnected = false;
 
 const playerBoard = document.getElementById("playerBoard");
 
 // =============================================================
-// IMAGE NORMALIZER (Cloudinary / fallback)
+// IMAGE NORMALIZER (Cloudinary SAFE)
 // =============================================================
 
 function resolveImage(img) {
   if (!img) return "/placeholder.png";
-
-  // Cloudinary object
-  if (typeof img === "object") {
-    return img.secure_url || img.url || "/placeholder.png";
-  }
-
-  // Cloudinary URL directa
-  if (typeof img === "string") {
-    return img.startsWith("http") ? img : "/placeholder.png";
-  }
-
+  if (typeof img === "string" && img.startsWith("http")) return img;
+  if (typeof img === "object") return img.secure_url || img.url || "/placeholder.png";
   return "/placeholder.png";
 }
 
@@ -66,13 +56,12 @@ function showToast(message, type = "info") {
 
   const toast = document.createElement("div");
   toast.className = `
-    ${colors[type]}
+    ${colors[type] || colors.info}
     text-white px-4 py-3 rounded-xl shadow-xl
   `;
   toast.textContent = message;
 
   container.appendChild(toast);
-
   setTimeout(() => toast.remove(), 3000);
 }
 
@@ -130,8 +119,6 @@ async function loadPlayers(fromRealtime = false) {
     if (fromRealtime) {
       showToast("⚡ Jugadores actualizados", "success");
     }
-
-    firstLoad = false;
   } catch (err) {
     console.error("Error cargando jugadores:", err);
     showToast("❌ Error cargando jugadores", "error");
@@ -169,11 +156,32 @@ function openSkillsModal(skills = []) {
 
   skills.forEach(s => {
     const li = document.createElement("li");
-    li.className =
-      "bg-stone-700 rounded px-3 py-2 text-sm text-white";
+    li.className = "bg-stone-700 rounded px-3 py-2 text-sm";
     li.textContent = s;
     list.appendChild(li);
   });
+}
+
+// =============================================================
+// OBJECT MODAL
+// =============================================================
+
+function openItemModal(img, description) {
+  const modal = document.getElementById("objectModal");
+  const modalImg = document.getElementById("objectModalImg");
+  const modalDesc = document.getElementById("objectModalDesc");
+
+  modalImg.src = img || "/placeholder.png";
+  modalDesc.textContent = description || "Sin descripción";
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+}
+
+function closeObjectModal() {
+  const modal = document.getElementById("objectModal");
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
 }
 
 // =============================================================
@@ -223,10 +231,14 @@ function renderPlayerBoard(list = players) {
         </div>
 
         <div class="grid grid-cols-6 gap-1 mt-3">
-          ${(p.items || []).slice(0, 6).map(item => `
+          ${(p.items || []).slice(0, 6).map((item, i) => `
             <img
               src="${resolveImage(item)}"
-              class="w-10 h-10 object-cover rounded border"
+              class="w-10 h-10 object-cover rounded border cursor-pointer"
+              onclick="openItemModal(
+                '${resolveImage(item)}',
+                ${JSON.stringify(p.itemDescriptions?.[i] || "Sin descripción")}
+              )"
               loading="lazy"
             />
           `).join("")}
@@ -257,7 +269,7 @@ function initSSE() {
   source.onerror = () => {
     sseConnected = false;
     source.close();
-    showToast("⚠️ SSE desconectado, usando polling", "warning");
+    showToast("⚠️ Conexión tiempo real perdida, usando polling", "warning");
   };
 }
 
