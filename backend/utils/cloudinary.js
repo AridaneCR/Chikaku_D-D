@@ -2,7 +2,7 @@
 
 const cloudinary = require("cloudinary").v2;
 
-// ⚠️ Usa variables de entorno (NUNCA claves hardcodeadas)
+// ⚠️ Variables de entorno
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -27,17 +27,22 @@ async function uploadBuffer(buffer, folder = "dnd") {
       },
       (error, result) => {
         if (error) return reject(error);
-        resolve({
-          url: result.secure_url,
-          public_id: result.public_id,
-        });
+        resolve(result.secure_url); // 🔥 SOLO URL
       }
     ).end(buffer);
   });
 }
 
 // ============================================================
-// 🗑️ BORRAR IMAGEN (opcional)
+// 🔥 ALIAS ESTABLE (para routes + scripts)
+// ============================================================
+
+async function uploadImage(buffer, folder) {
+  return uploadBuffer(buffer, folder);
+}
+
+// ============================================================
+// 🗑️ BORRAR IMAGEN
 // ============================================================
 
 async function deleteImage(publicId) {
@@ -47,5 +52,6 @@ async function deleteImage(publicId) {
 
 module.exports = {
   uploadBuffer,
+  uploadImage,   // ✅ ahora SÍ existe
   deleteImage,
 };
