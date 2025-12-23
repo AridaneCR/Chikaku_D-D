@@ -12,23 +12,6 @@ let lastSignature = "";
 // =============================================================
 // XP SYSTEM (ACUMULATIVO)
 // =============================================================
-const BASE_EXP = 100;
-const EXP_GROWTH = 1.08;
-
-function calculateLevelFromExp(totalExp) {
-  let level = 1;
-  let required = BASE_EXP;
-  let remainingExp = totalExp;
-
-  while (remainingExp >= required) {
-    remainingExp -= required;
-    required = Math.round(required * EXP_GROWTH);
-    level++;
-  }
-
-  return level;
-}
-
 
 
 function toggleCreateCard(forceOpen = false) {
@@ -42,6 +25,24 @@ function toggleCreateCard(forceOpen = false) {
     card.classList.toggle("hidden");
   }
 }
+
+const BASE_EXP = 100;
+const EXP_GROWTH = 1.08;
+
+function calculateLevelFromExp(totalExp) {
+  let level = 1;
+  let required = BASE_EXP;
+  let remaining = totalExp;
+
+  while (remaining >= required) {
+    remaining -= required;
+    required = Math.round(required * EXP_GROWTH);
+    level++;
+  }
+
+  return level;
+}
+
 
 function openCreateForm() {
   resetForm();
@@ -280,8 +281,10 @@ async function submitCharacter() {
   fd.append("life", charLifeInput.value);
   fd.append("milestones", charMilestonesInput.value);
   fd.append("attributes", charAttributesInput.value);
-  fd.append("exp", charExpInput.value);
-  fd.append("level", charLevelInput.value);
+  const totalExp = Number(charExpInput.value) || 0;
+  const calculatedLevel = calculateLevelFromExp(totalExp);
+  fd.append("exp", totalExp);
+  fd.append("level", calculatedLevel);
   fd.append("skills", JSON.stringify(skills));
   fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
 
