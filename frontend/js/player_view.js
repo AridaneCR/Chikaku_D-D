@@ -150,21 +150,20 @@ async function loadPlayers(fromRealtime = false) {
     const data = await fetchJson(API_PLAYERS);
     const signature = buildSignature(data);
 
-    if (signature === lastSignature) return;
+    if (!fromRealtime && signature === lastSignature) return;
 
     lastSignature = signature;
     players = data;
-
-    if (!isFiltering) renderPlayerBoard(players);
+    renderPlayerBoard(players);
 
     if (fromRealtime) {
       showToast("⚡ Jugadores actualizados", "success");
     }
   } catch (err) {
     console.error("Error cargando jugadores:", err);
-    showToast("❌ Error cargando jugadores", "error");
   }
 }
+
 
 // =============================================================
 // SKILLS MODAL
