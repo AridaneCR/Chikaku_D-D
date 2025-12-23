@@ -22,7 +22,7 @@ function invalidateCache() {
 }
 
 // ============================================================
-// 🧩 NORMALIZACIÓN (FRONTEND SAFE)
+// 🧩 NORMALIZACIÓN
 // ============================================================
 function normalizePlayer(p) {
   return {
@@ -50,7 +50,6 @@ function normalizePlayer(p) {
 // ============================================================
 router.get("/", async (req, res) => {
   try {
-    // 🔥 Si viene de SSE, forzamos recarga
     if (req.headers["x-realtime"] === "1") {
       invalidateCache();
     }
@@ -65,44 +64,23 @@ router.get("/", async (req, res) => {
       return res.json(CACHE.data);
     }
 
-    const players = await Player.find()
-      .sort({ createdAt: -1 })
-      .lean();
-
+    const players = await Player.find().sort({ createdAt: -1 }).lean();
     const normalized = players.map(normalizePlayer);
 
     const signature = normalized
-      .map(p => `${p._id}:${p.updatedAt?.getTime() || 0}`)
+      .map(p => `${p._id}:${new Date(p.updatedAt).getTime()}`)
       .join("|");
 
-    const etag = crypto
-      .createHash("sha1")
-      .update(signature)
-      .digest("hex");
+    const etag = crypto.createHash("sha1").update(signature).digest("hex");
 
     CACHE = { etag, data: normalized, updatedAt: Date.now() };
 
     res.setHeader("ETag", etag);
     res.setHeader("Cache-Control", "private, must-revalidate");
-
     res.json(normalized);
   } catch (err) {
     console.error("GET PLAYERS ERROR:", err);
     res.status(500).json({ error: "Error obteniendo jugadores" });
-  }
-});
-
-// ============================================================
-// GET PLAYER BY ID
-// ============================================================
-router.get("/id/:id", async (req, res) => {
-  try {
-    const p = await Player.findById(req.params.id).lean();
-    if (!p) return res.status(404).json({ error: "Jugador no encontrado" });
-    res.json(normalizePlayer(p));
-  } catch (err) {
-    console.error("GET PLAYER ERROR:", err);
-    res.status(500).json({ error: "Error obteniendo jugador" });
   }
 });
 
@@ -150,10 +128,13 @@ router.post(
         itemDescriptions: itemDescriptions.slice(0, 6),
       });
 
+      // 🔥 FIX CLAVE
+      player.updatedAt = new Date();
+
       const saved = await player.save();
 
       invalidateCache();
-      if (notify) notify();
+      notify?.();
 
       res.json(normalizePlayer(saved.toObject()));
     } catch (err) {
@@ -164,7 +145,7 @@ router.post(
 );
 
 // ============================================================
-// UPDATE PLAYER
+// UPDATE PLAYER (🔥 FIX DEFINITIVO)
 // ============================================================
 router.put(
   "/:id",
@@ -193,9 +174,7 @@ router.put(
 
       if (req.body.itemDescriptions) {
         let desc = JSON.parse(req.body.itemDescriptions);
-        const itemsLength = Array.isArray(player.items) ? player.items.length : 0;
-
-        while (desc.length < itemsLength) desc.push("");
+        while (desc.length < player.items.length) desc.push("");
         player.itemDescriptions = desc.slice(0, 6);
       }
 
@@ -211,10 +190,14 @@ router.put(
         player.items = [...player.items, ...newItems].slice(0, 6);
       }
 
+      // 🔥 FIX CLAVE
+      player.updatedAt = new Date();
+      player.markModified("updatedAt");
+
       const saved = await player.save();
 
       invalidateCache();
-      if (notify) notify();
+      notify?.();
 
       res.json(normalizePlayer(saved.toObject()));
     } catch (err) {
@@ -243,7 +226,7 @@ router.delete("/:id", async (req, res) => {
     await player.deleteOne();
 
     invalidateCache();
-    if (notify) notify();
+    notify?.();
 
     res.json({ ok: true });
   } catch (err) {
