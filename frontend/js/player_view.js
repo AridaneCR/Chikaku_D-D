@@ -246,11 +246,11 @@ function renderPlayerBoard(list = players) {
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-2 overflow-hidden">
           <div class="bg-green-500 h-3" style="width:${percent}%"></div>
-          <p class="text-xs text-stone-400 mt-1 text-center">
-            ${expInfo.current} / ${expInfo.required} EXP
-              · faltan ${expInfo.remaining}
-</p>
         </div>
+
+        <p class="text-xs text-stone-400 mt-1 text-center">
+          ${expInfo.current} / ${expInfo.required} EXP · faltan ${expInfo.remaining}
+        </p>
 
         <div class="grid grid-cols-6 gap-1 mt-3">
           ${(p.items || []).slice(0, 6).map((item, i) => `

@@ -8,11 +8,10 @@ let lastSignature = "";
 // =============================================================
 // XP SYSTEM (ACUMULATIVO)
 // =============================================================
-
 const BASE_EXP = 100;
 const EXP_GROWTH = 1.08;
 
-// Calcula el nivel en base a la experiencia TOTAL acumulada
+// Calcula el nivel a partir de la EXP TOTAL acumulada
 function calculateLevelFromExp(totalExp) {
   let level = 1;
   let required = BASE_EXP;
@@ -23,14 +22,12 @@ function calculateLevelFromExp(totalExp) {
     required = Math.round(required * EXP_GROWTH);
     level++;
   }
-
   return level;
 }
 
 // =============================================================
 // UI ACTIONS
 // =============================================================
-
 function toggleCreateCard(forceOpen = false) {
   const card = document.getElementById("createCard");
   if (!card) return;
@@ -55,7 +52,6 @@ function openPlayerBoard() {
 // =============================================================
 // CONFIG
 // =============================================================
-
 const BASE_URL =
   window.__env && window.__env.API_URL
     ? window.__env.API_URL
@@ -70,7 +66,6 @@ const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 // =============================================================
 // LOADER
 // =============================================================
-
 function showLoader() {
   document.getElementById("loader")?.classList.remove("hidden");
 }
@@ -79,13 +74,22 @@ function hideLoader() {
 }
 
 // =============================================================
-// FETCH
+// FETCH (🔥 CACHE FIX DEFINITIVO)
 // =============================================================
-
 async function fetchJson(url, opts = {}, showLoading = false) {
   if (showLoading) showLoader();
+
   try {
-    const res = await fetch(url, opts);
+    const res = await fetch(url, {
+      ...opts,
+      cache: "no-store",
+      headers: {
+        ...(opts.headers || {}),
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache"
+      }
+    });
+
     if (!res.ok) throw new Error(await res.text());
     return await res.json();
   } finally {
@@ -96,7 +100,6 @@ async function fetchJson(url, opts = {}, showLoading = false) {
 // =============================================================
 // IMÁGENES
 // =============================================================
-
 function validateImage(file) {
   if (!file) return true;
   if (!ALLOWED_TYPES.includes(file.type)) return false;
@@ -128,7 +131,6 @@ function addPreview(inputId, previewId) {
 // =============================================================
 // SKILLS
 // =============================================================
-
 function addSkillInput(value = "") {
   const container = document.getElementById("skillsContainer");
   if (!container) return;
@@ -151,7 +153,6 @@ function addSkillInput(value = "") {
 // =============================================================
 // OBJETOS
 // =============================================================
-
 function initItems() {
   const container = document.getElementById("objectsContainer");
   if (!container) return;
@@ -175,16 +176,9 @@ function initItems() {
 // =============================================================
 // PLAYERS LIST
 // =============================================================
-
 async function refreshPlayers(force = false) {
   const data = await fetchJson(API_PLAYERS);
   const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
-
-  console.log("🔄 refreshPlayers", {
-    force,
-    old: lastSignature,
-    new: signature
-  });
 
   if (!force && signature === lastSignature) return;
 
@@ -225,7 +219,6 @@ function renderPlayersList() {
         </button>
       </div>
     `;
-
     list.appendChild(card);
   });
 }
@@ -233,7 +226,6 @@ function renderPlayersList() {
 // =============================================================
 // EDIT PLAYER
 // =============================================================
-
 function editPlayer(id) {
   const player = players.find(p => p._id === id);
   if (!player) return;
@@ -279,7 +271,6 @@ function editPlayer(id) {
 // =============================================================
 // CREATE / EDIT
 // =============================================================
-
 async function submitCharacter() {
   const name = charNameInput.value.trim();
   if (!name) return;
@@ -334,7 +325,6 @@ async function submitCharacter() {
 // =============================================================
 // DELETE
 // =============================================================
-
 async function deletePlayer(id) {
   if (!confirm("¿Eliminar personaje?")) return;
   await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" }, true);
@@ -344,7 +334,6 @@ async function deletePlayer(id) {
 // =============================================================
 // RESET
 // =============================================================
-
 function resetForm() {
   formMode = "create";
   editingPlayerId = null;
@@ -366,7 +355,6 @@ function resetForm() {
 // =============================================================
 // INIT
 // =============================================================
-
 window.addEventListener("load", () => {
   refreshPlayers(true);
   initItems();
