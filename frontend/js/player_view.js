@@ -164,6 +164,15 @@ async function loadPlayers(fromRealtime = false) {
     console.error("Error cargando jugadores:", err);
   }
 }
+// =============================================================
+// SIGNATURE (CACHE / CAMBIOS)
+// =============================================================
+
+function buildSignature(list = []) {
+  return list
+    .map(p => `${p._id}:${p.updatedAt}`)
+    .join("|");
+}
 
 // =============================================================
 // SKILLS MODAL
