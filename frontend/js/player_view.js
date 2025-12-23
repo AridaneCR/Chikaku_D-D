@@ -244,19 +244,27 @@ function renderPlayerBoard(list = players) {
       "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[460px]";
 
     card.innerHTML = `
+      <!-- NOMBRE -->
       <h2 class="text-lg font-bold mb-2 truncate text-white">
         ${p.name} (Nivel ${exp.level})
       </h2>
 
+      <!-- IMAGEN -->
       <img
         src="${resolveImage(p.img)}"
         class="w-full h-44 object-cover rounded mb-3"
         loading="lazy"
       />
 
+      <!-- INFO -->
       <p class="text-sm">❤️ Salud: ${p.life}</p>
+
+      <!-- HITOS (🔥 RESTAURADO) -->
+      <p class="text-sm">🏆 ${p.milestones || "-"}</p>
+
       <p class="text-sm">⭐ EXP total: ${totalExp}</p>
 
+      <!-- HABILIDADES -->
       ${skills.length ? `
         <button
           onclick='openSkillsModal(${JSON.stringify(skills)})'
@@ -265,9 +273,13 @@ function renderPlayerBoard(list = players) {
         </button>
       ` : ""}
 
+      <!-- EXP -->
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
-          <div class="bg-green-500 h-3 transition-all" style="width:${exp.percent}%"></div>
+          <div
+            class="bg-green-500 h-3 transition-all"
+            style="width:${exp.percent}%">
+          </div>
         </div>
 
         <p class="text-xs text-stone-300 mt-1 text-center">
@@ -275,15 +287,14 @@ function renderPlayerBoard(list = players) {
           · faltan ${Math.round(exp.remaining)}
         </p>
 
-        <div class="grid grid-cols-6 gap-1 mt-3">
+        <!-- OBJETOS -->
+        <div class="grid grid-cols-6 gap-1 mt-3" data-items>
           ${(p.items || []).slice(0, 6).map((item, i) => `
             <img
               src="${resolveImage(item)}"
+              data-img="${resolveImage(item)}"
+              data-desc="${(p.itemDescriptions?.[i] || "Sin descripción").replace(/"/g, '&quot;')}"
               class="w-10 h-10 object-cover rounded border cursor-pointer"
-              onclick="openItemModal(
-                '${resolveImage(item)}',
-                ${JSON.stringify(p.itemDescriptions?.[i] || "Sin descripción")}
-              )"
               loading="lazy"
             />
           `).join("")}
@@ -291,9 +302,21 @@ function renderPlayerBoard(list = players) {
       </div>
     `;
 
+    // 🔥 FIX DEFINITIVO: binding de clicks por JS (no inline)
+    const itemImgs = card.querySelectorAll("[data-img]");
+    itemImgs.forEach(imgEl => {
+      imgEl.addEventListener("click", () => {
+        openItemModal(
+          imgEl.dataset.img,
+          imgEl.dataset.desc
+        );
+      });
+    });
+
     playerBoard.appendChild(card);
   });
 }
+
 
 // =============================================================
 // SSE
