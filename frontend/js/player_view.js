@@ -150,27 +150,27 @@ async function loadPlayers(fromRealtime = false) {
   try {
     const data = await fetchJson(API_PLAYERS, fromRealtime);
 
-    // 🔥 SI VIENE DE SSE → FORZAR RENDER SIEMPRE
-    if (fromRealtime) {
-      players = data;
-      lastSignature = ""; // 🔥 invalida firma
-      renderPlayerBoard(players);
-      showToast("⚡ Jugadores actualizados", "success");
-      return;
+    // 🔥 SI VIENE DE SSE, FORZAMOS RENDER
+    if (!fromRealtime) {
+      const signature = buildSignature(data);
+      if (signature === lastSignature) return;
+      lastSignature = signature;
+    } else {
+      // 🔥 invalida firma para próximos fetch
+      lastSignature = "";
     }
 
-    // ⬇️ Lógica normal (sin SSE)
-    const signature = buildSignature(data);
-    if (signature === lastSignature) return;
-
-    lastSignature = signature;
     players = data;
     renderPlayerBoard(players);
 
+    if (fromRealtime) {
+      showToast("⚡ Jugadores actualizados", "success");
+    }
   } catch (err) {
     console.error("Error cargando jugadores:", err);
   }
 }
+
 
 // =============================================================
 // SIGNATURE (CACHE / CAMBIOS)
