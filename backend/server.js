@@ -3,18 +3,21 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const path = require("path");
 
 const playersRouter = require("./routes/players");
 
 const app = express();
 
-// Middlewares
+// =============================================================
+// MIDDLEWARES
+// =============================================================
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Connect to MongoDB
+// =============================================================
+// MONGODB
+// =============================================================
 const MONGO_URI = process.env.MONGO_URI;
 if (!MONGO_URI) {
   console.error("❌ MONGO_URI no definido en .env");
@@ -22,22 +25,85 @@ if (!MONGO_URI) {
 }
 
 mongoose
-  .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .connect(MONGO_URI)
   .then(() => console.log("✅ MongoDB conectado"))
-  .catch((err) => {
-    console.error("❌ Error al conectar MongoDB:", err);
+  .catch(err => {
+    console.error("❌ Error MongoDB:", err);
     process.exit(1);
   });
 
-// API routes
+// =============================================================
+// SSE CLIENTS
+// =============================================================
+let sseClients = [];
+
+// 👉 FUNCIÓN GLOBAL (🔥 CLAVE)
+function notifyPlayersUpdate() {
+  sseClients.forEach(client => {
+    try {
+      client.res.write(`event: playersUpdated\ndata: update\n\n`);
+    } catch {
+      // cliente muerto
+      sseClients = sseClients.filter(c => c !== client);
+    }
+  });
+}
+
+// 🔥 HEARTBEAT SSE (evita buffering de Render)
+setInterval(() => {
+  sseClients.forEach(client => {
+    client.res.write(`:\n\n`);
+  });
+}, 15000); // cada 15s
+
+
+// 👉 HACERLA DISPONIBLE AL ROUTER
+app.set("notifyPlayersUpdate", notifyPlayersUpdate);
+
+
+// =============================================================
+// SSE ENDPOINT
+// =============================================================
+app.get("/api/players/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  res.flushHeaders();
+
+  const client = { res };
+  sseClients.push(client);
+
+  // 🔥 EVENTO INICIAL (IMPORTANTE)
+  res.write(`event: connected\ndata: ok\n\n`);
+
+  req.on("close", () => {
+    sseClients = sseClients.filter(c => c !== client);
+  });
+});
+
+// =============================================================
+// ROUTES
+// =============================================================
 app.use("/api/players", playersRouter);
 
-// (Opcional) servir carpeta pública si quieres que el front esté en el mismo servicio
-// app.use(express.static(path.join(__dirname, "../frontend")));
-
-// Health check
+// =============================================================
+// HEALTH CHECK
+// =============================================================
 app.get("/health", (req, res) => res.json({ ok: true }));
 
-// Start server
+// =============================================================
+// START SERVER
+// =============================================================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`)
+);
+
+// =============================================================
+// KEEPALIVE (RENDER)
+// =============================================================
+setInterval(() => {
+  fetch("https://chikaku-d-d-backend-pbe.onrender.com").catch(() => {});
+}, 10 * 60 * 1000);

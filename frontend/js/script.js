@@ -1,21 +1,79 @@
 // =============================================================
-// CONFIG
+// STATE
+// =============================================================
+let formMode = "create"; // "create" | "edit"
+let editingPlayerId = null;
+let lastSignature = "";
+
+// 🔥 NUEVO → objetos a borrar
+let itemsToDelete = [];
+
+
+// =============================================================
+// XP SYSTEM (ACUMULATIVO)
+// =============================================================
+// =============================================================
+// XP SYSTEM (ACUMULATIVO BASE 100 +40 POR NIVEL)
 // =============================================================
 
-// Cargar API_URL desde config.js o fallback a Render
-const BASE_URL = (window.__env && window.__env.API_URL)
-  ? window.__env.API_URL
-  : "https://chikaku-d-d-ptyl.onrender.com"; 
+const BASE_EXP = 100;
+const EXP_STEP = 40;
+
+// Calcula el nivel a partir de la EXP TOTAL acumulada
+function calculateLevelFromExp(totalExp) {
+  totalExp = Number(totalExp) || 0;
+
+  let level = 1;
+  let expUsed = 0;
+
+  while (true) {
+    const expForNextLevel = BASE_EXP + (level - 1) * EXP_STEP;
+
+    if (totalExp < expUsed + expForNextLevel) {
+      return level;
+    }
+
+    expUsed += expForNextLevel;
+    level++;
+  }
+}
+
+
+// =============================================================
+// UI ACTIONS
+// =============================================================
+function toggleCreateCard(forceOpen = false) {
+  const card = document.getElementById("createCard");
+  if (!card) return;
+
+  if (forceOpen) {
+    card.classList.remove("hidden");
+    card.scrollIntoView({ behavior: "smooth" });
+  } else {
+    card.classList.toggle("hidden");
+  }
+}
+
+function openCreateForm() {
+  resetForm();
+  toggleCreateCard(true);
+}
+
+function openPlayerBoard() {
+  window.open("../Player/player_view.html", "_blank");
+}
+
+// =============================================================
+// CONFIG
+// =============================================================
+const BASE_URL =
+  window.__env && window.__env.API_URL
+    ? window.__env.API_URL
+    : "https://chikaku-d-d-backend-pbe.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
-
-const PASS = "dragon";
 let players = [];
 
-// Backend NO usa campañas → siempre "default"
-let currentCampaign = { name: "default" };
-
-// Validaciones
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
@@ -30,32 +88,36 @@ function hideLoader() {
 }
 
 // =============================================================
-// FETCH HELPER
+// FETCH
 // =============================================================
-async function fetchJson(url, opts = {}) {
-  showLoader();
+async function fetchJson(url, opts = {}, showLoading = false) {
+  if (showLoading) showLoader();
+
   try {
-    const res = await fetch(url, opts);
+    const res = await fetch(url, {
+      ...opts,
+      cache: "no-store",
+      headers: {
+        ...(opts.headers || {}),
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      },
+    });
+
     if (!res.ok) throw new Error(await res.text());
     return await res.json();
   } finally {
-    hideLoader();
+    if (showLoading) hideLoader();
   }
 }
 
 // =============================================================
-// VALIDACIÓN + PREVIEW IMÁGENES
+// IMÁGENES
 // =============================================================
 function validateImage(file) {
   if (!file) return true;
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    alert("Solo se permiten PNG, JPG, JPEG o WEBP.");
-    return false;
-  }
-  if (file.size > MAX_IMAGE_SIZE) {
-    alert("La imagen supera los 2 MB.");
-    return false;
-  }
+  if (!ALLOWED_TYPES.includes(file.type)) return false;
+  if (file.size > MAX_IMAGE_SIZE) return false;
   return true;
 }
 
@@ -65,7 +127,7 @@ function addPreview(inputId, previewId) {
   if (!input || !preview) return;
 
   input.onchange = () => {
-    const file = input.files?.[0];
+    const file = input.files[0];
     if (!validateImage(file)) {
       input.value = "";
       preview.classList.add("hidden");
@@ -81,277 +143,276 @@ function addPreview(inputId, previewId) {
 }
 
 // =============================================================
-// REFRESH / RENDER LIST
+// SKILLS
 // =============================================================
-async function refreshPlayers() {
-  try {
-    players = await fetchJson(API_PLAYERS);
-    renderPlayersList();
-  } catch (e) {
-    console.error("Error cargando jugadores:", e);
+function addSkillInput(value = "") {
+  const container = document.getElementById("skillsContainer");
+  if (!container) return;
+  if (container.children.length >= 8) return;
+
+  const div = document.createElement("div");
+  div.className = "relative";
+  div.innerHTML = `
+    <input class="input pr-10" value="${value}">
+    <button type="button"
+      onclick="this.parentElement.remove()"
+      class="absolute right-2 top-1/2 -translate-y-1/2
+             px-2 py-1 rounded bg-red-600 hover:bg-red-700 font-bold">
+      ✕
+    </button>
+  `;
+  container.appendChild(div);
+}
+
+// =============================================================
+// OBJETOS
+// =============================================================
+function initItems() {
+  const container = document.getElementById("objectsContainer");
+  if (!container) return;
+
+  container.innerHTML = "";
+  for (let i = 1; i <= 6; i++) {
+    const div = document.createElement("div");
+    div.className = "object-card";
+    div.innerHTML = `
+      <label class="label-sm">Objeto ${i}</label>
+      <input id="item${i}Input" type="file" class="file" />
+      <textarea id="item${i}Desc" class="input mt-2 resize-none"
+        rows="2" placeholder="Descripción del objeto..."></textarea>
+
+      <img id="previewItem${i}" class="preview mt-3 hidden" />
+
+      <!-- 🔥 NUEVO -->
+      <button
+        id="deleteItemBtn${i}"
+        type="button"
+        onclick="deleteItemImage(${i})"
+        class="mt-2 w-full bg-red-600 hover:bg-red-700 text-sm rounded p-1 hidden">
+        🗑️ Eliminar imagen
+      </button>
+    `;
+    container.appendChild(div);
+    addPreview(`item${i}Input`, `previewItem${i}`);
   }
+}
+
+// =============================================================
+// 🔥 NUEVO → BORRAR IMAGEN DE OBJETO
+// =============================================================
+function deleteItemImage(index) {
+  const preview = document.getElementById(`previewItem${index}`);
+  const input = document.getElementById(`item${index}Input`);
+  const btn = document.getElementById(`deleteItemBtn${index}`);
+
+  if (preview) {
+    preview.src = "";
+    preview.classList.add("hidden");
+  }
+
+  if (input) input.value = "";
+
+  if (!itemsToDelete.includes(index - 1)) {
+    itemsToDelete.push(index - 1);
+  }
+
+  if (btn) btn.classList.add("hidden");
+}
+
+// =============================================================
+// PLAYERS LIST
+// =============================================================
+async function refreshPlayers(force = false) {
+  const data = await fetchJson(API_PLAYERS);
+  const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
+
+  if (!force && signature === lastSignature) return;
+
+  lastSignature = signature;
+  players = data;
+  renderPlayersList();
 }
 
 function renderPlayersList() {
   const list = document.getElementById("playersList");
   list.innerHTML = "";
 
-  players.forEach((p) => {
-    list.innerHTML += `
-      <div class='bg-stone-700 p-4 rounded-xl shadow-xl w-64'>
-        
-        <img 
-          src='${p.img ? "data:image/jpeg;base64," + p.img : "/placeholder.png"}'
-          class='w-full h-40 object-cover rounded mb-2'
-        />
+  players.forEach(p => {
+    const card = document.createElement("div");
+    card.className =
+      "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
 
-        <h3 class='text-xl font-bold mb-2'>${p.name} (Nivel ${p.level})</h3>
-        <p>Salud: ${p.life}</p>
-        <p>Habilidad 1: ${p.skill1}</p>
-        <p>Habilidad 2: ${p.skill2}</p>
-        <p>Hitos: ${p.milestones}</p>
-        <p>Características: ${p.attributes}</p>
-        <p>Experiencia: ${p.exp}</p>
+    card.innerHTML = `
+      <img src="${p.img || "/placeholder.png"}"
+        class="w-full h-40 object-cover rounded mb-2">
 
-        <div class='w-full grid grid-cols-3 gap-2 mt-2 mb-2'>
-          ${(p.items || []).slice(0, 6).map(img => `
-            <img 
-              src='${img ? "data:image/jpeg;base64," + img : "/placeholder.png"}'
-              class='w-full h-16 object-cover rounded border border-stone-600'
-            />
-          `).join("")}
-        </div>
+      <h3 class="font-bold text-lg">
+        ${p.name} (Nivel ${p.level})
+      </h3>
 
-        <button onclick='openMasterPanel("${p._id}")' 
-          class='bg-green-600 hover:bg-green-700 p-2 rounded w-full mt-2'>
+      <p>❤️ Vida: ${p.life}</p>
+      <p>⭐ EXP: ${p.exp}</p>
+
+      <div class="mt-auto">
+        <button onclick="editPlayer('${p._id}')"
+          class="mt-3 w-full bg-green-600 p-2 rounded">
           Editar
         </button>
 
-        <button onclick='deletePlayer("${p._id}")' 
-          class='bg-red-600 hover:bg-red-700 p-2 rounded w-full mt-2'>
+        <button onclick="deletePlayer('${p._id}')"
+          class="mt-2 w-full bg-red-600 p-2 rounded">
           Eliminar
         </button>
       </div>
     `;
+    list.appendChild(card);
   });
 }
 
 // =============================================================
-// LOGIN
+// EDIT PLAYER
 // =============================================================
-function loginMaster() {
-  const pass = document.getElementById("masterPass").value;
+function editPlayer(id) {
+  const player = players.find(p => p._id === id);
+  if (!player) return;
 
-  if (pass === PASS) {
-    document.getElementById("loginScreen").classList.add("hidden");
-    document.getElementById("mainApp").classList.remove("hidden");
-    refreshPlayers();
+  formMode = "edit";
+  editingPlayerId = id;
+  itemsToDelete = []; // 🔥 NUEVO
+
+  toggleCreateCard(true);
+  submitCharacterBtn.textContent = "✏️ Guardar cambios";
+
+  charNameInput.value = player.name || "";
+  charLifeInput.value = player.life ?? 10;
+  charMilestonesInput.value = player.milestones || "";
+  charAttributesInput.value = player.attributes || "";
+  charExpInput.value = player.exp ?? 0;
+
+  skillsContainer.innerHTML = "";
+  (player.skills || []).forEach(addSkillInput);
+
+  charImgInput.value = "";
+  if (player.img) {
+    previewCharMain.src = player.img;
+    previewCharMain.classList.remove("hidden");
   } else {
-    alert("Contraseña incorrecta");
+    previewCharMain.classList.add("hidden");
   }
-}
 
-function toggleCreateCard() {
-  document.getElementById("createCard").classList.toggle("hidden");
+  initItems();
+
+  (player.items || []).forEach((img, i) => {
+    const p = document.getElementById(`previewItem${i + 1}`);
+    const btn = document.getElementById(`deleteItemBtn${i + 1}`);
+    if (p && img) {
+      p.src = img;
+      p.classList.remove("hidden");
+      btn?.classList.remove("hidden"); // 🔥 NUEVO
+    }
+  });
+
+  (player.itemDescriptions || []).forEach((d, i) => {
+    const t = document.getElementById(`item${i + 1}Desc`);
+    if (t) t.value = d;
+  });
 }
 
 // =============================================================
-// CREATE CHARACTER
+// CREATE / EDIT
 // =============================================================
-async function createCharacter() {
-  const get = (id) => document.getElementById(id).value;
+async function submitCharacter() {
+  const name = charNameInput.value.trim();
+  if (!name) return;
 
-  const name = get("charNameInput");
-  if (!name.trim()) return alert("El nombre es obligatorio.");
+  const skills = [...document.querySelectorAll("#skillsContainer input")]
+    .map(i => i.value.trim())
+    .filter(Boolean);
+
+  const itemDescriptions = [];
+  for (let i = 1; i <= 6; i++) {
+    itemDescriptions.push(
+      document.getElementById(`item${i}Desc`)?.value.trim() || ""
+    );
+  }
+
+  const totalExp = Number(charExpInput.value) || 0;
+  const calculatedLevel = calculateLevelFromExp(totalExp);
 
   const fd = new FormData();
   fd.append("name", name);
-  fd.append("life", get("charLifeInput"));
-  fd.append("skill1", get("charSkill1Input"));
-  fd.append("skill2", get("charSkill2Input"));
-  fd.append("milestones", get("charMilestonesInput"));
-  fd.append("attributes", get("charAttributesInput"));
-  fd.append("exp", get("charExpInput"));
-  fd.append("level", get("charLevelInput"));
+  fd.append("life", charLifeInput.value);
+  fd.append("milestones", charMilestonesInput.value);
+  fd.append("attributes", charAttributesInput.value);
+  fd.append("exp", totalExp);
+  fd.append("level", calculatedLevel);
+  fd.append("skills", JSON.stringify(skills));
+  fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
 
-  const mainImg = document.getElementById("charImgInput").files?.[0];
-  if (mainImg && validateImage(mainImg)) fd.append("charImg", mainImg);
+  // 🔥 NUEVO
+  fd.append("itemsToDelete", JSON.stringify(itemsToDelete));
 
-  for (let i = 1; i <= 6; i++) {
-    const input = document.getElementById(`item${i}Input`);
-    if (!input) continue;
-    const file = input.files?.[0];
-    if (file && validateImage(file)) fd.append("items", file);
+  if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
+    fd.append("charImg", charImgInput.files[0]);
   }
 
-  await fetchJson(API_PLAYERS, { method: "POST", body: fd });
+  for (let i = 1; i <= 6; i++) {
+    const f = document.getElementById(`item${i}Input`)?.files[0];
+    if (f && validateImage(f)) fd.append("items", f);
+  }
 
-  alert("Personaje creado correctamente.");
-  toggleCreateCard();
-  refreshPlayers();
-}
-
-// =============================================================
-// EDIT PLAYER — PANEL DE EDICIÓN MEJORADO
-// =============================================================
-async function openMasterPanel(id) {
-  const player = players.find((p) => p._id === id);
-  if (!player) return alert("Jugador no encontrado");
-
-  const modal = document.createElement("div");
-  modal.className =
-    "fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50";
-
-  // PANEL RENOVADO
-  modal.innerHTML = `
-    <div class="bg-stone-900 p-6 rounded-2xl shadow-2xl w-[480px] border border-stone-700 max-h-[90vh] overflow-y-auto">
-      <h2 class="text-3xl font-bold text-red-400 mb-4 text-center">Editar ${player.name}</h2>
-
-      <!-- Imagen principal -->
-      <label class="font-semibold">Imagen principal:</label>
-      <img id="previewEditMain" 
-        src="${player.img ? `data:image/jpeg;base64,${player.img}` : '/placeholder.png'}"
-        class="w-full h-48 object-cover rounded-xl border border-stone-700 mb-3 shadow">
-      <input id="editImg" type="file" accept="image/*"
-        class="w-full p-2 rounded bg-white text-black mb-4">
-
-      <!-- Datos básicos -->
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label>Nombre:</label>
-          <input id="editName" value="${player.name}" class="w-full p-2 rounded text-black mb-2">
-        </div>
-        <div>
-          <label>Nivel:</label>
-          <input id="editLevel" type="number" value="${player.level}" class="w-full p-2 rounded text-black mb-2">
-        </div>
-        <div>
-          <label>Salud:</label>
-          <input id="editLife" type="number" value="${player.life}" class="w-full p-2 rounded text-black mb-2">
-        </div>
-        <div>
-          <label>EXPERIENCIA:</label>
-          <input id="editExp" type="number" value="${player.exp}" class="w-full p-2 rounded text-black mb-2">
-        </div>
-      </div>
-
-      <!-- Habilidades -->
-      <label>Habilidad 1:</label>
-      <input id="editSkill1" value="${player.skill1}" class="w-full p-2 rounded text-black mb-2">
-
-      <label>Habilidad 2:</label>
-      <input id="editSkill2" value="${player.skill2}" class="w-full p-2 rounded text-black mb-2">
-
-      <!-- Otros datos -->
-      <label>Hitos:</label>
-      <input id="editMilestones" value="${player.milestones}" class="w-full p-2 rounded text-black mb-2">
-
-      <label>Características:</label>
-      <input id="editAttributes" value="${player.attributes}" class="w-full p-2 rounded text-black mb-4">
-
-      <!-- Objetos -->
-      <h3 class="text-xl font-bold text-blue-300 mb-2">Objetos</h3>
-      <div class="grid grid-cols-2 gap-4 mb-4">
-        ${[1,2,3,4,5,6].map(i => {
-          const img = player.items?.[i-1] || "";
-          return `
-            <div class="bg-stone-800 p-2 rounded-xl border border-stone-700 shadow">
-              <img id="previewItemEdit${i}"
-                src="${img ? `data:image/jpeg;base64,${img}` : '/placeholder.png'}"
-                class="w-full h-20 object-cover rounded mb-2 border border-stone-600">
-              <input id="editItem${i}" type="file" accept="image/*"
-                     data-current="${img}"
-                     class="w-full bg-white text-black p-2 rounded">
-            </div>
-          `;
-        }).join("")}
-      </div>
-
-      <button id="saveEditBtn"
-        class="w-full bg-green-600 hover:bg-green-700 p-3 rounded-xl font-bold text-lg mt-2 shadow-lg">
-        Guardar Cambios
-      </button>
-
-      <button id="closeEdit"
-        class="w-full bg-red-600 hover:bg-red-700 p-2 rounded-xl font-bold mt-3 shadow">
-        Cerrar
-      </button>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  // activar previews
-  addPreview("editImg", "previewEditMain");
-  for (let i = 1; i <= 6; i++) addPreview(`editItem${i}`, `previewItemEdit${i}`);
-
-  document.getElementById("closeEdit").onclick = () => modal.remove();
-
-  document.getElementById("saveEditBtn").onclick = async () => {
-    const fd = new FormData();
-
-    fd.append("name", document.getElementById("editName").value);
-    fd.append("life", document.getElementById("editLife").value);
-    fd.append("skill1", document.getElementById("editSkill1").value);
-    fd.append("skill2", document.getElementById("editSkill2").value);
-    fd.append("milestones", document.getElementById("editMilestones").value);
-    fd.append("attributes", document.getElementById("editAttributes").value);
-    fd.append("exp", document.getElementById("editExp").value);
-    fd.append("level", document.getElementById("editLevel").value);
-
-    const newMain = document.getElementById("editImg").files?.[0];
-    if (newMain && validateImage(newMain)) fd.append("charImg", newMain);
-
-    const keepItems = [];
-    for (let i = 1; i <= 6; i++) {
-      const input = document.getElementById(`editItem${i}`);
-      const file = input.files?.[0];
-
-      if (file && validateImage(file)) {
-        fd.append("items", file);
-      } else {
-        keepItems.push(input.dataset.current || null);
-      }
-    }
-
-    fd.append("keepItems", JSON.stringify(keepItems));
-
-    await fetchJson(`${API_PLAYERS}/${player._id}`, {
+  if (formMode === "create") {
+    await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
+  } else {
+    await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
       method: "PUT",
-      body: fd
-    });
+      body: fd,
+    }, true);
+  }
 
-    modal.remove();
-    refreshPlayers();
-  };
+  itemsToDelete = []; // 🔥 NUEVO
+  resetForm();
+  toggleCreateCard();
+  refreshPlayers(true);
 }
 
 // =============================================================
-// DELETE PLAYER
+// DELETE
 // =============================================================
 async function deletePlayer(id) {
-  if (!confirm("¿Seguro que deseas eliminar este personaje?")) return;
-  await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" });
-  alert("Jugador eliminado.");
-  refreshPlayers();
+  if (!confirm("¿Eliminar personaje?")) return;
+  await fetchJson(`${API_PLAYERS}/${id}`, { method: "DELETE" }, true);
+  refreshPlayers(true);
 }
 
 // =============================================================
-// OPEN PLAYER BOARD
+// RESET
 // =============================================================
-function openPlayerBoard() {
-  window.open("../Player/player_view.html", "_blank");
+function resetForm() {
+  formMode = "create";
+  editingPlayerId = null;
+  itemsToDelete = []; // 🔥 NUEVO
+
+  submitCharacterBtn.textContent = "🐉 Crear personaje";
+
+  charNameInput.value = "";
+  charLifeInput.value = 10;
+  charMilestonesInput.value = "";
+  charAttributesInput.value = "";
+  charExpInput.value = 0;
+
+  skillsContainer.innerHTML = "";
+  charImgInput.value = "";
+  previewCharMain.classList.add("hidden");
+
+  initItems();
 }
 
 // =============================================================
 // INIT
 // =============================================================
 window.addEventListener("load", () => {
-  refreshPlayers();
-
+  refreshPlayers(true);
+  initItems();
   addPreview("charImgInput", "previewCharMain");
-  for (let i = 1; i <= 6; i++) {
-    addPreview(`item${i}Input`, `previewItem${i}`);
-  }
 });
-

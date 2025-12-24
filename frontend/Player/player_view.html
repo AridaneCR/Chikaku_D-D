@@ -4,43 +4,148 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tablero de D&D - Jugador</title>
+
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- Transiciones -->
   <style>
-    .exp-bar { transition: width 1s ease-in-out; }
+    .exp-bar {
+      transition: width 1s ease-in-out;
+    }
+
+    /* =============================================================
+       TOAST ANIMATIONS
+       ============================================================= */
+    .toast-enter {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    .toast-enter-active {
+      opacity: 1;
+      transform: translateY(0);
+      transition: all 0.3s ease;
+    }
+    .toast-exit {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+    }
   </style>
 </head>
-<body class="bg-stone-900 text-stone-100 min-h-screen p-6">
 
-  <h1 class="text-4xl text-center text-red-400 mb-6 font-bold">
-    Tablero de D&D
-  </h1>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen">
 
-  <!-- 🔎 BUSCADOR (NECESARIO PARA QUE NO FALLE EL JS) -->
-  <div class="mb-4 text-center">
-    <input id="searchName" 
-           type="text" 
-           placeholder="Buscar por nombre"
-           class="p-2 rounded bg-stone-700 text-white mr-2">
+  <!-- =============================================================
+  HEADER
+  ============================================================= -->
+  <header class="sticky top-0 z-40 bg-zinc-900/80 backdrop-blur border-b border-zinc-800">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <h1 class="text-3xl font-bold tracking-wide text-red-400 text-center">
+        🐉 Tablero de D&D
+      </h1>
+    </div>
+  </header>
 
-    <input id="searchLevel" 
-           type="number" 
-           placeholder="Nivel"
-           class="p-2 rounded bg-stone-700 text-white mr-2">
+  <!-- =============================================================
+  CONTENIDO
+  ============================================================= -->
+  <main class="max-w-6xl mx-auto px-6 py-8">
 
-    <button onclick="searchPlayer()" 
-            class="bg-blue-600 px-4 py-2 rounded mr-2">
-      Buscar
-    </button>
+    <!-- BUSCADOR -->
+    <section class="mb-8 bg-zinc-900 border border-zinc-700 rounded-2xl p-4 shadow-lg">
+      <div class="flex flex-col md:flex-row gap-4 justify-center items-center">
 
-    <button onclick="clearSearch()" 
-            class="bg-red-600 px-4 py-2 rounded">
-      Limpiar
-    </button>
+        <input
+          id="searchName"
+          type="text"
+          placeholder="Buscar por nombre"
+          class="w-full md:w-64 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
+                 text-zinc-100 placeholder-zinc-500 focus:outline-none
+                 focus:ring-2 focus:ring-red-500"
+        />
+
+        <input
+          id="searchLevel"
+          type="number"
+          placeholder="Nivel"
+          class="w-full md:w-32 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
+                 text-zinc-100 placeholder-zinc-500 focus:outline-none
+                 focus:ring-2 focus:ring-red-500"
+        />
+
+        <div class="flex gap-3">
+          <button
+            onclick="searchPlayer()"
+            class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700
+                   font-semibold shadow transition">
+            Buscar
+          </button>
+
+          <button
+            onclick="clearSearch()"
+            class="px-5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700
+                   border border-zinc-700 transition">
+            Limpiar
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TABLERO -->
+    <section id="playerBoard" class="relative min-h-screen">
+      <!-- Cards renderizadas desde player_view.js -->
+    </section>
+
+  </main>
+
+  <!-- =============================================================
+  MODAL OBJETOS
+  ============================================================= -->
+  <div
+    id="objectModal"
+    onclick="closeObjectModal()"
+    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
+
+    <div
+      onclick="event.stopPropagation()"
+      class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-sm w-full relative shadow-2xl">
+
+      <!-- Botón cerrar -->
+      <button
+        onclick="closeObjectModal()"
+        class="absolute top-2 right-2 text-stone-300 hover:text-white text-xl">
+        ✕
+      </button>
+
+      <!-- Imagen objeto -->
+      <img
+        id="objectModalImg"
+        src=""
+        alt="Objeto"
+        class="w-full h-48 object-cover rounded mb-4 border border-stone-700" />
+
+      <!-- Descripción -->
+      <p
+        id="objectModalDesc"
+        class="text-stone-200 text-sm whitespace-pre-line">
+      </p>
+    </div>
   </div>
 
-  <div id="playerBoard" class="relative min-h-screen"></div>
+  <!-- =============================================================
+  TOAST CONTAINER (🔥 NUEVO)
+  ============================================================= -->
+  <div
+    id="toastContainer"
+    class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none">
+  </div>
 
-  <script src="../js/player_view.js"></script>
+  <!-- =============================================================
+  SCRIPT
+  ============================================================= -->
+  <script src="/js/player_view.js"></script>
+
 </body>
 </html>

@@ -3,159 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>D&D App Completa</title>
+  <title>D&D App</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-stone-900 text-stone-100 min-h-screen p-6">
+<body class="bg-stone-900 text-stone-100 min-h-screen p-6 flex items-center justify-center">
 
-  <!-- SELECCIÓN INICIAL -->
-  <div id="startScreen" class="max-w-md mx-auto text-center mt-20 hidden">
-    <h1 class="text-4xl font-bold mb-6 text-red-400">Dungeons & Dragons</h1>
+  <!-- LOGIN MASTER / PLAYER -->
+  <div id="loginScreen"
+    class="w-full max-w-md bg-stone-800 p-6 rounded-xl shadow-xl">
 
-    <button onclick="openNewCampaignForm()" 
-      class="bg-green-600 hover:bg-green-700 p-3 rounded w-full mb-3">
-      Crear Nueva Campaña
-    </button>
+    <h1 class="text-4xl font-bold text-center mb-6 text-red-400">
+      Dungeons & Dragons
+    </h1>
 
-    <button onclick="openCampaignSelector()" 
-      class="bg-blue-600 hover:bg-blue-700 p-3 rounded w-full">
-      Seleccionar Campaña Existente
-    </button>
-  </div>
+    <!-- MASTER LOGIN -->
+    <div class="mb-6">
+      <label class="block mb-1 text-sm text-stone-300">
+        Entrar como Master
+      </label>
 
-  <!-- FORMULARIO CREAR CAMPAÑA -->
-  <div id="campaignCard" class="max-w-md mx-auto bg-stone-800 p-6 rounded-xl shadow-xl mb-6 hidden">
-    <h1 class="text-3xl font-bold text-center mb-4 text-red-400">Crear Campaña</h1>
+      <input
+        id="masterPass"
+        type="password"
+        placeholder="Contraseña del Master"
+        class="w-full p-2 rounded text-black mb-3" />
 
-    <label>Nombre de la campaña:</label>
-    <input id="campaignNameInput" class="w-full p-2 text-black rounded mb-2" />
+      <button
+        onclick="loginMaster()"
+        class="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold">
+        Entrar como Master
+      </button>
+    </div>
 
-    <label>Número de jugadores:</label>
-    <input id="campaignPlayersInput" type="number" min="1" class="w-full p-2 text-black rounded mb-2" />
+    <!-- DIVISOR -->
+    <div class="border-t border-stone-700 my-6"></div>
 
-    <button onclick="createCampaign()" class="bg-green-600 hover:bg-green-700 p-2 rounded w-full mt-2">
-      Crear Campaña
-    </button>
-
-    <button onclick="backToStart()" class="bg-gray-600 hover:bg-gray-700 p-2 rounded w-full mt-3">
-      Volver
-    </button>
-  </div>
-
-  <!-- SELECCIONAR CAMPAÑA EXISTENTE -->
-  <div id="campaignSelectCard" class="max-w-md mx-auto bg-stone-800 p-6 rounded-xl shadow-xl mb-6 hidden">
-    <h1 class="text-3xl font-bold text-center mb-4 text-blue-400">Seleccionar Campaña</h1>
-
-    <select id="campaignSelect" class="w-full p-2 text-black rounded mb-4"></select>
-
-    <button onclick="chooseCampaign()" 
-      class="bg-blue-600 hover:bg-blue-700 p-2 rounded w-full mb-2">
-      Seleccionar
-    </button>
-
-    <button onclick="backToStart()" 
-      class="bg-gray-600 hover:bg-gray-700 p-2 rounded w-full">
-      Volver
+    <!-- PLAYER -->
+    <button
+      onclick="enterBoard()"
+      class="w-full bg-purple-600 hover:bg-purple-700 p-2 rounded font-semibold">
+      Entrar como Jugador
     </button>
   </div>
-
-  <!-- LOGIN MASTER + IR AL TABLERO -->
-  <div id="loginScreen" class="max-w-md mx-auto bg-stone-800 p-6 rounded-xl shadow-xl hidden">
-    <h1 class="text-3xl font-bold text-center mb-4 text-red-400">Opciones</h1>
-
-    <label>Entrar como Master:</label>
-    <input id="masterPass" type="password" class="w-full p-2 rounded text-black mb-3" />
-
-    <button onclick="loginMaster()" 
-      class="w-full bg-red-600 hover:bg-red-700 p-2 rounded">
-      Entrar como Master
-    </button>
-
-    <button onclick="enterBoard()" 
-      class="w-full bg-purple-600 hover:bg-purple-700 p-2 rounded mt-4">
-      Ir al Tablero
-    </button>
-
-    <button onclick="backToStart()" 
-      class="w-full bg-gray-600 hover:bg-gray-700 p-2 rounded mt-3">
-      Volver
-    </button>
-  </div>
-
 
   <script>
-    let campaigns = JSON.parse(localStorage.getItem("campaigns")) || [];
-    let currentCampaign = JSON.parse(localStorage.getItem("currentCampaign")) || null;
-
-    window.addEventListener("load", () => {
-      if (campaigns.length === 0) {
-        openNewCampaignForm();
-      } else {
-        document.getElementById("startScreen").classList.remove("hidden");
-      }
-    });
-
-    function backToStart() {
-      document.querySelectorAll("#campaignCard,#campaignSelectCard,#loginScreen")
-        .forEach(el => el.classList.add("hidden"));
-
-      document.getElementById("startScreen").classList.remove("hidden");
-    }
-
-    function openNewCampaignForm() {
-      document.getElementById("startScreen").classList.add("hidden");
-      document.getElementById("campaignCard").classList.remove("hidden");
-    }
-
-    function openCampaignSelector() {
-      document.getElementById("startScreen").classList.add("hidden");
-      document.getElementById("campaignSelectCard").classList.remove("hidden");
-
-      const select = document.getElementById("campaignSelect");
-      select.innerHTML = "";
-
-      campaigns.forEach((c, i) => {
-        select.innerHTML += `<option value="${i}">${c.name}</option>`;
-      });
-    }
-
-    function createCampaign() {
-      const name = document.getElementById("campaignNameInput").value;
-      const numPlayers = parseInt(document.getElementById("campaignPlayersInput").value);
-
-      if (!name || !numPlayers) return alert("Completa todos los campos");
-
-      const campaign = { name, numPlayers };
-      campaigns.push(campaign);
-
-      localStorage.setItem("campaigns", JSON.stringify(campaigns));
-      localStorage.setItem("currentCampaign", JSON.stringify(campaign));
-
-      showLoginOptions();
-    }
-
-    function chooseCampaign() {
-      const idx = document.getElementById("campaignSelect").value;
-      currentCampaign = campaigns[idx];
-
-      localStorage.setItem("currentCampaign", JSON.stringify(currentCampaign));
-
-      showLoginOptions();
-    }
-
-    function showLoginOptions() {
-      document.querySelectorAll("#startScreen,#campaignCard,#campaignSelectCard")
-        .forEach(el => el.classList.add("hidden"));
-
-      document.getElementById("loginScreen").classList.remove("hidden");
-    }
-
+    // =============================================================
+    // LOGIN
+    // =============================================================
     function loginMaster() {
       const pass = document.getElementById("masterPass").value;
+
       if (pass === "dragon") {
         window.location.href = "./Player/master.html";
-      } else alert("Contraseña incorrecta");
+      } else {
+        alert("Contraseña incorrecta");
+      }
     }
 
     function enterBoard() {
