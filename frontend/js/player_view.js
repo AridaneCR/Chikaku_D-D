@@ -326,7 +326,7 @@ setInterval(() => {
   if (!sseConnected && !isFiltering) {
     loadPlayers();
   }
-}, 10000);
+}, 1000);
 
 // =============================================================
 // INIT
