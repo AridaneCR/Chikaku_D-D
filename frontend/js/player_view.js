@@ -28,7 +28,8 @@ const playerBoard = document.getElementById("playerBoard");
 function resolveImage(img) {
   if (!img) return "/placeholder.png";
   if (typeof img === "string" && img.startsWith("http")) return img;
-  if (typeof img === "object") return img.secure_url || img.url || "/placeholder.png";
+  if (typeof img === "object")
+    return img.secure_url || img.url || "/placeholder.png";
   return "/placeholder.png";
 }
 
@@ -42,8 +43,7 @@ function showToast(message, type = "info") {
   if (!container) {
     container = document.createElement("div");
     container.id = "toastContainer";
-    container.className =
-      "fixed top-4 right-4 z-50 flex flex-col gap-3";
+    container.className = "fixed top-4 right-4 z-50 flex flex-col gap-3";
     document.body.appendChild(container);
   }
 
@@ -131,14 +131,15 @@ function expProgress(totalExp) {
 // FETCH
 // =============================================================
 
-async function fetchJson(url) {
-  const res = await fetch(url, { cache: "no-store" });
+async function fetchJson(url, realtime = false) {
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: realtime
+      ? { "x-realtime": "1" } // 🔥 fuerza invalidar cache en backend
+      : {},
+  });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
-}
-
-function buildSignature(list) {
-  return list.map(p => `${p._id}:${p.updatedAt}`).join("|");
 }
 
 // =============================================================
@@ -147,23 +148,30 @@ function buildSignature(list) {
 
 async function loadPlayers(fromRealtime = false) {
   try {
-    const data = await fetchJson(API_PLAYERS);
+    const data = await fetchJson(API_PLAYERS, fromRealtime);
     const signature = buildSignature(data);
 
-    if (signature === lastSignature) return;
+    if (!fromRealtime && signature === lastSignature) return;
 
     lastSignature = signature;
     players = data;
-
-    if (!isFiltering) renderPlayerBoard(players);
+    renderPlayerBoard(players);
 
     if (fromRealtime) {
       showToast("⚡ Jugadores actualizados", "success");
     }
   } catch (err) {
     console.error("Error cargando jugadores:", err);
-    showToast("❌ Error cargando jugadores", "error");
   }
+}
+// =============================================================
+// SIGNATURE (CACHE / CAMBIOS)
+// =============================================================
+
+function buildSignature(list = []) {
+  return list
+    .map(p => `${p._id}:${p.updatedAt}`)
+    .join("|");
 }
 
 // =============================================================
@@ -195,7 +203,7 @@ function openSkillsModal(skills = []) {
   const list = modal.querySelector("#skillsList");
   list.innerHTML = "";
 
-  skills.forEach(s => {
+  skills.forEach((s) => {
     const li = document.createElement("li");
     li.className = "bg-stone-700 rounded px-3 py-2 text-sm";
     li.textContent = s;
@@ -234,7 +242,7 @@ function renderPlayerBoard(list = players) {
   playerBoard.className =
     "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
 
-  list.forEach(p => {
+  list.forEach((p) => {
     const totalExp = Number(p.exp) || 0;
     const exp = expProgress(totalExp);
     const skills = Array.isArray(p.skills) ? p.skills : [];
@@ -244,30 +252,46 @@ function renderPlayerBoard(list = players) {
       "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[460px]";
 
     card.innerHTML = `
+      <!-- NOMBRE -->
       <h2 class="text-lg font-bold mb-2 truncate text-white">
         ${p.name} (Nivel ${exp.level})
       </h2>
 
+      <!-- IMAGEN -->
       <img
         src="${resolveImage(p.img)}"
         class="w-full h-44 object-cover rounded mb-3"
         loading="lazy"
       />
 
+      <!-- INFO -->
       <p class="text-sm">❤️ Salud: ${p.life}</p>
+
+      <!-- HITOS (🔥 RESTAURADO) -->
+      <p class="text-sm">🏆 ${p.milestones || "-"}</p>
+
       <p class="text-sm">⭐ EXP total: ${totalExp}</p>
 
-      ${skills.length ? `
+      <!-- HABILIDADES -->
+      ${
+        skills.length
+          ? `
         <button
           onclick='openSkillsModal(${JSON.stringify(skills)})'
           class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
           Ver habilidades (${skills.length})
         </button>
-      ` : ""}
+      `
+          : ""
+      }
 
+      <!-- EXP -->
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
-          <div class="bg-green-500 h-3 transition-all" style="width:${exp.percent}%"></div>
+          <div
+            class="bg-green-500 h-3 transition-all"
+            style="width:${exp.percent}%">
+          </div>
         </div>
 
         <p class="text-xs text-stone-300 mt-1 text-center">
@@ -275,21 +299,35 @@ function renderPlayerBoard(list = players) {
           · faltan ${Math.round(exp.remaining)}
         </p>
 
-        <div class="grid grid-cols-6 gap-1 mt-3">
-          ${(p.items || []).slice(0, 6).map((item, i) => `
+        <!-- OBJETOS -->
+        <div class="grid grid-cols-6 gap-1 mt-3" data-items>
+          ${(p.items || [])
+            .slice(0, 6)
+            .map(
+              (item, i) => `
             <img
               src="${resolveImage(item)}"
+              data-img="${resolveImage(item)}"
+              data-desc="${(
+                p.itemDescriptions?.[i] || "Sin descripción"
+              ).replace(/"/g, "&quot;")}"
               class="w-10 h-10 object-cover rounded border cursor-pointer"
-              onclick="openItemModal(
-                '${resolveImage(item)}',
-                ${JSON.stringify(p.itemDescriptions?.[i] || "Sin descripción")}
-              )"
               loading="lazy"
             />
-          `).join("")}
+          `
+            )
+            .join("")}
         </div>
       </div>
     `;
+
+    // 🔥 FIX DEFINITIVO: binding de clicks por JS (no inline)
+    const itemImgs = card.querySelectorAll("[data-img]");
+    itemImgs.forEach((imgEl) => {
+      imgEl.addEventListener("click", () => {
+        openItemModal(imgEl.dataset.img, imgEl.dataset.desc);
+      });
+    });
 
     playerBoard.appendChild(card);
   });
