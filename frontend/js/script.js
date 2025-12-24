@@ -5,6 +5,10 @@ let formMode = "create"; // "create" | "edit"
 let editingPlayerId = null;
 let lastSignature = "";
 
+// 🔥 NUEVO → objetos a borrar
+let itemsToDelete = [];
+
+
 // =============================================================
 // XP SYSTEM (ACUMULATIVO)
 // =============================================================
@@ -74,7 +78,7 @@ function hideLoader() {
 }
 
 // =============================================================
-// FETCH (🔥 CACHE FIX DEFINITIVO)
+// FETCH
 // =============================================================
 async function fetchJson(url, opts = {}, showLoading = false) {
   if (showLoading) showLoader();
@@ -86,8 +90,8 @@ async function fetchJson(url, opts = {}, showLoading = false) {
       headers: {
         ...(opts.headers || {}),
         "Cache-Control": "no-cache",
-        Pragma: "no-cache"
-      }
+        Pragma: "no-cache",
+      },
     });
 
     if (!res.ok) throw new Error(await res.text());
@@ -166,11 +170,43 @@ function initItems() {
       <input id="item${i}Input" type="file" class="file" />
       <textarea id="item${i}Desc" class="input mt-2 resize-none"
         rows="2" placeholder="Descripción del objeto..."></textarea>
-      <img id="previewItem${i}" class="preview mt-3" />
+
+      <img id="previewItem${i}" class="preview mt-3 hidden" />
+
+      <!-- 🔥 NUEVO -->
+      <button
+        id="deleteItemBtn${i}"
+        type="button"
+        onclick="deleteItemImage(${i})"
+        class="mt-2 w-full bg-red-600 hover:bg-red-700 text-sm rounded p-1 hidden">
+        🗑️ Eliminar imagen
+      </button>
     `;
     container.appendChild(div);
     addPreview(`item${i}Input`, `previewItem${i}`);
   }
+}
+
+// =============================================================
+// 🔥 NUEVO → BORRAR IMAGEN DE OBJETO
+// =============================================================
+function deleteItemImage(index) {
+  const preview = document.getElementById(`previewItem${index}`);
+  const input = document.getElementById(`item${index}Input`);
+  const btn = document.getElementById(`deleteItemBtn${index}`);
+
+  if (preview) {
+    preview.src = "";
+    preview.classList.add("hidden");
+  }
+
+  if (input) input.value = "";
+
+  if (!itemsToDelete.includes(index - 1)) {
+    itemsToDelete.push(index - 1);
+  }
+
+  if (btn) btn.classList.add("hidden");
 }
 
 // =============================================================
@@ -232,6 +268,7 @@ function editPlayer(id) {
 
   formMode = "edit";
   editingPlayerId = id;
+  itemsToDelete = []; // 🔥 NUEVO
 
   toggleCreateCard(true);
   submitCharacterBtn.textContent = "✏️ Guardar cambios";
@@ -254,11 +291,14 @@ function editPlayer(id) {
   }
 
   initItems();
+
   (player.items || []).forEach((img, i) => {
     const p = document.getElementById(`previewItem${i + 1}`);
+    const btn = document.getElementById(`deleteItemBtn${i + 1}`);
     if (p && img) {
       p.src = img;
       p.classList.remove("hidden");
+      btn?.classList.remove("hidden"); // 🔥 NUEVO
     }
   });
 
@@ -299,6 +339,9 @@ async function submitCharacter() {
   fd.append("skills", JSON.stringify(skills));
   fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
 
+  // 🔥 NUEVO
+  fd.append("itemsToDelete", JSON.stringify(itemsToDelete));
+
   if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
     fd.append("charImg", charImgInput.files[0]);
   }
@@ -308,47 +351,19 @@ async function submitCharacter() {
     if (f && validateImage(f)) fd.append("items", f);
   }
 
-  let updatedPlayer;
-
-  try {
-    if (formMode === "create") {
-      updatedPlayer = await fetchJson(
-        API_PLAYERS,
-        { method: "POST", body: fd },
-        true
-      );
-
-      // 🔥 INSERTA INMEDIATAMENTE EN MEMORIA
-      players.unshift(updatedPlayer);
-    } else {
-      updatedPlayer = await fetchJson(
-        `${API_PLAYERS}/${editingPlayerId}`,
-        { method: "PUT", body: fd },
-        true
-      );
-
-      // 🔥 ACTUALIZA EN MEMORIA
-      const index = players.findIndex(p => p._id === editingPlayerId);
-      if (index !== -1) {
-        players[index] = updatedPlayer;
-      }
-    }
-
-    // 🔥 RENDER INMEDIATO (SIN ESPERAR RED)
-    renderPlayersList();
-
-    resetForm();
-    toggleCreateCard();
-
-    // 🔄 SINCRONIZACIÓN SILENCIOSA
-    setTimeout(() => {
-      lastSignature = "";
-      refreshPlayers(true);
-    }, 1500);
-
-  } catch (err) {
-    console.error("Error guardando personaje:", err);
+  if (formMode === "create") {
+    await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
+  } else {
+    await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
+      method: "PUT",
+      body: fd,
+    }, true);
   }
+
+  itemsToDelete = []; // 🔥 NUEVO
+  resetForm();
+  toggleCreateCard();
+  refreshPlayers(true);
 }
 
 // =============================================================
@@ -366,6 +381,8 @@ async function deletePlayer(id) {
 function resetForm() {
   formMode = "create";
   editingPlayerId = null;
+  itemsToDelete = []; // 🔥 NUEVO
+
   submitCharacterBtn.textContent = "🐉 Crear personaje";
 
   charNameInput.value = "";
