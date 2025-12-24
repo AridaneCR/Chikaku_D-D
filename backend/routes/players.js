@@ -128,7 +128,6 @@ router.post(
         itemDescriptions: itemDescriptions.slice(0, 6),
       });
 
-      // 🔥 FIX CLAVE
       player.updatedAt = new Date();
 
       const saved = await player.save();
@@ -145,7 +144,7 @@ router.post(
 );
 
 // ============================================================
-// UPDATE PLAYER (🔥 FIX DEFINITIVO)
+// UPDATE PLAYER (🔥 CON BORRADO DE OBJETOS)
 // ============================================================
 router.put(
   "/:id",
@@ -160,6 +159,13 @@ router.put(
       const player = await Player.findById(req.params.id);
       if (!player)
         return res.status(404).json({ error: "Jugador no encontrado" });
+
+      // ========================================================
+      // 🔥 NUEVO: ITEMS A BORRAR
+      // ========================================================
+      const itemsToDelete = req.body.itemsToDelete
+        ? JSON.parse(req.body.itemsToDelete)
+        : [];
 
       player.name = req.body.name ?? player.name;
       player.life = req.body.life !== undefined ? Number(req.body.life) : player.life;
@@ -178,6 +184,25 @@ router.put(
         player.itemDescriptions = desc.slice(0, 6);
       }
 
+      // ========================================================
+      // 🔥 NUEVO: BORRAR IMÁGENES DE OBJETOS
+      // ========================================================
+      if (itemsToDelete.length && Array.isArray(player.items)) {
+        for (const index of itemsToDelete) {
+          const imgUrl = player.items[index];
+          if (imgUrl) {
+            await deleteImage(imgUrl);
+          }
+        }
+
+        player.items = player.items.filter(
+          (_, i) => !itemsToDelete.includes(i)
+        );
+        player.itemDescriptions = player.itemDescriptions.filter(
+          (_, i) => !itemsToDelete.includes(i)
+        );
+      }
+
       if (req.files?.charImg?.[0]) {
         if (player.img) await deleteImage(player.img);
         player.img = await uploadImage(req.files.charImg[0].buffer, "players");
@@ -190,7 +215,6 @@ router.put(
         player.items = [...player.items, ...newItems].slice(0, 6);
       }
 
-      // 🔥 FIX CLAVE
       player.updatedAt = new Date();
       player.markModified("updatedAt");
 
