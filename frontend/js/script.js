@@ -12,22 +12,32 @@ let itemsToDelete = [];
 // =============================================================
 // XP SYSTEM (ACUMULATIVO)
 // =============================================================
+// =============================================================
+// XP SYSTEM (ACUMULATIVO BASE 100 +40 POR NIVEL)
+// =============================================================
+
 const BASE_EXP = 100;
-const EXP_GROWTH = 1.08;
+const EXP_STEP = 40;
 
 // Calcula el nivel a partir de la EXP TOTAL acumulada
 function calculateLevelFromExp(totalExp) {
-  let level = 1;
-  let required = BASE_EXP;
-  let remaining = totalExp;
+  totalExp = Number(totalExp) || 0;
 
-  while (remaining >= required) {
-    remaining -= required;
-    required = Math.round(required * EXP_GROWTH);
+  let level = 1;
+  let expUsed = 0;
+
+  while (true) {
+    const expForNextLevel = BASE_EXP + (level - 1) * EXP_STEP;
+
+    if (totalExp < expUsed + expForNextLevel) {
+      return level;
+    }
+
+    expUsed += expForNextLevel;
     level++;
   }
-  return level;
 }
+
 
 // =============================================================
 // UI ACTIONS

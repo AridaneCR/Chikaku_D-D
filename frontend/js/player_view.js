@@ -66,66 +66,44 @@ function showToast(message, type = "info") {
 }
 
 // =============================================================
-// 🔥 EXP SYSTEM (ACUMULATIVO REAL)
+// 🔥 EXP SYSTEM (BASE 100 +40 POR NIVEL)
 // =============================================================
 
 const BASE_EXP = 100;
-const EXP_GROWTH = 1.08;
+const EXP_STEP = 40;
 
-// tabla de costes por nivel
-function buildExpTable(maxLevel = 50) {
-  const table = [];
-  let cost = BASE_EXP;
-
-  for (let i = 1; i <= maxLevel; i++) {
-    table.push(Math.round(cost));
-    cost *= EXP_GROWTH;
-  }
-  return table;
+// EXP necesaria para subir un nivel concreto
+function expForLevel(level) {
+  return BASE_EXP + (level - 1) * EXP_STEP;
 }
 
-const EXP_TABLE = buildExpTable();
-
-// nivel desde EXP TOTAL
-function levelFromExp(totalExp) {
-  let acc = 0;
-
-  for (let i = 0; i < EXP_TABLE.length; i++) {
-    acc += EXP_TABLE[i];
-    if (totalExp < acc) return i + 1;
-  }
-
-  return EXP_TABLE.length + 1;
-}
-
-// progreso real
+// Calcula nivel y progreso desde EXP TOTAL acumulada
 function expProgress(totalExp) {
-  let acc = 0;
+  totalExp = Number(totalExp) || 0;
 
-  for (let lvl = 1; lvl <= EXP_TABLE.length; lvl++) {
-    const cost = EXP_TABLE[lvl - 1];
+  let level = 1;
+  let usedExp = 0;
 
-    if (totalExp < acc + cost) {
-      const current = totalExp - acc;
+  while (true) {
+    const required = expForLevel(level);
+
+    if (totalExp < usedExp + required) {
+      const current = totalExp - usedExp;
+
       return {
-        level: lvl,
+        level,
         current,
-        required: cost,
-        remaining: cost - current,
-        percent: Math.min(100, Math.round((current / cost) * 100)),
+        required,
+        remaining: required - current,
+        percent: Math.round((current / required) * 100),
       };
     }
-    acc += cost;
-  }
 
-  return {
-    level: EXP_TABLE.length + 1,
-    current: 0,
-    required: 0,
-    remaining: 0,
-    percent: 100,
-  };
+    usedExp += required;
+    level++;
+  }
 }
+
 
 // =============================================================
 // FETCH
