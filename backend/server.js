@@ -49,8 +49,17 @@ function notifyPlayersUpdate() {
   });
 }
 
+// 🔥 HEARTBEAT SSE (evita buffering de Render)
+setInterval(() => {
+  sseClients.forEach(client => {
+    client.res.write(`:\n\n`);
+  });
+}, 15000); // cada 15s
+
+
 // 👉 HACERLA DISPONIBLE AL ROUTER
 app.set("notifyPlayersUpdate", notifyPlayersUpdate);
+
 
 // =============================================================
 // SSE ENDPOINT
