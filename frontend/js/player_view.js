@@ -345,9 +345,11 @@ function initSSE() {
     showToast("🟢 Conectado en tiempo real");
   };
 
-  source.addEventListener("playersUpdated", () => {
-    loadPlayers(true);
-  });
+ source.addEventListener("playersUpdated", () => {
+  console.log("🔥 SSE RECIBIDO", new Date().toISOString());
+  loadPlayers(true);
+});
+
 
   source.onerror = () => {
     sseConnected = false;
