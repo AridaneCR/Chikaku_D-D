@@ -17,3 +17,7 @@ services:
     rootDir: frontend
     repo: https://github.com/AridaneCR/Chikaku_D-D
     staticPublishPath: "."
+    routes:
+    - type: rewrite
+      source: /*
+      destination: /index.html
