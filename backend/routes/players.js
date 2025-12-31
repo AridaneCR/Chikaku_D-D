@@ -210,9 +210,6 @@ router.put(
         const newItems = await Promise.all(
           req.files.items.map(f => uploadImage(f.buffer, "items"))
         );
-
-        player.items = [...player.items, ...newItems].slice(0, 6);
-
         while (player.itemDescriptions.length < player.items.length) {
           player.itemDescriptions.push("");
         }
@@ -223,12 +220,57 @@ router.put(
       // ===============================
       // ACTUALIZAR DESCRIPCIONES
       // ===============================
-      if (req.body.itemDescriptions) {
-        const desc = JSON.parse(req.body.itemDescriptions);
-        player.itemDescriptions = player.items.map(
-          (_, i) => desc[i] || ""
-        );
-      }
+      // ===============================
+// 🔥 BORRAR OBJETOS
+// ===============================
+if (itemsToDelete.length) {
+  for (const index of itemsToDelete) {
+    const imgUrl = player.items[index];
+    if (imgUrl) await deleteImage(imgUrl);
+  }
+
+  player.items = player.items.filter(
+    (_, i) => !itemsToDelete.includes(i)
+  );
+
+  player.itemDescriptions = player.itemDescriptions.filter(
+    (_, i) => !itemsToDelete.includes(i)
+  );
+}
+
+// ===============================
+// 🔥 AÑADIR NUEVOS OBJETOS
+// ===============================
+if (req.files?.items?.length) {
+  const newItems = await Promise.all(
+    req.files.items.map(f => uploadImage(f.buffer, "items"))
+  );
+
+  player.items.push(...newItems);
+
+  // mantener índices
+  newItems.forEach(() => {
+    player.itemDescriptions.push("");
+  });
+}
+
+// ===============================
+// 🔥 SINCRONIZAR DESCRIPCIONES
+// ===============================
+if (req.body.itemDescriptions) {
+  const desc = JSON.parse(req.body.itemDescriptions);
+
+  player.itemDescriptions = player.items.map(
+    (_, i) => desc[i] || ""
+  );
+}
+
+// ===============================
+// 🔥 LIMITE FINAL
+// ===============================
+player.items = player.items.slice(0, 6);
+player.itemDescriptions = player.itemDescriptions.slice(0, 6);
+
 
       // ===============================
       // IMAGEN PRINCIPAL
