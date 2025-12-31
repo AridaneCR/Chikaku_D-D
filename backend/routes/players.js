@@ -114,6 +114,11 @@ router.post(
         );
       }
 
+      // 🔥 asegurar descripciones alineadas
+      while (itemDescriptions.length < items.length) {
+        itemDescriptions.push("");
+      }
+
       const player = new Player({
         campaign: req.body.campaign || "default",
         name: req.body.name,
@@ -124,7 +129,7 @@ router.post(
         level: Number(req.body.level) || 1,
         skills,
         img,
-        items,
+        items: items.slice(0, 6),
         itemDescriptions: itemDescriptions.slice(0, 6),
       });
 
@@ -144,7 +149,7 @@ router.post(
 );
 
 // ============================================================
-// UPDATE PLAYER (🔥 CON BORRADO DE OBJETOS)
+// UPDATE PLAYER (CORREGIDO)
 // ============================================================
 router.put(
   "/:id",
@@ -160,39 +165,34 @@ router.put(
       if (!player)
         return res.status(404).json({ error: "Jugador no encontrado" });
 
-      // ========================================================
-      // 🔥 NUEVO: ITEMS A BORRAR
-      // ========================================================
       const itemsToDelete = req.body.itemsToDelete
         ? JSON.parse(req.body.itemsToDelete)
         : [];
 
+      // ===============================
+      // CAMPOS BÁSICOS
+      // ===============================
       player.name = req.body.name ?? player.name;
-      player.life = req.body.life !== undefined ? Number(req.body.life) : player.life;
+      player.life =
+        req.body.life !== undefined ? Number(req.body.life) : player.life;
       player.milestones = req.body.milestones ?? player.milestones;
       player.attributes = req.body.attributes ?? player.attributes;
-      player.exp = req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
-      player.level = req.body.level !== undefined ? Number(req.body.level) : player.level;
+      player.exp =
+        req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
+      player.level =
+        req.body.level !== undefined ? Number(req.body.level) : player.level;
 
       if (req.body.skills) {
         player.skills = JSON.parse(req.body.skills);
       }
 
-      if (req.body.itemDescriptions) {
-        let desc = JSON.parse(req.body.itemDescriptions);
-        while (desc.length < player.items.length) desc.push("");
-        player.itemDescriptions = desc.slice(0, 6);
-      }
-
-      // ========================================================
-      // 🔥 NUEVO: BORRAR IMÁGENES DE OBJETOS
-      // ========================================================
-      if (itemsToDelete.length && Array.isArray(player.items)) {
+      // ===============================
+      // BORRAR OBJETOS
+      // ===============================
+      if (itemsToDelete.length) {
         for (const index of itemsToDelete) {
           const imgUrl = player.items[index];
-          if (imgUrl) {
-            await deleteImage(imgUrl);
-          }
+          if (imgUrl) await deleteImage(imgUrl);
         }
 
         player.items = player.items.filter(
@@ -203,20 +203,42 @@ router.put(
         );
       }
 
+      // ===============================
+      // AÑADIR NUEVOS OBJETOS
+      // ===============================
+      if (req.files?.items?.length) {
+        const newItems = await Promise.all(
+          req.files.items.map(f => uploadImage(f.buffer, "items"))
+        );
+
+        player.items = [...player.items, ...newItems].slice(0, 6);
+
+        while (player.itemDescriptions.length < player.items.length) {
+          player.itemDescriptions.push("");
+        }
+
+        player.itemDescriptions = player.itemDescriptions.slice(0, 6);
+      }
+
+      // ===============================
+      // ACTUALIZAR DESCRIPCIONES
+      // ===============================
+      if (req.body.itemDescriptions) {
+        const desc = JSON.parse(req.body.itemDescriptions);
+        player.itemDescriptions = player.items.map(
+          (_, i) => desc[i] || ""
+        );
+      }
+
+      // ===============================
+      // IMAGEN PRINCIPAL
+      // ===============================
       if (req.files?.charImg?.[0]) {
         if (player.img) await deleteImage(player.img);
         player.img = await uploadImage(req.files.charImg[0].buffer, "players");
       }
 
-      if (req.files?.items?.length) {
-        const newItems = await Promise.all(
-          req.files.items.map(f => uploadImage(f.buffer, "items"))
-        );
-        player.items = [...player.items, ...newItems].slice(0, 6);
-      }
-
       player.updatedAt = new Date();
-      player.markModified("updatedAt");
 
       const saved = await player.save();
 
