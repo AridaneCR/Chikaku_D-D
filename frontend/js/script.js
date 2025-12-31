@@ -5,21 +5,16 @@ let formMode = "create"; // "create" | "edit"
 let editingPlayerId = null;
 let lastSignature = "";
 
-// 🔥 NUEVO → objetos a borrar
+// 🔥 objetos a borrar
 let itemsToDelete = [];
 
 
 // =============================================================
-// XP SYSTEM (ACUMULATIVO)
+// XP SYSTEM (BASE 100 +40 POR NIVEL)
 // =============================================================
-// =============================================================
-// XP SYSTEM (ACUMULATIVO BASE 100 +40 POR NIVEL)
-// =============================================================
-
 const BASE_EXP = 100;
 const EXP_STEP = 40;
 
-// Calcula el nivel a partir de la EXP TOTAL acumulada
 function calculateLevelFromExp(totalExp) {
   totalExp = Number(totalExp) || 0;
 
@@ -28,11 +23,7 @@ function calculateLevelFromExp(totalExp) {
 
   while (true) {
     const expForNextLevel = BASE_EXP + (level - 1) * EXP_STEP;
-
-    if (totalExp < expUsed + expForNextLevel) {
-      return level;
-    }
-
+    if (totalExp < expUsed + expForNextLevel) return level;
     expUsed += expForNextLevel;
     level++;
   }
@@ -63,6 +54,7 @@ function openPlayerBoard() {
   window.open("../Player/player_view.html", "_blank");
 }
 
+
 // =============================================================
 // CONFIG
 // =============================================================
@@ -77,6 +69,7 @@ let players = [];
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
+
 // =============================================================
 // LOADER
 // =============================================================
@@ -86,6 +79,7 @@ function showLoader() {
 function hideLoader() {
   document.getElementById("loader")?.classList.add("hidden");
 }
+
 
 // =============================================================
 // FETCH
@@ -111,6 +105,7 @@ async function fetchJson(url, opts = {}, showLoading = false) {
   }
 }
 
+
 // =============================================================
 // IMÁGENES
 // =============================================================
@@ -130,9 +125,11 @@ function addPreview(inputId, previewId) {
     const file = input.files[0];
     if (!validateImage(file)) {
       input.value = "";
+      preview.removeAttribute("src");
       preview.classList.add("hidden");
       return;
     }
+
     const reader = new FileReader();
     reader.onload = () => {
       preview.src = reader.result;
@@ -142,13 +139,13 @@ function addPreview(inputId, previewId) {
   };
 }
 
+
 // =============================================================
 // SKILLS
 // =============================================================
 function addSkillInput(value = "") {
   const container = document.getElementById("skillsContainer");
-  if (!container) return;
-  if (container.children.length >= 8) return;
+  if (!container || container.children.length >= 8) return;
 
   const div = document.createElement("div");
   div.className = "relative";
@@ -156,13 +153,13 @@ function addSkillInput(value = "") {
     <input class="input pr-10" value="${value}">
     <button type="button"
       onclick="this.parentElement.remove()"
-      class="absolute right-2 top-1/2 -translate-y-1/2
-             px-2 py-1 rounded bg-red-600 hover:bg-red-700 font-bold">
+      class="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-red-600">
       ✕
     </button>
   `;
   container.appendChild(div);
 }
+
 
 // =============================================================
 // OBJETOS
@@ -172,23 +169,19 @@ function initItems() {
   if (!container) return;
 
   container.innerHTML = "";
+
   for (let i = 1; i <= 6; i++) {
     const div = document.createElement("div");
     div.className = "object-card";
     div.innerHTML = `
-      <label class="label-sm">Objeto ${i}</label>
-      <input id="item${i}Input" type="file" class="file" />
-      <textarea id="item${i}Desc" class="input mt-2 resize-none"
-        rows="2" placeholder="Descripción del objeto..."></textarea>
-
-      <img id="previewItem${i}" class="preview mt-3 hidden" />
-
-      <!-- 🔥 NUEVO -->
-      <button
-        id="deleteItemBtn${i}"
+      <label>Objeto ${i}</label>
+      <input id="item${i}Input" type="file">
+      <textarea id="item${i}Desc" rows="2"></textarea>
+      <img id="previewItem${i}" class="hidden">
+      <button id="deleteItemBtn${i}"
         type="button"
         onclick="deleteItemImage(${i})"
-        class="mt-2 w-full bg-red-600 hover:bg-red-700 text-sm rounded p-1 hidden">
+        class="hidden bg-red-600 mt-1">
         🗑️ Eliminar imagen
       </button>
     `;
@@ -197,27 +190,26 @@ function initItems() {
   }
 }
 
+
 // =============================================================
-// 🔥 NUEVO → BORRAR IMAGEN DE OBJETO
+// BORRAR IMAGEN DE OBJETO
 // =============================================================
 function deleteItemImage(index) {
   const preview = document.getElementById(`previewItem${index}`);
   const input = document.getElementById(`item${index}Input`);
   const btn = document.getElementById(`deleteItemBtn${index}`);
 
-  if (preview) {
-    preview.src = "";
-    preview.classList.add("hidden");
-  }
-
+  preview?.removeAttribute("src");
+  preview?.classList.add("hidden");
   if (input) input.value = "";
 
   if (!itemsToDelete.includes(index - 1)) {
     itemsToDelete.push(index - 1);
   }
 
-  if (btn) btn.classList.add("hidden");
+  btn?.classList.add("hidden");
 }
+
 
 // =============================================================
 // PLAYERS LIST
@@ -225,7 +217,6 @@ function deleteItemImage(index) {
 async function refreshPlayers(force = false) {
   const data = await fetchJson(API_PLAYERS);
   const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
-
   if (!force && signature === lastSignature) return;
 
   lastSignature = signature;
@@ -239,35 +230,16 @@ function renderPlayersList() {
 
   players.forEach(p => {
     const card = document.createElement("div");
-    card.className =
-      "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
-
     card.innerHTML = `
-      <img src="${p.img || "/placeholder.png"}"
-        class="w-full h-40 object-cover rounded mb-2">
-
-      <h3 class="font-bold text-lg">
-        ${p.name} (Nivel ${p.level})
-      </h3>
-
-      <p>❤️ Vida: ${p.life}</p>
-      <p>⭐ EXP: ${p.exp}</p>
-
-      <div class="mt-auto">
-        <button onclick="editPlayer('${p._id}')"
-          class="mt-3 w-full bg-green-600 p-2 rounded">
-          Editar
-        </button>
-
-        <button onclick="deletePlayer('${p._id}')"
-          class="mt-2 w-full bg-red-600 p-2 rounded">
-          Eliminar
-        </button>
-      </div>
+      <img src="${p.img || "/placeholder.png"}">
+      <h3>${p.name}</h3>
+      <button onclick="editPlayer('${p._id}')">Editar</button>
+      <button onclick="deletePlayer('${p._id}')">Eliminar</button>
     `;
     list.appendChild(card);
   });
 }
+
 
 // =============================================================
 // EDIT PLAYER
@@ -278,29 +250,25 @@ function editPlayer(id) {
 
   formMode = "edit";
   editingPlayerId = id;
-  itemsToDelete = []; // 🔥 NUEVO
+  itemsToDelete = [];
 
   toggleCreateCard(true);
   submitCharacterBtn.textContent = "✏️ Guardar cambios";
 
   charNameInput.value = player.name || "";
   charLifeInput.value = player.life ?? 10;
-  charMilestonesInput.value = player.milestones || "";
-  charAttributesInput.value = player.attributes || "";
   charExpInput.value = player.exp ?? 0;
 
   skillsContainer.innerHTML = "";
   (player.skills || []).forEach(addSkillInput);
 
-  charImgInput.value = "";
-  if (player.img) {
-    previewCharMain.src = player.img;
-    previewCharMain.classList.remove("hidden");
-  } else {
-    previewCharMain.classList.add("hidden");
-  }
-
   initItems();
+
+  // 🔥 limpiar inputs file SIEMPRE
+  for (let i = 1; i <= 6; i++) {
+    const input = document.getElementById(`item${i}Input`);
+    if (input) input.value = "";
+  }
 
   (player.items || []).forEach((img, i) => {
     const p = document.getElementById(`previewItem${i + 1}`);
@@ -308,7 +276,7 @@ function editPlayer(id) {
     if (p && img) {
       p.src = img;
       p.classList.remove("hidden");
-      btn?.classList.remove("hidden"); // 🔥 NUEVO
+      btn?.classList.remove("hidden");
     }
   });
 
@@ -318,16 +286,21 @@ function editPlayer(id) {
   });
 }
 
+
 // =============================================================
 // CREATE / EDIT
 // =============================================================
 async function submitCharacter() {
-  const name = charNameInput.value.trim();
-  if (!name) return;
+  const fd = new FormData();
+
+  fd.append("name", charNameInput.value);
+  fd.append("life", charLifeInput.value);
+  fd.append("exp", charExpInput.value);
+  fd.append("level", calculateLevelFromExp(charExpInput.value));
 
   const skills = [...document.querySelectorAll("#skillsContainer input")]
-    .map(i => i.value.trim())
-    .filter(Boolean);
+    .map(i => i.value.trim()).filter(Boolean);
+  fd.append("skills", JSON.stringify(skills));
 
   const itemDescriptions = [];
   for (let i = 1; i <= 6; i++) {
@@ -335,21 +308,7 @@ async function submitCharacter() {
       document.getElementById(`item${i}Desc`)?.value.trim() || ""
     );
   }
-
-  const totalExp = Number(charExpInput.value) || 0;
-  const calculatedLevel = calculateLevelFromExp(totalExp);
-
-  const fd = new FormData();
-  fd.append("name", name);
-  fd.append("life", charLifeInput.value);
-  fd.append("milestones", charMilestonesInput.value);
-  fd.append("attributes", charAttributesInput.value);
-  fd.append("exp", totalExp);
-  fd.append("level", calculatedLevel);
-  fd.append("skills", JSON.stringify(skills));
-  fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
-
-  // 🔥 NUEVO
+  fd.append("itemDescriptions", JSON.stringify(itemDescriptions.slice(0, 6)));
   fd.append("itemsToDelete", JSON.stringify(itemsToDelete));
 
   if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
@@ -361,20 +320,17 @@ async function submitCharacter() {
     if (f && validateImage(f)) fd.append("items", f);
   }
 
-  if (formMode === "create") {
-    await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
-  } else {
-    await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
-      method: "PUT",
-      body: fd,
-    }, true);
-  }
+  const url = formMode === "create"
+    ? API_PLAYERS
+    : `${API_PLAYERS}/${editingPlayerId}`;
 
-  itemsToDelete = []; // 🔥 NUEVO
+  await fetchJson(url, { method: formMode === "create" ? "POST" : "PUT", body: fd }, true);
+
   resetForm();
   toggleCreateCard();
   refreshPlayers(true);
 }
+
 
 // =============================================================
 // DELETE
@@ -385,28 +341,19 @@ async function deletePlayer(id) {
   refreshPlayers(true);
 }
 
+
 // =============================================================
 // RESET
 // =============================================================
 function resetForm() {
   formMode = "create";
   editingPlayerId = null;
-  itemsToDelete = []; // 🔥 NUEVO
-
+  itemsToDelete = [];
   submitCharacterBtn.textContent = "🐉 Crear personaje";
-
-  charNameInput.value = "";
-  charLifeInput.value = 10;
-  charMilestonesInput.value = "";
-  charAttributesInput.value = "";
-  charExpInput.value = 0;
-
   skillsContainer.innerHTML = "";
-  charImgInput.value = "";
-  previewCharMain.classList.add("hidden");
-
   initItems();
 }
+
 
 // =============================================================
 // INIT
