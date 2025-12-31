@@ -3,7 +3,6 @@ const router = express.Router();
 const multer = require("multer");
 const crypto = require("crypto");
 const Player = require("../models/player");
-
 const { uploadImage, deleteImage } = require("../utils/cloudinary");
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -14,11 +13,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 let CACHE = {
   etag: null,
   data: null,
-  updatedAt: 0,
 };
 
 function invalidateCache() {
-  CACHE = { etag: null, data: null, updatedAt: 0 };
+  CACHE = { etag: null, data: null };
 }
 
 // ============================================================
@@ -35,10 +33,13 @@ function normalizePlayer(p) {
     milestones: p.milestones || "",
     attributes: p.attributes || "",
     skills: Array.isArray(p.skills) ? p.skills : [],
-    img: typeof p.img === "string" ? p.img : null,
-    items: Array.isArray(p.items) ? p.items.filter(Boolean) : [],
+    img: p.img || null,
+    items: Array.isArray(p.items) ? p.items : [],
     itemDescriptions: Array.isArray(p.itemDescriptions)
       ? p.itemDescriptions
+      : [],
+    equippedItems: Array.isArray(p.equippedItems)
+      ? p.equippedItems
       : [],
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
@@ -60,23 +61,20 @@ router.get("/", async (req, res) => {
 
     if (CACHE.data) {
       res.setHeader("ETag", CACHE.etag);
-      res.setHeader("Cache-Control", "private, must-revalidate");
       return res.json(CACHE.data);
     }
 
-    const players = await Player.find().sort({ createdAt: -1 }).lean();
+    const players = await Player.find().sort({ createdAt: -1 });
     const normalized = players.map(normalizePlayer);
 
     const signature = normalized
-      .map(p => `${p._id}:${new Date(p.updatedAt).getTime()}`)
+      .map(p => `${p._id}:${p.updatedAt.getTime()}`)
       .join("|");
 
     const etag = crypto.createHash("sha1").update(signature).digest("hex");
 
-    CACHE = { etag, data: normalized, updatedAt: Date.now() };
-
+    CACHE = { etag, data: normalized };
     res.setHeader("ETag", etag);
-    res.setHeader("Cache-Control", "private, must-revalidate");
     res.json(normalized);
   } catch (err) {
     console.error("GET PLAYERS ERROR:", err);
@@ -102,6 +100,10 @@ router.post(
         ? JSON.parse(req.body.itemDescriptions)
         : [];
 
+      const equippedItems = req.body.equippedItems
+        ? JSON.parse(req.body.equippedItems)
+        : [];
+
       let img = null;
       if (req.files?.charImg?.[0]) {
         img = await uploadImage(req.files.charImg[0].buffer, "players");
@@ -114,11 +116,6 @@ router.post(
         );
       }
 
-      // 🔥 asegurar descripciones alineadas
-      while (itemDescriptions.length < items.length) {
-        itemDescriptions.push("");
-      }
-
       const player = new Player({
         campaign: req.body.campaign || "default",
         name: req.body.name,
@@ -129,18 +126,17 @@ router.post(
         level: Number(req.body.level) || 1,
         skills,
         img,
-        items: items.slice(0, 6),
-        itemDescriptions: itemDescriptions.slice(0, 6),
+        items,
+        itemDescriptions: items.map((_, i) => itemDescriptions[i] || ""),
+        equippedItems: items.map((_, i) => !!equippedItems[i]),
       });
-
-      player.updatedAt = new Date();
 
       const saved = await player.save();
 
       invalidateCache();
       notify?.();
 
-      res.json(normalizePlayer(saved.toObject()));
+      res.json(normalizePlayer(saved));
     } catch (err) {
       console.error("CREATE PLAYER ERROR:", err);
       res.status(400).json({ error: "Error creando jugador" });
@@ -149,7 +145,7 @@ router.post(
 );
 
 // ============================================================
-// UPDATE PLAYER (CORREGIDO)
+// UPDATE PLAYER (🔥 EDICIÓN REAL FUNCIONAL)
 // ============================================================
 router.put(
   "/:id",
@@ -162,123 +158,99 @@ router.put(
       const notify = req.app.get("notifyPlayersUpdate");
 
       const player = await Player.findById(req.params.id);
-      if (!player)
+      if (!player) {
         return res.status(404).json({ error: "Jugador no encontrado" });
+      }
 
       const itemsToDelete = req.body.itemsToDelete
         ? JSON.parse(req.body.itemsToDelete)
         : [];
 
-      // ===============================
-      // CAMPOS BÁSICOS
-      // ===============================
+      const newDescriptions = req.body.itemDescriptions
+        ? JSON.parse(req.body.itemDescriptions)
+        : [];
+
+      const equippedItems = req.body.equippedItems
+        ? JSON.parse(req.body.equippedItems)
+        : [];
+
+      // ------------------------------
+      // CAMPOS SIMPLES
+      // ------------------------------
       player.name = req.body.name ?? player.name;
-      player.life =
-        req.body.life !== undefined ? Number(req.body.life) : player.life;
+      player.life = req.body.life !== undefined ? Number(req.body.life) : player.life;
       player.milestones = req.body.milestones ?? player.milestones;
       player.attributes = req.body.attributes ?? player.attributes;
-      player.exp =
-        req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
-      player.level =
-        req.body.level !== undefined ? Number(req.body.level) : player.level;
+      player.exp = req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
+      player.level = req.body.level !== undefined ? Number(req.body.level) : player.level;
 
       if (req.body.skills) {
         player.skills = JSON.parse(req.body.skills);
       }
 
-      // ===============================
+      // ------------------------------
       // BORRAR OBJETOS
-      // ===============================
+      // ------------------------------
       if (itemsToDelete.length) {
         for (const index of itemsToDelete) {
-          const imgUrl = player.items[index];
-          if (imgUrl) await deleteImage(imgUrl);
+          if (player.items[index]) {
+            await deleteImage(player.items[index]);
+          }
         }
 
-        player.items = player.items.filter(
-          (_, i) => !itemsToDelete.includes(i)
-        );
+        player.items = player.items.filter((_, i) => !itemsToDelete.includes(i));
         player.itemDescriptions = player.itemDescriptions.filter(
           (_, i) => !itemsToDelete.includes(i)
         );
+        player.equippedItems = player.equippedItems.filter(
+          (_, i) => !itemsToDelete.includes(i)
+        );
       }
 
-      // ===============================
-      // AÑADIR NUEVOS OBJETOS
-      // ===============================
+      // ------------------------------
+      // AÑADIR NUEVAS IMÁGENES
+      // ------------------------------
       if (req.files?.items?.length) {
-        const newItems = await Promise.all(
+        const uploaded = await Promise.all(
           req.files.items.map(f => uploadImage(f.buffer, "items"))
         );
-        while (player.itemDescriptions.length < player.items.length) {
-          player.itemDescriptions.push("");
-        }
 
-        player.itemDescriptions = player.itemDescriptions.slice(0, 6);
+        uploaded.forEach(() => {
+          player.itemDescriptions.push("");
+          player.equippedItems.push(false);
+        });
+
+        player.items.push(...uploaded);
       }
 
-      // ===============================
-      // ACTUALIZAR DESCRIPCIONES
-      // ===============================
-      // ===============================
-// 🔥 BORRAR OBJETOS
-// ===============================
-if (itemsToDelete.length) {
-  for (const index of itemsToDelete) {
-    const imgUrl = player.items[index];
-    if (imgUrl) await deleteImage(imgUrl);
-  }
+      // ------------------------------
+      // SINCRONIZAR DESCRIPCIONES
+      // ------------------------------
+      player.itemDescriptions = player.items.map(
+        (_, i) => newDescriptions[i] || ""
+      );
 
-  player.items = player.items.filter(
-    (_, i) => !itemsToDelete.includes(i)
-  );
+      // ------------------------------
+      // SINCRONIZAR EQUIPADOS
+      // ------------------------------
+      player.equippedItems = player.items.map(
+        (_, i) => !!equippedItems[i]
+      );
 
-  player.itemDescriptions = player.itemDescriptions.filter(
-    (_, i) => !itemsToDelete.includes(i)
-  );
-}
-
-// ===============================
-// 🔥 AÑADIR NUEVOS OBJETOS
-// ===============================
-if (req.files?.items?.length) {
-  const newItems = await Promise.all(
-    req.files.items.map(f => uploadImage(f.buffer, "items"))
-  );
-
-  player.items.push(...newItems);
-
-  // mantener índices
-  newItems.forEach(() => {
-    player.itemDescriptions.push("");
-  });
-}
-
-// ===============================
-// 🔥 SINCRONIZAR DESCRIPCIONES
-// ===============================
-if (req.body.itemDescriptions) {
-  const desc = JSON.parse(req.body.itemDescriptions);
-
-  player.itemDescriptions = player.items.map(
-    (_, i) => desc[i] || ""
-  );
-}
-
-// ===============================
-// 🔥 LIMITE FINAL
-// ===============================
-player.items = player.items.slice(0, 6);
-player.itemDescriptions = player.itemDescriptions.slice(0, 6);
-
-
-      // ===============================
+      // ------------------------------
       // IMAGEN PRINCIPAL
-      // ===============================
+      // ------------------------------
       if (req.files?.charImg?.[0]) {
         if (player.img) await deleteImage(player.img);
         player.img = await uploadImage(req.files.charImg[0].buffer, "players");
       }
+
+      // ------------------------------
+      // LIMITE FINAL
+      // ------------------------------
+      player.items = player.items.slice(0, 6);
+      player.itemDescriptions = player.itemDescriptions.slice(0, 6);
+      player.equippedItems = player.equippedItems.slice(0, 6);
 
       player.updatedAt = new Date();
 
@@ -287,7 +259,7 @@ player.itemDescriptions = player.itemDescriptions.slice(0, 6);
       invalidateCache();
       notify?.();
 
-      res.json(normalizePlayer(saved.toObject()));
+      res.json(normalizePlayer(saved));
     } catch (err) {
       console.error("UPDATE PLAYER ERROR:", err);
       res.status(500).json({ error: "Error actualizando jugador" });
@@ -303,8 +275,9 @@ router.delete("/:id", async (req, res) => {
     const notify = req.app.get("notifyPlayersUpdate");
 
     const player = await Player.findById(req.params.id);
-    if (!player)
+    if (!player) {
       return res.status(404).json({ error: "Jugador no encontrado" });
+    }
 
     if (player.img) await deleteImage(player.img);
     if (player.items?.length) {
