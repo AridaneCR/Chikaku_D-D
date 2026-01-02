@@ -92,7 +92,6 @@ function hideLoader() {
 // =============================================================
 
 for (let pair of fd.entries()) {
-  console.log(pair[0], pair[1]);
 }
 async function fetchJson(url, opts = {}, showLoading = false) {
   if (showLoading) showLoader();
