@@ -128,29 +128,29 @@ function addPreview(inputId, previewId) {
   if (!input || !preview) return;
 
   input.onchange = () => {
-  const file = input.files[0];
+    const file = input.files[0];
 
-  console.log("📂 Archivo seleccionado:", {
-    inputId,
-    name: file?.name,
-    size: file?.size,
-    type: file?.type,
-  });
+    console.log("📂 Archivo seleccionado:", {
+      inputId,
+      name: file?.name,
+      size: file?.size,
+      type: file?.type,
+    });
 
-  if (!validateImage(file)) {
-    console.warn("❌ Imagen no válida");
-    input.value = "";
-    preview.classList.add("hidden");
-    return;
-  }
+    if (!validateImage(file)) {
+      console.warn("❌ Imagen no válida");
+      input.value = "";
+      preview.classList.add("hidden");
+      return;
+    }
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    preview.src = reader.result;
-    preview.classList.remove("hidden");
+    const reader = new FileReader();
+    reader.onload = () => {
+      preview.src = reader.result;
+      preview.classList.remove("hidden");
+    };
+    reader.readAsDataURL(file);
   };
-  reader.readAsDataURL(file);
-};
 
 }
 
@@ -334,7 +334,8 @@ function editPlayer(id) {
 // CREATE / EDIT
 // =============================================================
 async function submitCharacter() {
-  console.log("🚀 submitCharacter() EJECUTADO");
+  console.log("🚀 submitCharacter() ejecutado");
+
   const name = charNameInput.value.trim();
   if (!name) return;
 
@@ -353,6 +354,10 @@ async function submitCharacter() {
   const calculatedLevel = calculateLevelFromExp(totalExp);
 
   const fd = new FormData();
+
+  // =============================
+  // DATOS BÁSICOS
+  // =============================
   fd.append("name", name);
   fd.append("life", charLifeInput.value);
   fd.append("milestones", charMilestonesInput.value);
@@ -363,24 +368,40 @@ async function submitCharacter() {
   fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
   fd.append("itemsToDelete", JSON.stringify(itemsToDelete));
 
-
-
-  // 🔥 IMAGEN PRINCIPAL
+  // =============================
+  // IMAGEN PRINCIPAL
+  // =============================
   if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
+    console.log("🖼️ Enviando imagen principal:", charImgInput.files[0].name);
     fd.append("charImg", charImgInput.files[0]);
   }
 
-  // 🔥 OBJETOS → REEMPLAZO POR SLOT (FIX DEFINITIVO)
+  // =============================
+  // OBJETOS POR SLOT (CLAVE)
+  // =============================
   for (let i = 1; i <= 6; i++) {
     const input = document.getElementById(`item${i}Input`);
     const file = input?.files?.[0];
 
     if (file && validateImage(file)) {
+      console.log(`📦 Objeto slot ${i - 1}:`, file.name);
       fd.append("items", file);
       fd.append("itemsIndex", i - 1); // 🔥 CLAVE ABSOLUTA
     }
   }
 
+  // =============================
+  // DEBUG FINAL (MUY IMPORTANTE)
+  // =============================
+  console.group("📤 FormData enviado");
+  for (const [key, value] of fd.entries()) {
+    console.log(key, value);
+  }
+  console.groupEnd();
+
+  // =============================
+  // FETCH
+  // =============================
   if (formMode === "create") {
     await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
   } else {
@@ -390,15 +411,14 @@ async function submitCharacter() {
     }, true);
   }
 
+  // =============================
+  // RESET
+  // =============================
   itemsToDelete = [];
   resetForm();
   toggleCreateCard();
   refreshPlayers(true);
-  
 }
-
-
-
 
 // =============================================================
 // DELETE
