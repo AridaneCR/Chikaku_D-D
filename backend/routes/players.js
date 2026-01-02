@@ -149,9 +149,14 @@ router.post(
 // ============================================================
 router.put(
   "/:id",
+  console.log("📥 req.files:", req.files),
+  console.log("📥 req.body:", req.body),
+
   upload.fields([
     { name: "charImg", maxCount: 1 },
     { name: "items", maxCount: 6 },
+
+
   ]),
   async (req, res) => {
     try {
@@ -212,7 +217,9 @@ router.put(
       // ------------------------------
       if (req.files?.items?.length) {
         const uploaded = await Promise.all(
-          req.files.items.map(f => uploadImage(f.buffer, "items"))
+          req.files.items.map(f => uploadImage(f.buffer, "items")),
+          console.log("☁️ Subiendo imagen principal...")
+
         );
 
         uploaded.forEach(() => {
@@ -221,6 +228,8 @@ router.put(
         });
 
         player.items.push(...uploaded);
+        console.log("☁️ Subiendo objetos:", req.files.items.length);
+
       }
 
       // ------------------------------
@@ -273,6 +282,10 @@ router.put(
 
       player.updatedAt = new Date();
 
+      console.log("💾 Guardando player:", {
+        img: player.img,
+        items: player.items,
+      });
       const saved = await player.save();
 
       invalidateCache();

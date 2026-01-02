@@ -90,6 +90,11 @@ function hideLoader() {
 // =============================================================
 // FETCH
 // =============================================================
+console.log("📦 FormData contenido:");
+
+for (let pair of fd.entries()) {
+  console.log(pair[0], pair[1]);
+}
 async function fetchJson(url, opts = {}, showLoading = false) {
   if (showLoading) showLoader();
 
@@ -127,19 +132,30 @@ function addPreview(inputId, previewId) {
   if (!input || !preview) return;
 
   input.onchange = () => {
-    const file = input.files[0];
-    if (!validateImage(file)) {
-      input.value = "";
-      preview.classList.add("hidden");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      preview.src = reader.result;
-      preview.classList.remove("hidden");
-    };
-    reader.readAsDataURL(file);
+  const file = input.files[0];
+
+  console.log("📂 Archivo seleccionado:", {
+    inputId,
+    name: file?.name,
+    size: file?.size,
+    type: file?.type,
+  });
+
+  if (!validateImage(file)) {
+    console.warn("❌ Imagen no válida");
+    input.value = "";
+    preview.classList.add("hidden");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    preview.src = reader.result;
+    preview.classList.remove("hidden");
   };
+  reader.readAsDataURL(file);
+};
+
 }
 
 // =============================================================
@@ -322,6 +338,7 @@ function editPlayer(id) {
 // CREATE / EDIT
 // =============================================================
 async function submitCharacter() {
+  console.log("🚀 submitCharacter() EJECUTADO");
   const name = charNameInput.value.trim();
   if (!name) return;
 
