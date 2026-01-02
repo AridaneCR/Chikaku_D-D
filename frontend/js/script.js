@@ -90,7 +90,6 @@ function hideLoader() {
 // =============================================================
 // FETCH
 // =============================================================
-console.log("📦 FormData contenido:");
 
 for (let pair of fd.entries()) {
   console.log(pair[0], pair[1]);

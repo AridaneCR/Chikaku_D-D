@@ -152,8 +152,6 @@ router.put(
   upload.fields([
     { name: "charImg", maxCount: 1 },
     { name: "items", maxCount: 6 },
-    
-
   ]),
   async (req, res) => {
     try {
@@ -245,25 +243,6 @@ router.put(
       if (req.files?.charImg?.[0]) {
         if (player.img) await deleteImage(player.img);
         player.img = await uploadImage(req.files.charImg[0].buffer, "players");
-      }
-      if (req.files?.items?.length) {
-        const indices = Array.isArray(req.body.itemsIndex)
-          ? req.body.itemsIndex
-          : [req.body.itemsIndex];
-
-        for (let i = 0; i < req.files.items.length; i++) {
-          const index = Number(indices[i]);
-          if (Number.isNaN(index)) continue;
-
-          // 🔥 borrar imagen anterior del slot
-          if (player.items[index]) {
-            await deleteImage(player.items[index]);
-          }
-
-          // 🔥 subir y reemplazar
-          const img = await uploadImage(req.files.items[i].buffer, "items");
-          player.items[index] = img;
-        }
       }
 
       // ------------------------------
