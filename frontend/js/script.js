@@ -348,17 +348,22 @@ async function submitCharacter() {
   fd.append("level", calculatedLevel);
   fd.append("skills", JSON.stringify(skills));
   fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
-
-  // 🔥 NUEVO
   fd.append("itemsToDelete", JSON.stringify(itemsToDelete));
 
+  // 🔥 IMAGEN PRINCIPAL
   if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
     fd.append("charImg", charImgInput.files[0]);
   }
 
+  // 🔥 OBJETOS → REEMPLAZO POR SLOT (FIX DEFINITIVO)
   for (let i = 1; i <= 6; i++) {
-    const f = document.getElementById(`item${i}Input`)?.files[0];
-    if (f && validateImage(f)) fd.append("items", f);
+    const input = document.getElementById(`item${i}Input`);
+    const file = input?.files?.[0];
+
+    if (file && validateImage(file)) {
+      fd.append("items", file);
+      fd.append("itemsIndex", i - 1); // 🔥 CLAVE ABSOLUTA
+    }
   }
 
   if (formMode === "create") {
@@ -370,11 +375,12 @@ async function submitCharacter() {
     }, true);
   }
 
-  itemsToDelete = []; // 🔥 NUEVO
+  itemsToDelete = [];
   resetForm();
   toggleCreateCard();
   refreshPlayers(true);
 }
+
 
 // =============================================================
 // DELETE
