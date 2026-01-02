@@ -149,17 +149,13 @@ router.post(
 // ============================================================
 router.put(
   "/:id",
-
-
   upload.fields([
     { name: "charImg", maxCount: 1 },
     { name: "items", maxCount: 6 },
-
+    
 
   ]),
   async (req, res) => {
-    console.log("📥 req.files:", req.files);
-    console.log("📥 req.body:", req.body);
     try {
       const notify = req.app.get("notifyPlayersUpdate");
 
@@ -218,9 +214,7 @@ router.put(
       // ------------------------------
       if (req.files?.items?.length) {
         const uploaded = await Promise.all(
-          req.files.items.map(f => uploadImage(f.buffer, "items")),
-          console.log("☁️ Subiendo imagen principal...")
-
+          req.files.items.map(f => uploadImage(f.buffer, "items"))
         );
 
         uploaded.forEach(() => {
@@ -229,8 +223,6 @@ router.put(
         });
 
         player.items.push(...uploaded);
-        console.log("☁️ Subiendo objetos:", req.files.items.length);
-
       }
 
       // ------------------------------
@@ -283,10 +275,6 @@ router.put(
 
       player.updatedAt = new Date();
 
-      console.log("💾 Guardando player:", {
-        img: player.img,
-        items: player.items,
-      });
       const saved = await player.save();
 
       invalidateCache();
