@@ -149,8 +149,7 @@ router.post(
 // ============================================================
 router.put(
   "/:id",
-  console.log("📥 req.files:", req.files),
-  console.log("📥 req.body:", req.body),
+
 
   upload.fields([
     { name: "charImg", maxCount: 1 },
@@ -159,6 +158,8 @@ router.put(
 
   ]),
   async (req, res) => {
+    console.log("📥 req.files:", req.files);
+    console.log("📥 req.body:", req.body);
     try {
       const notify = req.app.get("notifyPlayersUpdate");
 
