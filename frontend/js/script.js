@@ -91,8 +91,6 @@ function hideLoader() {
 // FETCH
 // =============================================================
 
-for (let pair of fd.entries()) {
-}
 async function fetchJson(url, opts = {}, showLoading = false) {
   if (showLoading) showLoader();
 
@@ -365,6 +363,8 @@ async function submitCharacter() {
   fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
   fd.append("itemsToDelete", JSON.stringify(itemsToDelete));
 
+
+
   // 🔥 IMAGEN PRINCIPAL
   if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
     fd.append("charImg", charImgInput.files[0]);
@@ -394,7 +394,10 @@ async function submitCharacter() {
   resetForm();
   toggleCreateCard();
   refreshPlayers(true);
+  
 }
+
+
 
 
 // =============================================================
