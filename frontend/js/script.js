@@ -26,10 +26,10 @@ function resolveImage(img) {
 
   // imagen antigua (Cloudinary object)
   if (typeof img === "object") {
-    return img.url || img.secure_url || "https://via.placeholder.com/400x300?text=No+Image";
+    return img.url || img.secure_url || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
   }
 
-  return "https://via.placeholder.com/400x300?text=No+Image";
+  return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
 }
 
 
