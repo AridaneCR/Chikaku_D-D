@@ -19,12 +19,19 @@ const BASE_EXP = 100;
 const EXP_STEP = 40;
 
 function resolveImage(img) {
-  if (!img) return "/placeholder.png";
-  if (typeof img === "string" && img.startsWith("http")) return img;
-  if (typeof img === "object")
-    return img.secure_url || img.url || "/placeholder.png";
-  return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
+  if (!img) return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
+
+  // imagen nueva (string)
+  if (typeof img === "string") return img;
+
+  // imagen antigua (Cloudinary object)
+  if (typeof img === "object") {
+    return img.url || img.secure_url || "https://via.placeholder.com/400x300?text=No+Image";
+  }
+
+  return "https://via.placeholder.com/400x300?text=No+Image";
 }
+
 
 // Calcula el nivel a partir de la EXP TOTAL acumulada
 function calculateLevelFromExp(totalExp) {
