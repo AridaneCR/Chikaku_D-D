@@ -44,7 +44,7 @@ function normalizePlayer(p) {
 }
 
 // ============================================================
-// GET ALL PLAYERS
+// GET ALL PLAYERS (CON CACHE)
 // ============================================================
 router.get("/", async (req, res) => {
   try {
@@ -137,7 +137,7 @@ router.post(
 );
 
 // ============================================================
-// UPDATE PLAYER (EDICIÓN REAL FUNCIONAL)
+// UPDATE PLAYER (MERGE SEGURO)
 // ============================================================
 router.put(
   "/:id",
@@ -157,14 +157,6 @@ router.put(
       if (!player) {
         return res.status(404).json({ error: "Jugador no encontrado" });
       }
-
-      const itemsToDelete = req.body.itemsToDelete
-        ? JSON.parse(req.body.itemsToDelete)
-        : [];
-
-      const newDescriptions = req.body.itemDescriptions
-        ? JSON.parse(req.body.itemDescriptions)
-        : [];
 
       // ------------------------------
       // CAMPOS SIMPLES
@@ -186,55 +178,49 @@ router.put(
       // ------------------------------
       // BORRAR OBJETOS
       // ------------------------------
-      if (itemsToDelete.length) {
-        for (const index of itemsToDelete) {
-          if (player.items[index]) {
-            await deleteImage(player.items[index]);
-          }
-        }
+      const itemsToDelete = req.body.itemsToDelete
+        ? JSON.parse(req.body.itemsToDelete)
+        : [];
 
-        player.items = player.items.filter(
-          (_, i) => !itemsToDelete.includes(i)
-        );
-        player.itemDescriptions = player.itemDescriptions.filter(
-          (_, i) => !itemsToDelete.includes(i)
-        );
+      if (itemsToDelete.length) {
+        itemsToDelete
+          .sort((a, b) => b - a)
+          .forEach(i => {
+            if (player.items[i]) deleteImage(player.items[i]);
+            player.items.splice(i, 1);
+            player.itemDescriptions.splice(i, 1);
+          });
       }
 
       // ------------------------------
-      // IMAGEN PRINCIPAL (FIX DEFINITIVO)
+      // IMAGEN PRINCIPAL (FIX REAL)
       // ------------------------------
       if (req.files?.charImg?.[0]) {
-        console.log("🖼️ Reemplazando imagen principal");
-
-        if (player.img) {
-          await deleteImage(player.img);
-        }
+        if (player.img) await deleteImage(player.img);
 
         player.img = await uploadImage(
           req.files.charImg[0].buffer,
           "players"
         );
 
-        // 🔥 CLAVE PARA QUE MONGOOSE GUARDE
         player.markModified("img");
+        player.updatedAt = new Date();
       }
 
       // ------------------------------
-      // REEMPLAZO DE OBJETOS POR SLOT
+      // REEMPLAZO DE ITEMS (BLINDADO)
       // ------------------------------
       if (req.files?.items?.length && req.body.itemsIndex !== undefined) {
         const indices = Array.isArray(req.body.itemsIndex)
-          ? req.body.itemsIndex
-          : [req.body.itemsIndex];
+          ? req.body.itemsIndex.map(Number)
+          : [Number(req.body.itemsIndex)];
 
         for (let i = 0; i < req.files.items.length; i++) {
-          const index = Number(indices[i]);
+          const index = indices[i];
           if (Number.isNaN(index)) continue;
+          if (!player.items[index]) continue;
 
-          if (player.items[index]) {
-            await deleteImage(player.items[index]);
-          }
+          await deleteImage(player.items[index]);
 
           const img = await uploadImage(
             req.files.items[i].buffer,
@@ -243,30 +229,29 @@ router.put(
 
           player.items[index] = img;
         }
+
+        player.markModified("items");
       }
 
       // ------------------------------
-      // SINCRONIZAR DESCRIPCIONES
+      // DESCRIPCIONES
       // ------------------------------
+      const newDescriptions = req.body.itemDescriptions
+        ? JSON.parse(req.body.itemDescriptions)
+        : [];
+
       player.itemDescriptions = player.items.map(
         (_, i) => newDescriptions[i] || ""
       );
 
       // ------------------------------
-      // LIMITE FINAL
+      // FINAL
       // ------------------------------
       player.items = player.items.slice(0, 6);
       player.itemDescriptions = player.itemDescriptions.slice(0, 6);
-
       player.updatedAt = new Date();
 
       const saved = await player.save();
-
-      console.log("✅ PLAYER ACTUALIZADO:", {
-        id: saved._id,
-        img: saved.img,
-        items: saved.items.length,
-      });
 
       invalidateCache();
       notify?.();
@@ -280,7 +265,7 @@ router.put(
 );
 
 // ============================================================
-// DELETE PLAYER
+// DELETE PLAYER (RESTORED)
 // ============================================================
 router.delete("/:id", async (req, res) => {
   try {

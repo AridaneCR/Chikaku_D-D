@@ -8,7 +8,6 @@ let lastSignature = "";
 // 🔥 NUEVO → objetos a borrar
 let itemsToDelete = [];
 
-
 // =============================================================
 // XP SYSTEM (ACUMULATIVO)
 // =============================================================
@@ -37,7 +36,6 @@ function calculateLevelFromExp(totalExp) {
     level++;
   }
 }
-
 
 // =============================================================
 // UI ACTIONS
@@ -122,7 +120,7 @@ function validateImage(file) {
   return true;
 }
 
-function addPreview(inputId, previewId) {
+function addPreview(inputId, previewId, index = null) {
   const input = document.getElementById(inputId);
   const preview = document.getElementById(previewId);
   if (!input || !preview) return;
@@ -144,6 +142,14 @@ function addPreview(inputId, previewId) {
       return;
     }
 
+    // 🔥 SI SE SELECCIONA NUEVA IMAGEN → DESMARCAR BORRADO
+    if (index !== null) {
+      itemsToDelete = itemsToDelete.filter((i) => i !== index);
+
+      const btn = document.getElementById(`deleteItemBtn${index + 1}`);
+      btn?.classList.remove("hidden");
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       preview.src = reader.result;
@@ -151,7 +157,6 @@ function addPreview(inputId, previewId) {
     };
     reader.readAsDataURL(file);
   };
-
 }
 
 // =============================================================
@@ -205,7 +210,7 @@ function initItems() {
       </button>
     `;
     container.appendChild(div);
-    addPreview(`item${i}Input`, `previewItem${i}`);
+    addPreview(`item${i}Input`, `previewItem${i}`, i - 1);
   }
 }
 
@@ -213,6 +218,8 @@ function initItems() {
 // 🔥 NUEVO → BORRAR IMAGEN DE OBJETO
 // =============================================================
 function deleteItemImage(index) {
+  const realIndex = index - 1;
+
   const preview = document.getElementById(`previewItem${index}`);
   const input = document.getElementById(`item${index}Input`);
   const btn = document.getElementById(`deleteItemBtn${index}`);
@@ -224,11 +231,13 @@ function deleteItemImage(index) {
 
   if (input) input.value = "";
 
-  if (!itemsToDelete.includes(index - 1)) {
-    itemsToDelete.push(index - 1);
+  if (!itemsToDelete.includes(realIndex)) {
+    itemsToDelete.push(realIndex);
   }
 
   if (btn) btn.classList.add("hidden");
+
+  console.log("🗑️ Item marcado para borrar:", realIndex);
 }
 
 // =============================================================
@@ -236,7 +245,7 @@ function deleteItemImage(index) {
 // =============================================================
 async function refreshPlayers(force = false) {
   const data = await fetchJson(API_PLAYERS);
-  const signature = data.map(p => `${p._id}:${p.updatedAt}`).join("|");
+  const signature = data.map((p) => `${p._id}:${p.updatedAt}`).join("|");
 
   if (!force && signature === lastSignature) return;
 
@@ -249,7 +258,7 @@ function renderPlayersList() {
   const list = document.getElementById("playersList");
   list.innerHTML = "";
 
-  players.forEach(p => {
+  players.forEach((p) => {
     const card = document.createElement("div");
     card.className =
       "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
@@ -285,7 +294,7 @@ function renderPlayersList() {
 // EDIT PLAYER
 // =============================================================
 function editPlayer(id) {
-  const player = players.find(p => p._id === id);
+  const player = players.find((p) => p._id === id);
   if (!player) return;
 
   formMode = "edit";
@@ -340,7 +349,7 @@ async function submitCharacter() {
   if (!name) return;
 
   const skills = [...document.querySelectorAll("#skillsContainer input")]
-    .map(i => i.value.trim())
+    .map((i) => i.value.trim())
     .filter(Boolean);
 
   const itemDescriptions = [];
@@ -366,6 +375,20 @@ async function submitCharacter() {
   fd.append("level", calculatedLevel);
   fd.append("skills", JSON.stringify(skills));
   fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
+  // 🔥 LIMPIAR CONFLICTOS: no borrar slots con imagen nueva
+  const indicesWithNewImages = [];
+
+  for (let i = 1; i <= 6; i++) {
+    const input = document.getElementById(`item${i}Input`);
+    if (input?.files?.[0]) {
+      indicesWithNewImages.push(i - 1);
+    }
+  }
+
+  itemsToDelete = itemsToDelete.filter(
+    (i) => !indicesWithNewImages.includes(i)
+  );
+
   fd.append("itemsToDelete", JSON.stringify(itemsToDelete));
 
   // =============================
@@ -405,10 +428,14 @@ async function submitCharacter() {
   if (formMode === "create") {
     await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
   } else {
-    await fetchJson(`${API_PLAYERS}/${editingPlayerId}`, {
-      method: "PUT",
-      body: fd,
-    }, true);
+    await fetchJson(
+      `${API_PLAYERS}/${editingPlayerId}`,
+      {
+        method: "PUT",
+        body: fd,
+      },
+      true
+    );
   }
 
   // =============================
