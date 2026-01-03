@@ -26,7 +26,6 @@ function resolveImage(img) {
   return "/placeholder.png";
 }
 
-
 // Calcula el nivel a partir de la EXP TOTAL acumulada
 function calculateLevelFromExp(totalExp) {
   totalExp = Number(totalExp) || 0;
@@ -273,8 +272,9 @@ function renderPlayersList() {
       "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
 
     card.innerHTML = `
-      <img src="${p.img || "/placeholder.png"}"
-        class="w-full h-40 object-cover rounded mb-2">
+    <img src="${resolveImage(p.img)}"
+    class="w-full h-40 object-cover rounded mb-2">
+
 
       <h3 class="font-bold text-lg">
         ${p.name} (Nivel ${p.level})
@@ -324,7 +324,7 @@ function editPlayer(id) {
 
   charImgInput.value = "";
   if (player.img) {
-    previewCharMain.src = player.img;
+    previewCharMain.src = resolveImage(player.img);
     previewCharMain.classList.remove("hidden");
   } else {
     previewCharMain.classList.add("hidden");
@@ -336,9 +336,9 @@ function editPlayer(id) {
     const p = document.getElementById(`previewItem${i + 1}`);
     const btn = document.getElementById(`deleteItemBtn${i + 1}`);
     if (p && img) {
-      p.src = img;
+      p.src = resolveImage(img);
       p.classList.remove("hidden");
-      btn?.classList.remove("hidden"); // 🔥 NUEVO
+      btn?.classList.remove("hidden");
     }
   });
 
