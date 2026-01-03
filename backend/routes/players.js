@@ -48,9 +48,7 @@ function normalizePlayer(p) {
 // ============================================================
 router.get("/", async (req, res) => {
   try {
-    if (req.headers["x-realtime"] === "1") {
-      invalidateCache();
-    }
+    if (req.headers["x-realtime"] === "1") invalidateCache();
 
     if (CACHE.etag && req.headers["if-none-match"] === CACHE.etag) {
       return res.status(304).end();
@@ -137,7 +135,7 @@ router.post(
 );
 
 // ============================================================
-// UPDATE PLAYER (MERGE SEGURO)
+// UPDATE PLAYER (FIX DEFINITIVO)
 // ============================================================
 router.put(
   "/:id",
@@ -176,7 +174,7 @@ router.put(
       }
 
       // ------------------------------
-      // BORRAR OBJETOS
+      // BORRAR OBJETOS (FORZAR MONGOOSE)
       // ------------------------------
       const itemsToDelete = req.body.itemsToDelete
         ? JSON.parse(req.body.itemsToDelete)
@@ -190,10 +188,13 @@ router.put(
             player.items.splice(i, 1);
             player.itemDescriptions.splice(i, 1);
           });
+
+        player.markModified("items");
+        player.updatedAt = new Date();
       }
 
       // ------------------------------
-      // IMAGEN PRINCIPAL (FIX REAL)
+      // IMAGEN PRINCIPAL
       // ------------------------------
       if (req.files?.charImg?.[0]) {
         if (player.img) await deleteImage(player.img);
@@ -208,7 +209,7 @@ router.put(
       }
 
       // ------------------------------
-      // REEMPLAZO DE ITEMS (BLINDADO)
+      // REEMPLAZO DE ITEMS (CLAVE REAL)
       // ------------------------------
       if (req.files?.items?.length && req.body.itemsIndex !== undefined) {
         const indices = Array.isArray(req.body.itemsIndex)
@@ -228,9 +229,12 @@ router.put(
           );
 
           player.items[index] = img;
+
+          // 🔥 ESTA LÍNEA ES LA DIFERENCIA
+          player.markModified("items");
         }
 
-        player.markModified("items");
+        player.updatedAt = new Date();
       }
 
       // ------------------------------
@@ -265,7 +269,7 @@ router.put(
 );
 
 // ============================================================
-// DELETE PLAYER (RESTORED)
+// DELETE PLAYER
 // ============================================================
 router.delete("/:id", async (req, res) => {
   try {
