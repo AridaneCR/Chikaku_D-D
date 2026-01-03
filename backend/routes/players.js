@@ -23,6 +23,15 @@ function invalidateCache() {
 // NORMALIZACIÓN (🔥 CLAVE ABSOLUTA)
 // ============================================================
 function normalizePlayer(p) {
+  const resolveImg = img => {
+    if (!img) return null;
+    if (typeof img === "string") return img;
+    if (typeof img === "object") {
+      return img.url || img.secure_url || null;
+    }
+    return null;
+  };
+
   return {
     _id: p._id,
     campaign: p.campaign || "default",
@@ -34,17 +43,10 @@ function normalizePlayer(p) {
     attributes: p.attributes || "",
     skills: Array.isArray(p.skills) ? p.skills : [],
 
-    // 🔥 SIEMPRE STRING
-    img:
-      typeof p.img === "string"
-        ? p.img
-        : p.img?.url || null,
+    img: resolveImg(p.img),
 
-    // 🔥 SIEMPRE ARRAY DE STRINGS
     items: Array.isArray(p.items)
-      ? p.items.map(i =>
-          typeof i === "string" ? i : i.url
-        )
+      ? p.items.map(resolveImg).filter(Boolean)
       : [],
 
     itemDescriptions: Array.isArray(p.itemDescriptions)
