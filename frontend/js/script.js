@@ -19,7 +19,8 @@ const BASE_EXP = 100;
 const EXP_STEP = 40;
 
 function resolveImage(img) {
-  if (!img) return "/placeholder.png";
+  if (!img)return "https://via.placeholder.com/400x300?text=No+Image";
+;
 
   // URL normal (Cloudinary o externa)
   if (typeof img === "string" && img.startsWith("http")) {
