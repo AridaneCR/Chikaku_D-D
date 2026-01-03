@@ -1,20 +1,17 @@
 /**
  * MIGRACIÓN DE IMÁGENES LEGACY → CLOUDINARY (OPCIÓN A)
- *
- * - img: string | base64 → { url, publicId }
+ * - img: string/base64 → { url, publicId }
  * - items: [string] → [{ url, publicId }]
- *
- * SEGURO, IDEMPOTENTE, SIN BORRADOS
+ * Seguro e idempotente
  */
 
 require("dotenv").config();
 const mongoose = require("mongoose");
 const Player = require("../models/player");
 const { uploadImage } = require("../utils/cloudinary");
-const fetch = require("node-fetch");
 
 // ===============================
-// CONFIG
+// CONEXIÓN
 // ===============================
 const MONGO_URI = process.env.MONGO_URI;
 if (!MONGO_URI) {
@@ -28,7 +25,6 @@ if (!MONGO_URI) {
 async function uploadFromUrl(url, folder) {
   const res = await fetch(url);
   if (!res.ok) throw new Error("Error descargando imagen");
-
   const buffer = Buffer.from(await res.arrayBuffer());
   return uploadImage(buffer, folder);
 }
@@ -54,10 +50,8 @@ async function migrate() {
   for (const player of players) {
     let changed = false;
 
-    // -----------------------------
-    // IMG PRINCIPAL
-    // -----------------------------
-    if (player.img && typeof player.img === "string") {
+    // -------- IMG PRINCIPAL --------
+    if (typeof player.img === "string") {
       console.log(`🖼️ Migrando img URL → ${player.name}`);
       player.img = await uploadFromUrl(player.img, "players");
       changed = true;
@@ -67,30 +61,25 @@ async function migrate() {
       changed = true;
     }
 
-    // -----------------------------
-    // ITEMS
-    // -----------------------------
+    // -------- ITEMS --------
     if (Array.isArray(player.items) && player.items.length) {
-      const migratedItems = [];
+      const migrated = [];
 
       for (let i = 0; i < player.items.length; i++) {
-        const item = player.items[i];
-
-        if (typeof item === "string") {
-          console.log(`📦 Migrando item ${i} de ${player.name}`);
-          migratedItems[i] = await uploadFromUrl(item, "items");
+        const it = player.items[i];
+        if (typeof it === "string") {
+          console.log(`📦 Migrando item ${i} → ${player.name}`);
+          migrated[i] = await uploadFromUrl(it, "items");
           changed = true;
         } else {
-          migratedItems[i] = item;
+          migrated[i] = it;
         }
       }
 
-      if (changed) player.items = migratedItems;
+      if (changed) player.items = migrated;
     }
 
-    // -----------------------------
-    // GUARDAR
-    // -----------------------------
+    // -------- GUARDAR --------
     if (changed) {
       player.markModified("img");
       player.markModified("items");

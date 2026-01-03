@@ -33,15 +33,28 @@ function normalizePlayer(p) {
     milestones: p.milestones || "",
     attributes: p.attributes || "",
     skills: Array.isArray(p.skills) ? p.skills : [],
-    img: p.img || null,
-    items: Array.isArray(p.items) ? p.items : [],
+
+    // 🔥 ESTO ES CLAVE
+    img:
+      typeof p.img === "string"
+        ? p.img
+        : p.img?.url || null,
+
+    items: Array.isArray(p.items)
+      ? p.items.map(i =>
+          typeof i === "string" ? i : i.url
+        )
+      : [],
+
     itemDescriptions: Array.isArray(p.itemDescriptions)
       ? p.itemDescriptions
       : [],
+
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };
 }
+
 
 // ============================================================
 // GET ALL PLAYERS (CON CACHE)
