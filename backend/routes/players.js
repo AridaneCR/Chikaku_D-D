@@ -25,10 +25,15 @@ function invalidateCache() {
 function normalizePlayer(p) {
   const resolveImg = img => {
     if (!img) return null;
+
+    // 🟢 FORMATO ANTIGUO (string)
     if (typeof img === "string") return img;
+
+    // 🟢 FORMATO NUEVO (objeto Cloudinary)
     if (typeof img === "object") {
       return img.url || img.secure_url || null;
     }
+
     return null;
   };
 
@@ -43,6 +48,7 @@ function normalizePlayer(p) {
     attributes: p.attributes || "",
     skills: Array.isArray(p.skills) ? p.skills : [],
 
+    // 🔥 CLAVE ABSOLUTA
     img: resolveImg(p.img),
 
     items: Array.isArray(p.items)
@@ -57,6 +63,7 @@ function normalizePlayer(p) {
     updatedAt: p.updatedAt,
   };
 }
+
 
 // ============================================================
 // GET ALL PLAYERS (CON CACHE + ETag)
