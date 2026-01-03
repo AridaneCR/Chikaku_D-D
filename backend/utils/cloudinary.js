@@ -1,8 +1,6 @@
 // backend/utils/cloudinary.js
-
 const cloudinary = require("cloudinary").v2;
 
-// ⚠️ Variables de entorno
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -10,16 +8,14 @@ cloudinary.config({
 });
 
 // ============================================================
-// 📤 SUBIR IMAGEN (Buffer → URL CDN)
+// 📤 SUBIR IMAGEN (Buffer → { url, publicId })
 // ============================================================
-
 async function uploadBuffer(buffer, folder = "dnd") {
   return new Promise((resolve, reject) => {
     cloudinary.uploader.upload_stream(
       {
         folder,
         resource_type: "image",
-        format: "jpg",
         transformation: [
           { width: 512, height: 512, crop: "limit" },
           { quality: "auto" },
@@ -27,31 +23,41 @@ async function uploadBuffer(buffer, folder = "dnd") {
       },
       (error, result) => {
         if (error) return reject(error);
-        resolve(result.secure_url); // 🔥 SOLO URL
+
+        resolve({
+          url: result.secure_url,
+          publicId: result.public_id,
+        });
       }
     ).end(buffer);
   });
 }
-
-// ============================================================
-// 🔥 ALIAS ESTABLE (para routes + scripts)
-// ============================================================
 
 async function uploadImage(buffer, folder) {
   return uploadBuffer(buffer, folder);
 }
 
 // ============================================================
-// 🗑️ BORRAR IMAGEN
+// 🗑️ BORRAR IMAGEN (SIEMPRE CON publicId)
 // ============================================================
+async function deleteImage(image) {
+  if (!image) return;
 
-async function deleteImage(publicId) {
+  const publicId =
+    typeof image === "string"
+      ? image
+      : image.publicId;
+
   if (!publicId) return;
-  return cloudinary.uploader.destroy(publicId);
+
+  try {
+    await cloudinary.uploader.destroy(publicId);
+  } catch (err) {
+    console.warn("⚠️ Cloudinary delete error:", err.message);
+  }
 }
 
 module.exports = {
-  uploadBuffer,
-  uploadImage,   // ✅ ahora SÍ existe
+  uploadImage,
   deleteImage,
 };

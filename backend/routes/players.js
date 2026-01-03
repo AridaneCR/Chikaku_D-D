@@ -20,7 +20,7 @@ function invalidateCache() {
 }
 
 // ============================================================
-// NORMALIZACIÓN
+// NORMALIZACIÓN (API → FRONTEND)
 // ============================================================
 function normalizePlayer(p) {
   return {
@@ -33,8 +33,8 @@ function normalizePlayer(p) {
     milestones: p.milestones || "",
     attributes: p.attributes || "",
     skills: Array.isArray(p.skills) ? p.skills : [],
-    img: p.img || null,
-    items: Array.isArray(p.items) ? p.items : [],
+    img: p.img?.url || null,
+    items: Array.isArray(p.items) ? p.items.map(i => i.url) : [],
     itemDescriptions: Array.isArray(p.itemDescriptions)
       ? p.itemDescriptions
       : [],
@@ -44,7 +44,7 @@ function normalizePlayer(p) {
 }
 
 // ============================================================
-// GET ALL PLAYERS (CON CACHE)
+// GET ALL PLAYERS (CACHE + ETAG)
 // ============================================================
 router.get("/", async (req, res) => {
   try {
@@ -95,17 +95,15 @@ router.post(
         ? JSON.parse(req.body.itemDescriptions)
         : [];
 
-      let img = null;
-      if (req.files?.charImg?.[0]) {
-        img = await uploadImage(req.files.charImg[0].buffer, "players");
-      }
+      const img = req.files?.charImg?.[0]
+        ? await uploadImage(req.files.charImg[0].buffer, "players")
+        : null;
 
-      let items = [];
-      if (req.files?.items?.length) {
-        items = await Promise.all(
-          req.files.items.map(f => uploadImage(f.buffer, "items"))
-        );
-      }
+      const items = req.files?.items?.length
+        ? await Promise.all(
+            req.files.items.map(f => uploadImage(f.buffer, "items"))
+          )
+        : [];
 
       const player = new Player({
         campaign: req.body.campaign || "default",
@@ -122,7 +120,6 @@ router.post(
       });
 
       const saved = await player.save();
-
       invalidateCache();
       notify?.();
 
@@ -135,7 +132,7 @@ router.post(
 );
 
 // ============================================================
-// UPDATE PLAYER (FIX DEFINITIVO)
+// UPDATE PLAYER (EDICIÓN SEGURA)
 // ============================================================
 router.put(
   "/:id",
@@ -145,10 +142,6 @@ router.put(
   ]),
   async (req, res) => {
     try {
-      console.log("📥 PUT /players/:id");
-      console.log("📥 req.files:", Object.keys(req.files || {}));
-      console.log("📥 req.body:", req.body);
-
       const notify = req.app.get("notifyPlayersUpdate");
 
       const player = await Player.findById(req.params.id);
@@ -174,23 +167,21 @@ router.put(
       }
 
       // ------------------------------
-      // BORRAR OBJETOS (FORZAR MONGOOSE)
+      // BORRAR ITEMS
       // ------------------------------
       const itemsToDelete = req.body.itemsToDelete
         ? JSON.parse(req.body.itemsToDelete)
         : [];
 
       if (itemsToDelete.length) {
-        itemsToDelete
-          .sort((a, b) => b - a)
-          .forEach(i => {
-            if (player.items[i]) deleteImage(player.items[i]);
-            player.items.splice(i, 1);
-            player.itemDescriptions.splice(i, 1);
-          });
-
+        for (const i of itemsToDelete.sort((a, b) => b - a)) {
+          if (player.items[i]) {
+            await deleteImage(player.items[i]);
+          }
+          player.items.splice(i, 1);
+          player.itemDescriptions.splice(i, 1);
+        }
         player.markModified("items");
-        player.updatedAt = new Date();
       }
 
       // ------------------------------
@@ -198,18 +189,15 @@ router.put(
       // ------------------------------
       if (req.files?.charImg?.[0]) {
         if (player.img) await deleteImage(player.img);
-
         player.img = await uploadImage(
           req.files.charImg[0].buffer,
           "players"
         );
-
         player.markModified("img");
-        player.updatedAt = new Date();
       }
 
       // ------------------------------
-      // REEMPLAZO DE ITEMS (CLAVE REAL)
+      // REEMPLAZAR / CREAR ITEMS
       // ------------------------------
       if (req.files?.items?.length && req.body.itemsIndex !== undefined) {
         const indices = Array.isArray(req.body.itemsIndex)
@@ -219,9 +207,10 @@ router.put(
         for (let i = 0; i < req.files.items.length; i++) {
           const index = indices[i];
           if (Number.isNaN(index)) continue;
-          if (!player.items[index]) continue;
 
-          await deleteImage(player.items[index]);
+          if (player.items[index]) {
+            await deleteImage(player.items[index]);
+          }
 
           const img = await uploadImage(
             req.files.items[i].buffer,
@@ -229,12 +218,8 @@ router.put(
           );
 
           player.items[index] = img;
-
-          // 🔥 ESTA LÍNEA ES LA DIFERENCIA
           player.markModified("items");
         }
-
-        player.updatedAt = new Date();
       }
 
       // ------------------------------
@@ -256,7 +241,6 @@ router.put(
       player.updatedAt = new Date();
 
       const saved = await player.save();
-
       invalidateCache();
       notify?.();
 
@@ -286,7 +270,6 @@ router.delete("/:id", async (req, res) => {
     }
 
     await player.deleteOne();
-
     invalidateCache();
     notify?.();
 

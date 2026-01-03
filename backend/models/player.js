@@ -1,8 +1,23 @@
 const mongoose = require("mongoose");
 
 // ============================================================
-// PLAYER SCHEMA (CDN READY + LEGACY SAFE)
+// PLAYER SCHEMA (CLOUDINARY READY + LEGACY SAFE)
 // ============================================================
+
+// 🔥 Subschema reutilizable para imágenes Cloudinary
+const ImageSchema = new mongoose.Schema(
+  {
+    url: {
+      type: String,
+      required: true,
+    },
+    publicId: {
+      type: String,
+      required: true,
+    },
+  },
+  { _id: false }
+);
 
 const PlayerSchema = new mongoose.Schema(
   {
@@ -60,27 +75,23 @@ const PlayerSchema = new mongoose.Schema(
     // -------------------------
     // 🔥 IMAGEN PRINCIPAL
     // -------------------------
-
-    // ✅ NUEVO → URL Cloudinary
     img: {
-      type: String,
+      type: ImageSchema,
       default: null,
     },
 
-    // 🟡 LEGACY → base64 (migración)
+    // 🟡 LEGACY → base64 (por si hay datos antiguos)
     imgBase64: {
       type: String,
       default: null,
-      select: false, // 🔒 no se envía salvo que se pida explícito
+      select: false,
     },
 
     // -------------------------
-    // 🔥 OBJETOS
+    // 🔥 OBJETOS (IMÁGENES)
     // -------------------------
-
-    // ✅ NUEVO → URLs Cloudinary
     items: {
-      type: [String],
+      type: [ImageSchema],
       default: [],
     },
 
@@ -91,13 +102,16 @@ const PlayerSchema = new mongoose.Schema(
       select: false,
     },
 
+    // -------------------------
+    // DESCRIPCIONES
+    // -------------------------
     itemDescriptions: {
       type: [String],
       default: [],
     },
   },
   {
-    timestamps: true, // 🔥 necesario para cache + ETag
+    timestamps: true, // 🔥 CLAVE para cache + ETag
   }
 );
 

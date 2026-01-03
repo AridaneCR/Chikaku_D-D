@@ -12,6 +12,7 @@
     "express": "^4.22.1",
     "mongoose": "^8.20.2",
     "multer": "^2.0.2",
+    "node-fetch": "^3.3.2",
     "streamifier": "^0.1.1"
   }
 }
