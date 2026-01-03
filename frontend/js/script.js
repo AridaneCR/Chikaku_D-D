@@ -18,6 +18,14 @@ let itemsToDelete = [];
 const BASE_EXP = 100;
 const EXP_STEP = 40;
 
+function resolveImg(img) {
+  if (!img) return "/placeholder.png";
+  if (typeof img === "string") return img;
+  if (typeof img === "object" && img.url) return img.url;
+  return "/placeholder.png";
+}
+
+
 // Calcula el nivel a partir de la EXP TOTAL acumulada
 function calculateLevelFromExp(totalExp) {
   totalExp = Number(totalExp) || 0;

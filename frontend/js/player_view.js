@@ -21,15 +21,10 @@ let sseConnected = false;
 
 const playerBoard = document.getElementById("playerBoard");
 
-// =============================================================
-// IMAGE NORMALIZER (Cloudinary SAFE)
-// =============================================================
-
-function resolveImage(img) {
+function resolveImg(img) {
   if (!img) return "/placeholder.png";
-  if (typeof img === "string" && img.startsWith("http")) return img;
-  if (typeof img === "object")
-    return img.secure_url || img.url || "/placeholder.png";
+  if (typeof img === "string") return img;
+  if (typeof img === "object" && img.url) return img.url;
   return "/placeholder.png";
 }
 
