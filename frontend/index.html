@@ -7,14 +7,16 @@
 
   <!-- 🔥 CSP PERMITIENDO CLOUDINARY -->
   <meta
-    http-equiv="Content-Security-Policy"
-    content="
-      default-src 'self' https://cdn.tailwindcss.com;
-      img-src 'self' data: https://res.cloudinary.com;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com;
-      style-src 'self' 'unsafe-inline';
-    "
-  >
+  http-equiv="Content-Security-Policy"
+  content="
+    default-src 'self' https: data: blob:;
+    img-src 'self' https://res.cloudinary.com data: blob:;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https:;
+    style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
+    connect-src 'self' https:;
+  "
+/>
+
 
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
