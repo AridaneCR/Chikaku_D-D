@@ -10,14 +10,14 @@ const upload = multer({ storage: multer.memoryStorage() });
 // ============================================================
 // CACHE EN MEMORIA
 // ============================================================
-let CACHE = {
-  etag: null,
-  data: null,
-};
+//let CACHE = {
+// etag: null,
+// data: null,
+//};
 
-function invalidateCache() {
-  CACHE = { etag: null, data: null };
-}
+//function invalidateCache() {
+// CACHE = { etag: null, data: null };
+//}
 
 // ============================================================
 // NORMALIZACIÓN (🔥 CLAVE ABSOLUTA)
