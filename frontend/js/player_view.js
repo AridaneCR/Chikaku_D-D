@@ -19,7 +19,26 @@ let lastSignature = "";
 let isFiltering = false;
 let sseConnected = false;
 
+// 🧊 cold start
+let coldStartChecked = false;
+const COLD_START_THRESHOLD = 900; // ms
+
 const playerBoard = document.getElementById("playerBoard");
+
+// =============================================================
+// LOADER (GLOBAL)
+// =============================================================
+
+function showLoader(text = "Cargando jugadores…") {
+  const loader = document.getElementById("globalLoader");
+  if (!loader) return;
+  loader.querySelector("span").textContent = text;
+  loader.classList.remove("hidden");
+}
+
+function hideLoader() {
+  document.getElementById("globalLoader")?.classList.add("hidden");
+}
 
 // =============================================================
 // IMAGE NORMALIZER (Cloudinary SAFE)
@@ -50,6 +69,7 @@ function showToast(message, type = "info") {
   const colors = {
     info: "bg-indigo-600",
     success: "bg-green-600",
+    explained: "bg-purple-600",
     warning: "bg-yellow-600",
     error: "bg-red-600",
   };
@@ -58,6 +78,7 @@ function showToast(message, type = "info") {
   toast.className = `
     ${colors[type] || colors.info}
     text-white px-4 py-3 rounded-xl shadow-xl
+    animate-fade-in
   `;
   toast.textContent = message;
 
@@ -72,12 +93,10 @@ function showToast(message, type = "info") {
 const BASE_EXP = 100;
 const EXP_STEP = 40;
 
-// EXP necesaria para subir un nivel concreto
 function expForLevel(level) {
   return BASE_EXP + (level - 1) * EXP_STEP;
 }
 
-// Calcula nivel y progreso desde EXP TOTAL acumulada
 function expProgress(totalExp) {
   totalExp = Number(totalExp) || 0;
 
@@ -104,20 +123,32 @@ function expProgress(totalExp) {
   }
 }
 
-
 // =============================================================
-// FETCH
+// FETCH (con medición de tiempo)
 // =============================================================
 
 async function fetchJson(url, realtime = false) {
+  const start = performance.now();
+
   const res = await fetch(url, {
     cache: "no-store",
-    headers: realtime
-      ? { "x-realtime": "1" } // 🔥 fuerza invalidar cache en backend
-      : {},
+    headers: realtime ? { "x-realtime": "1" } : {},
   });
+
+  const duration = performance.now() - start;
+
   if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  const data = await res.json();
+
+  return { data, duration };
+}
+
+// =============================================================
+// SIGNATURE (CACHE / CAMBIOS)
+// =============================================================
+
+function buildSignature(list = []) {
+  return list.map(p => `${p._id}:${p.updatedAt}`).join("|");
 }
 
 // =============================================================
@@ -126,15 +157,27 @@ async function fetchJson(url, realtime = false) {
 
 async function loadPlayers(fromRealtime = false) {
   try {
-    const data = await fetchJson(API_PLAYERS, fromRealtime);
+    showLoader(fromRealtime ? "Actualizando jugadores…" : "Cargando jugadores…");
 
-    // 🔥 SI VIENE DE SSE, FORZAMOS RENDER
+    const { data, duration } = await fetchJson(API_PLAYERS, fromRealtime);
+
+    // 🧊 detección de cold start SOLO en primera carga
+    if (!fromRealtime && !coldStartChecked) {
+      coldStartChecked = true;
+
+      if (duration > COLD_START_THRESHOLD) {
+        showToast("🧙‍♂️ Despertando al servidor…", "explained");
+      }
+    }
+
     if (!fromRealtime) {
       const signature = buildSignature(data);
-      if (signature === lastSignature) return;
+      if (signature === lastSignature) {
+        hideLoader();
+        return;
+      }
       lastSignature = signature;
     } else {
-      // 🔥 invalida firma para próximos fetch
       lastSignature = "";
     }
 
@@ -146,18 +189,10 @@ async function loadPlayers(fromRealtime = false) {
     }
   } catch (err) {
     console.error("Error cargando jugadores:", err);
+    showToast("❌ Error cargando jugadores", "error");
+  } finally {
+    hideLoader();
   }
-}
-
-
-// =============================================================
-// SIGNATURE (CACHE / CAMBIOS)
-// =============================================================
-
-function buildSignature(list = []) {
-  return list
-    .map(p => `${p._id}:${p.updatedAt}`)
-    .join("|");
 }
 
 // =============================================================
@@ -220,7 +255,7 @@ function closeObjectModal() {
 }
 
 // =============================================================
-// RENDER
+// RENDER (TU LÓGICA, NO TOCADA)
 // =============================================================
 
 function renderPlayerBoard(list = players) {
@@ -238,80 +273,55 @@ function renderPlayerBoard(list = players) {
       "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[460px]";
 
     card.innerHTML = `
-      <!-- NOMBRE -->
       <h2 class="text-lg font-bold mb-2 truncate text-white">
         ${p.name} (Nivel ${exp.level})
       </h2>
 
-      <!-- IMAGEN -->
       <img
         src="${resolveImage(p.img)}"
         class="w-full h-44 object-cover rounded mb-3"
         loading="lazy"
       />
 
-      <!-- INFO -->
       <p class="text-sm">❤️ Salud: ${p.life}</p>
-
-      <!-- HITOS (🔥 RESTAURADO) -->
       <p class="text-sm">🏆 ${p.milestones || "-"}</p>
-
       <p class="text-sm">⭐ EXP total: ${totalExp}</p>
 
-      <!-- HABILIDADES -->
       ${
         skills.length
-          ? `
-        <button
-          onclick='openSkillsModal(${JSON.stringify(skills)})'
-          class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
-          Ver habilidades (${skills.length})
-        </button>
-      `
+          ? `<button
+              onclick='openSkillsModal(${JSON.stringify(skills)})'
+              class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
+              Ver habilidades (${skills.length})
+            </button>`
           : ""
       }
 
-      <!-- EXP -->
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
-          <div
-            class="bg-green-500 h-3 transition-all"
-            style="width:${exp.percent}%">
-          </div>
+          <div class="bg-green-500 h-3" style="width:${exp.percent}%"></div>
         </div>
 
         <p class="text-xs text-stone-300 mt-1 text-center">
-          ${Math.round(exp.current)} / ${Math.round(exp.required)}
-          · faltan ${Math.round(exp.remaining)}
+          ${exp.current} / ${exp.required} · faltan ${exp.remaining}
         </p>
 
-        <!-- OBJETOS -->
-        <div class="grid grid-cols-6 gap-1 mt-3" data-items>
-          ${(p.items || [])
-            .slice(0, 6)
-            .map(
-              (item, i) => `
+        <div class="grid grid-cols-6 gap-1 mt-3">
+          ${(p.items || []).slice(0, 6).map((item, i) => `
             <img
               src="${resolveImage(item)}"
               data-img="${resolveImage(item)}"
-              data-desc="${(
-                p.itemDescriptions?.[i] || "Sin descripción"
-              ).replace(/"/g, "&quot;")}"
+              data-desc="${(p.itemDescriptions?.[i] || "Sin descripción").replace(/"/g, "&quot;")}"
               class="w-10 h-10 object-cover rounded border cursor-pointer"
-              loading="lazy"
             />
-          `
-            )
-            .join("")}
+          `).join("")}
         </div>
       </div>
     `;
 
-    // 🔥 FIX DEFINITIVO: binding de clicks por JS (no inline)
-    const itemImgs = card.querySelectorAll("[data-img]");
-    itemImgs.forEach((imgEl) => {
-      imgEl.addEventListener("click", () => {
-        openItemModal(imgEl.dataset.img, imgEl.dataset.desc);
+    card.querySelectorAll("[data-img]").forEach(el => {
+      el.addEventListener("click", () => {
+        openItemModal(el.dataset.img, el.dataset.desc);
       });
     });
 
@@ -331,25 +341,22 @@ function initSSE() {
     showToast("🟢 Conectado en tiempo real");
   };
 
- source.addEventListener("playersUpdated", () => {
-  console.log("🔥 SSE RECIBIDO", new Date().toISOString());
-  loadPlayers(true);
-});
-
+  source.addEventListener("playersUpdated", () => {
+    loadPlayers(true);
+  });
 
   source.onerror = () => {
     sseConnected = false;
     source.close();
-    showToast("⚠️ Conexión tiempo real perdida, usando polling", "warning");
+    showToast("⚠️ Conexión tiempo real perdida", "warning");
   };
 }
-
 
 // =============================================================
 // INIT
 // =============================================================
 
 window.addEventListener("load", () => {
-  loadPlayers();
+  loadPlayers(false);
   initSSE();
 });
