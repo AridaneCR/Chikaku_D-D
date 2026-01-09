@@ -7,33 +7,28 @@ const { uploadImage, deleteImage } = require("../utils/cloudinary");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// ============================================================
-// CACHE EN MEMORIA
-// ============================================================
-//let CACHE = {
-// etag: null,
-// data: null,
-//};
-
-//function invalidateCache() {
-// CACHE = { etag: null, data: null };
-//}
 
 // ============================================================
-// NORMALIZACIÓN (🔥 CLAVE ABSOLUTA)
+// 🧠 CACHE EN MEMORIA (REACTIVADO)
+// ============================================================
+let CACHE = {
+  etag: null,
+  data: null,
+};
+
+function invalidateCache() {
+  CACHE = { etag: null, data: null };
+}
+
+
+// ============================================================
+// 🧩 NORMALIZACIÓN (CLAVE ABSOLUTA)
 // ============================================================
 function normalizePlayer(p) {
   const resolveImg = img => {
     if (!img) return null;
-
-    // 🟢 FORMATO ANTIGUO (string)
     if (typeof img === "string") return img;
-
-    // 🟢 FORMATO NUEVO (objeto Cloudinary)
-    if (typeof img === "object") {
-      return img.url || img.secure_url || null;
-    }
-
+    if (typeof img === "object") return img.url || img.secure_url || null;
     return null;
   };
 
@@ -48,7 +43,6 @@ function normalizePlayer(p) {
     attributes: p.attributes || "",
     skills: Array.isArray(p.skills) ? p.skills : [],
 
-    // 🔥 CLAVE ABSOLUTA
     img: resolveImg(p.img),
 
     items: Array.isArray(p.items)
@@ -66,11 +60,13 @@ function normalizePlayer(p) {
 
 
 // ============================================================
-// GET ALL PLAYERS (CON CACHE + ETag)
+// GET ALL PLAYERS (CACHE + ETAG)
 // ============================================================
 router.get("/", async (req, res) => {
   try {
-    if (req.headers["x-realtime"] === "1") invalidateCache();
+    if (req.headers["x-realtime"] === "1") {
+      invalidateCache();
+    }
 
     if (CACHE.etag && req.headers["if-none-match"] === CACHE.etag) {
       return res.status(304).end();
@@ -78,26 +74,30 @@ router.get("/", async (req, res) => {
 
     if (CACHE.data) {
       res.setHeader("ETag", CACHE.etag);
+      res.setHeader("Cache-Control", "private, must-revalidate");
       return res.json(CACHE.data);
     }
 
-    const players = await Player.find().sort({ createdAt: -1 });
+    const players = await Player.find().sort({ createdAt: -1 }).lean();
     const normalized = players.map(normalizePlayer);
 
     const signature = normalized
-      .map(p => `${p._id}:${p.updatedAt.getTime()}`)
+      .map(p => `${p._id}:${new Date(p.updatedAt).getTime()}`)
       .join("|");
 
     const etag = crypto.createHash("sha1").update(signature).digest("hex");
 
     CACHE = { etag, data: normalized };
+
     res.setHeader("ETag", etag);
+    res.setHeader("Cache-Control", "private, must-revalidate");
     res.json(normalized);
   } catch (err) {
     console.error("GET PLAYERS ERROR:", err);
     res.status(500).json({ error: "Error obteniendo jugadores" });
   }
 });
+
 
 // ============================================================
 // CREATE PLAYER
@@ -156,8 +156,9 @@ router.post(
   }
 );
 
+
 // ============================================================
-// UPDATE PLAYER (FIX DEFINITIVO)
+// UPDATE PLAYER (EDICIÓN DE IMÁGENES 100% FUNCIONAL)
 // ============================================================
 router.put(
   "/:id",
@@ -178,35 +179,29 @@ router.put(
       // CAMPOS SIMPLES
       // ------------------------------
       player.name = req.body.name ?? player.name;
-      player.life =
-        req.body.life !== undefined ? Number(req.body.life) : player.life;
+      player.life = req.body.life !== undefined ? Number(req.body.life) : player.life;
       player.milestones = req.body.milestones ?? player.milestones;
       player.attributes = req.body.attributes ?? player.attributes;
-      player.exp =
-        req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
-      player.level =
-        req.body.level !== undefined ? Number(req.body.level) : player.level;
+      player.exp = req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
+      player.level = req.body.level !== undefined ? Number(req.body.level) : player.level;
 
       if (req.body.skills) {
         player.skills = JSON.parse(req.body.skills);
       }
 
       // ------------------------------
-      // BORRAR OBJETOS
+      // BORRAR ITEMS
       // ------------------------------
       const itemsToDelete = req.body.itemsToDelete
         ? JSON.parse(req.body.itemsToDelete)
         : [];
 
       if (itemsToDelete.length) {
-        itemsToDelete
-          .sort((a, b) => b - a)
-          .forEach(i => {
-            if (player.items[i]) deleteImage(player.items[i]);
-            player.items.splice(i, 1);
-            player.itemDescriptions.splice(i, 1);
-          });
-
+        itemsToDelete.sort((a, b) => b - a).forEach(i => {
+          if (player.items[i]) deleteImage(player.items[i]);
+          player.items.splice(i, 1);
+          player.itemDescriptions.splice(i, 1);
+        });
         player.markModified("items");
       }
 
@@ -215,17 +210,12 @@ router.put(
       // ------------------------------
       if (req.files?.charImg?.[0]) {
         if (player.img) await deleteImage(player.img);
-
-        player.img = await uploadImage(
-          req.files.charImg[0].buffer,
-          "players"
-        );
-
+        player.img = await uploadImage(req.files.charImg[0].buffer, "players");
         player.markModified("img");
       }
 
       // ------------------------------
-      // REEMPLAZO DE ITEMS
+      // REEMPLAZO DE ITEMS POR SLOT
       // ------------------------------
       if (req.files?.items?.length && req.body.itemsIndex !== undefined) {
         const indices = Array.isArray(req.body.itemsIndex)
@@ -240,11 +230,7 @@ router.put(
             await deleteImage(player.items[index]);
           }
 
-          const img = await uploadImage(
-            req.files.items[i].buffer,
-            "items"
-          );
-
+          const img = await uploadImage(req.files.items[i].buffer, "items");
           player.items[index] = img;
         }
 
@@ -281,6 +267,7 @@ router.put(
     }
   }
 );
+
 
 // ============================================================
 // DELETE PLAYER
