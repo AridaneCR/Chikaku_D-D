@@ -353,6 +353,66 @@ function initSSE() {
 }
 
 // =============================================================
+// 🔍 FILTROS (BUSCADOR + ORDEN + NIVEL)
+// =============================================================
+
+const searchInput = document.getElementById("searchInput");
+const sortAlphabet = document.getElementById("sortAlphabet");
+const filterLevel = document.getElementById("filterLevel");
+
+function applyFilters() {
+  let result = [...players];
+
+  // 🔍 BUSCADOR POR NOMBRE
+  const query = searchInput?.value.trim().toLowerCase();
+  if (query) {
+    result = result.filter(p =>
+      p.name?.toLowerCase().includes(query)
+    );
+  }
+
+  // 🎚️ FILTRO POR NIVEL
+  const levelFilter = filterLevel?.value;
+  if (levelFilter) {
+    result = result.filter(p => {
+      const lvl = Number(p.level) || 1;
+
+      switch (levelFilter) {
+        case "1-3":
+          return lvl >= 1 && lvl <= 3;
+        case "4-6":
+          return lvl >= 4 && lvl <= 6;
+        case "7-9":
+          return lvl >= 7 && lvl <= 9;
+        case "10+":
+          return lvl >= 10;
+        default:
+          return true;
+      }
+    });
+  }
+
+  // 🔤 ORDEN ALFABÉTICO
+  const sort = sortAlphabet?.value;
+  if (sort === "az") {
+    result.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sort === "za") {
+    result.sort((a, b) => b.name.localeCompare(a.name));
+  }
+
+  renderPlayerBoard(result);
+}
+
+// =============================================================
+// 🎧 EVENTOS
+// =============================================================
+
+searchInput?.addEventListener("input", applyFilters);
+sortAlphabet?.addEventListener("change", applyFilters);
+filterLevel?.addEventListener("change", applyFilters);
+
+
+// =============================================================
 // INIT
 // =============================================================
 
