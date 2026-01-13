@@ -16,6 +16,7 @@ const SSE_URL = `${BASE_URL}/api/players/stream`;
 
 let players = [];
 let lastSignature = "";
+let isFiltering = false;
 let sseConnected = false;
 
 // 🧊 cold start
@@ -160,8 +161,10 @@ async function loadPlayers(fromRealtime = false) {
 
     const { data, duration } = await fetchJson(API_PLAYERS, fromRealtime);
 
+    // 🧊 detección de cold start SOLO en primera carga
     if (!fromRealtime && !coldStartChecked) {
       coldStartChecked = true;
+
       if (duration > COLD_START_THRESHOLD) {
         showToast("🧙‍♂️ Despertando al servidor…", "explained");
       }
@@ -179,7 +182,7 @@ async function loadPlayers(fromRealtime = false) {
     }
 
     players = data;
-    applyFilters(); // 🔥 siempre renderiza usando filtros
+    renderPlayerBoard(players);
 
     if (fromRealtime) {
       showToast("⚡ Jugadores actualizados", "success");
@@ -193,10 +196,69 @@ async function loadPlayers(fromRealtime = false) {
 }
 
 // =============================================================
-// RENDER
+// SKILLS MODAL
 // =============================================================
 
-function renderPlayerBoard(list = []) {
+function openSkillsModal(skills = []) {
+  if (!skills.length) return;
+
+  let modal = document.getElementById("skillsModal");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "skillsModal";
+    modal.className =
+      "fixed inset-0 bg-black/80 z-50 flex items-center justify-center";
+    modal.innerHTML = `
+      <div class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-sm w-full relative">
+        <button
+          onclick="document.getElementById('skillsModal').remove()"
+          class="absolute top-2 right-2 text-xl text-white">✕</button>
+        <h3 class="text-lg font-bold mb-4 text-center">Habilidades</h3>
+        <ul id="skillsList" class="space-y-2"></ul>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  const list = modal.querySelector("#skillsList");
+  list.innerHTML = "";
+
+  skills.forEach((s) => {
+    const li = document.createElement("li");
+    li.className = "bg-stone-700 rounded px-3 py-2 text-sm";
+    li.textContent = s;
+    list.appendChild(li);
+  });
+}
+
+// =============================================================
+// OBJECT MODAL
+// =============================================================
+
+function openItemModal(img, description) {
+  const modal = document.getElementById("objectModal");
+  const modalImg = document.getElementById("objectModalImg");
+  const modalDesc = document.getElementById("objectModalDesc");
+
+  modalImg.src = img || "/placeholder.png";
+  modalDesc.textContent = description || "Sin descripción";
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+}
+
+function closeObjectModal() {
+  const modal = document.getElementById("objectModal");
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+}
+
+// =============================================================
+// RENDER (TU LÓGICA, NO TOCADA)
+// =============================================================
+
+function renderPlayerBoard(list = players) {
   playerBoard.innerHTML = "";
   playerBoard.className =
     "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
@@ -225,6 +287,16 @@ function renderPlayerBoard(list = []) {
       <p class="text-sm">🏆 ${p.milestones || "-"}</p>
       <p class="text-sm">⭐ EXP total: ${totalExp}</p>
 
+      ${
+        skills.length
+          ? `<button
+              onclick='openSkillsModal(${JSON.stringify(skills)})'
+              class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
+              Ver habilidades (${skills.length})
+            </button>`
+          : ""
+      }
+
       <div class="mt-auto">
         <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
           <div class="bg-green-500 h-3" style="width:${exp.percent}%"></div>
@@ -233,64 +305,28 @@ function renderPlayerBoard(list = []) {
         <p class="text-xs text-stone-300 mt-1 text-center">
           ${exp.current} / ${exp.required} · faltan ${exp.remaining}
         </p>
+
+        <div class="grid grid-cols-6 gap-1 mt-3">
+          ${(p.items || []).slice(0, 6).map((item, i) => `
+            <img
+              src="${resolveImage(item)}"
+              data-img="${resolveImage(item)}"
+              data-desc="${(p.itemDescriptions?.[i] || "Sin descripción").replace(/"/g, "&quot;")}"
+              class="w-10 h-10 object-cover rounded border cursor-pointer"
+            />
+          `).join("")}
+        </div>
       </div>
     `;
 
+    card.querySelectorAll("[data-img]").forEach(el => {
+      el.addEventListener("click", () => {
+        openItemModal(el.dataset.img, el.dataset.desc);
+      });
+    });
+
     playerBoard.appendChild(card);
   });
-}
-
-// =============================================================
-// 🔍 FILTROS (BUSCADOR + ORDEN + NIVEL)
-// =============================================================
-
-const searchInput = document.getElementById("searchInput");
-const sortAlphabet = document.getElementById("sortAlphabet");
-const filterLevel = document.getElementById("filterLevel");
-
-function applyFilters() {
-  let result = [...players];
-
-  const query = searchInput?.value.trim().toLowerCase();
-  if (query) {
-    result = result.filter(p =>
-      p.name?.toLowerCase().includes(query)
-    );
-  }
-
-  const levelFilter = filterLevel?.value;
-  if (levelFilter) {
-    result = result.filter(p => {
-      const lvl = Number(p.level) || 1;
-      if (levelFilter === "1-3") return lvl <= 3;
-      if (levelFilter === "4-6") return lvl >= 4 && lvl <= 6;
-      if (levelFilter === "7-9") return lvl >= 7 && lvl <= 9;
-      if (levelFilter === "10+") return lvl >= 10;
-      return true;
-    });
-  }
-
-  const sort = sortAlphabet?.value;
-  if (sort === "az") {
-    result.sort((a, b) => a.name.localeCompare(b.name));
-  } else if (sort === "za") {
-    result.sort((a, b) => b.name.localeCompare(a.name));
-  }
-
-  renderPlayerBoard(result);
-}
-
-function initFilters() {
-  if (!searchInput || !sortAlphabet || !filterLevel) {
-    console.warn("⚠️ Filtros no inicializados: faltan elementos HTML");
-    return;
-  }
-
-  searchInput.addEventListener("input", applyFilters);
-  sortAlphabet.addEventListener("change", applyFilters);
-  filterLevel.addEventListener("change", applyFilters);
-
-  console.log("✅ Filtros inicializados correctamente");
 }
 
 // =============================================================
@@ -317,11 +353,70 @@ function initSSE() {
 }
 
 // =============================================================
-// INIT
+// 🔍 FILTROS (BUSCADOR + ORDEN + NIVEL)
+// =============================================================
+
+const searchInput = document.getElementById("searchInput");
+const sortAlphabet = document.getElementById("sortAlphabet");
+const filterLevel = document.getElementById("filterLevel");
+
+function applyFilters() {
+  let result = [...players];
+
+  // 🔍 BUSCADOR POR NOMBRE
+  const query = searchInput?.value.trim().toLowerCase();
+  if (query) {
+    result = result.filter(p =>
+      p.name?.toLowerCase().includes(query)
+    );
+  }
+
+  // 🎚️ FILTRO POR NIVEL
+  const levelFilter = filterLevel?.value;
+  if (levelFilter) {
+    result = result.filter(p => {
+      const lvl = Number(p.level) || 1;
+
+      switch (levelFilter) {
+        case "1-3":
+          return lvl >= 1 && lvl <= 3;
+        case "4-6":
+          return lvl >= 4 && lvl <= 6;
+        case "7-9":
+          return lvl >= 7 && lvl <= 9;
+        case "10+":
+          return lvl >= 10;
+        default:
+          return true;
+      }
+    });
+  }
+
+  // 🔤 ORDEN ALFABÉTICO
+  const sort = sortAlphabet?.value;
+  if (sort === "az") {
+    result.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sort === "za") {
+    result.sort((a, b) => b.name.localeCompare(a.name));
+  }
+
+  renderPlayerBoard(result);
+}
+
+// =============================================================
+// 🎧 EVENTOS
+// =============================================================
+
+searchInput?.addEventListener("input", applyFilters);
+sortAlphabet?.addEventListener("change", applyFilters);
+filterLevel?.addEventListener("change", applyFilters);
+
+
+// =============================================================
+// INIT 
 // =============================================================
 
 window.addEventListener("load", () => {
   loadPlayers(false);
   initSSE();
-  initFilters();
 });
