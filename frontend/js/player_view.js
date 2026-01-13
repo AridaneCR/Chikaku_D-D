@@ -363,11 +363,13 @@ const filterLevel = document.getElementById("filterLevel");
 function applyFilters() {
   let result = [...players];
 
-  // 🔍 BUSCADOR POR NOMBRE
-  const query = searchInput?.value.trim().toLowerCase();
+  // 🔍 BUSCADOR POR NOMBRE (FIX DEFINITIVO)
+  const query =
+    searchInput?.value?.trim()?.toLowerCase() || "";
+
   if (query) {
     result = result.filter(p =>
-      p.name?.toLowerCase().includes(query)
+      (p.name || "").toLowerCase().includes(query)
     );
   }
 
@@ -395,9 +397,13 @@ function applyFilters() {
   // 🔤 ORDEN ALFABÉTICO
   const sort = sortAlphabet?.value;
   if (sort === "az") {
-    result.sort((a, b) => a.name.localeCompare(b.name));
+    result.sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "")
+    );
   } else if (sort === "za") {
-    result.sort((a, b) => b.name.localeCompare(a.name));
+    result.sort((a, b) =>
+      (b.name || "").localeCompare(a.name || "")
+    );
   }
 
   renderPlayerBoard(result);
