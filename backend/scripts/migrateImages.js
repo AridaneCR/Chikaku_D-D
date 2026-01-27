@@ -1,114 +1,74 @@
-/**
- * MIGRACIÓN DE IMÁGENES LEGACY A FORMATO CLOUDINARY
- *
- * Convierte:
- *  - img: "https://res.cloudinary.com/..."
- *  - items: ["https://res.cloudinary.com/..."]
- *
- * A:
- *  - img: { url, publicId }
- *  - items: [{ url, publicId }]
- */
-
 require("dotenv").config();
 const mongoose = require("mongoose");
-const Player = require("../models/player");
 
-// ============================================================
-// CONFIG
-// ============================================================
-const MONGO_URI = process.env.MONGO_URI;
+const extractPublicId = (url) => {
+  if (!url || typeof url !== "string") return null;
 
-if (!MONGO_URI) {
-  console.error("❌ MONGO_URI no definido");
-  process.exit(1);
-}
+  const idx = url.indexOf("/upload/");
+  if (idx === -1) return null;
 
-// ============================================================
-// UTIL
-// ============================================================
-function extractPublicId(url) {
+  let pid = url.slice(idx + 8);
+  pid = pid.replace(/^v\d+\//, "");
+  return pid;
+};
+
+(async () => {
   try {
-    // https://res.cloudinary.com/<cloud>/image/upload/v123/folder/name.jpg
-    const parts = url.split("/upload/");
-    if (!parts[1]) return null;
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("✅ MongoDB conectado");
 
-    return parts[1]
-      .replace(/^v\d+\//, "") // quita versión
-      .replace(/\.[a-zA-Z0-9]+$/, ""); // quita extensión
-  } catch {
-    return null;
-  }
-}
+    const db = mongoose.connection.db;
+    const collection = db.collection("players"); // ⚠️ nombre real
 
-// ============================================================
-// MAIN
-// ============================================================
-async function migrate() {
-  await mongoose.connect(MONGO_URI);
-  console.log("✅ MongoDB conectado");
+    const players = await collection.find({}).toArray();
+    console.log(`👥 Jugadores encontrados: ${players.length}`);
 
-  const players = await Player.find({});
-  console.log(`🔎 Jugadores encontrados: ${players.length}`);
+    let updated = 0;
 
-  let migrated = 0;
+    for (const p of players) {
+      let changed = false;
+      const update = {};
 
-  for (const p of players) {
-    let changed = false;
-
-    // -------------------------
-    // IMAGEN PRINCIPAL
-    // -------------------------
-    if (typeof p.img === "string" && p.img.startsWith("http")) {
-      const publicId = extractPublicId(p.img);
-
-      if (publicId) {
-        p.img = {
-          url: p.img,
-          publicId,
-        };
-        changed = true;
-        console.log(`🖼️ Migrada img → ${p.name}`);
-      }
-    }
-
-    // -------------------------
-    // ITEMS
-    // -------------------------
-    if (Array.isArray(p.items)) {
-      const newItems = [];
-
-      for (const item of p.items) {
-        if (typeof item === "string" && item.startsWith("http")) {
-          const publicId = extractPublicId(item);
-          if (publicId) {
-            newItems.push({ url: item, publicId });
-            changed = true;
-          }
-        } else {
-          newItems.push(item); // ya migrado
+      // 🔥 IMG PRINCIPAL
+      if (typeof p.img === "string") {
+        const pid = extractPublicId(p.img);
+        if (pid) {
+          update.img = { url: p.img, publicId: pid };
+          changed = true;
+          console.log("🖼️ Migrada img:", pid);
         }
       }
 
+      // 🔥 ITEMS
+      if (Array.isArray(p.items)) {
+        const newItems = p.items.map(it => {
+          if (typeof it === "string") {
+            const pid = extractPublicId(it);
+            if (pid) {
+              changed = true;
+              console.log("📦 Migrado item:", pid);
+              return { url: it, publicId: pid };
+            }
+          }
+          return it;
+        });
+
+        if (changed) update.items = newItems;
+      }
+
       if (changed) {
-        p.items = newItems;
+        await collection.updateOne(
+          { _id: p._id },
+          { $set: update }
+        );
+        updated++;
       }
     }
 
-    if (changed) {
-      p.markModified("img");
-      p.markModified("items");
-      await p.save();
-      migrated++;
-    }
+    console.log(`🔥 MIGRACIÓN COMPLETADA. Jugadores actualizados: ${updated}`);
+    process.exit(0);
+  } catch (err) {
+    console.error("❌ Error:", err);
+    process.exit(1);
   }
-
-  console.log(`✅ Migración completada. Jugadores actualizados: ${migrated}`);
-  process.exit(0);
-}
-
-// ============================================================
-migrate().catch(err => {
-  console.error("❌ Error en migración:", err);
-  process.exit(1);
-});
+})();
