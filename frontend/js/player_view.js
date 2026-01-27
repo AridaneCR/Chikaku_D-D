@@ -148,7 +148,7 @@ async function fetchJson(url, realtime = false) {
 // =============================================================
 
 function buildSignature(list = []) {
-  return list.map(p => `${p._id}:${p.updatedAt}`).join("|");
+  return list.map((p) => `${p._id}:${p.updatedAt}`).join("|");
 }
 
 // =============================================================
@@ -157,7 +157,9 @@ function buildSignature(list = []) {
 
 async function loadPlayers(fromRealtime = false) {
   try {
-    showLoader(fromRealtime ? "Actualizando jugadores…" : "Cargando jugadores…");
+    showLoader(
+      fromRealtime ? "Actualizando jugadores…" : "Cargando jugadores…",
+    );
 
     const { data, duration } = await fetchJson(API_PLAYERS, fromRealtime);
 
@@ -283,9 +285,15 @@ function renderPlayerBoard(list = players) {
         loading="lazy"
       />
 
-      <p class="text-sm">❤️ Salud: ${p.life}</p>
-      <p class="text-sm">🏆 ${p.milestones || "-"}</p>
-      <p class="text-sm">⭐ EXP total: ${totalExp}</p>
+     <p class="text-sm">❤️ Salud: <span class="font-semibold">${p.life}</span></p>
+     <p class="text-sm">🏆 ${p.milestones || "-"}</p>
+     <p class="text-sm">⭐ EXP total: ${totalExp}</p>
+
+     <!-- 🪙 ORO -->
+     <p class="text-sm text-yellow-400 font-bold">
+     🪙 Oro: ${p.gold ?? 0}
+     </p>
+
 
       ${
         skills.length
@@ -307,19 +315,24 @@ function renderPlayerBoard(list = players) {
         </p>
 
         <div class="grid grid-cols-6 gap-1 mt-3">
-          ${(p.items || []).slice(0, 6).map((item, i) => `
+          ${(p.items || [])
+            .slice(0, 6)
+            .map(
+              (item, i) => `
             <img
               src="${resolveImage(item)}"
               data-img="${resolveImage(item)}"
               data-desc="${(p.itemDescriptions?.[i] || "Sin descripción").replace(/"/g, "&quot;")}"
               class="w-10 h-10 object-cover rounded border cursor-pointer"
             />
-          `).join("")}
+          `,
+            )
+            .join("")}
         </div>
       </div>
     `;
 
-    card.querySelectorAll("[data-img]").forEach(el => {
+    card.querySelectorAll("[data-img]").forEach((el) => {
       el.addEventListener("click", () => {
         openItemModal(el.dataset.img, el.dataset.desc);
       });
@@ -364,19 +377,16 @@ function applyFilters() {
   let result = [...players];
 
   // 🔍 BUSCADOR POR NOMBRE (FIX DEFINITIVO)
-  const query =
-    searchInput?.value?.trim()?.toLowerCase() || "";
+  const query = searchInput?.value?.trim()?.toLowerCase() || "";
 
   if (query) {
-    result = result.filter(p =>
-      (p.name || "").toLowerCase().includes(query)
-    );
+    result = result.filter((p) => (p.name || "").toLowerCase().includes(query));
   }
 
   // 🎚️ FILTRO POR NIVEL
   const levelFilter = filterLevel?.value;
   if (levelFilter) {
-    result = result.filter(p => {
+    result = result.filter((p) => {
       const lvl = Number(p.level) || 1;
 
       switch (levelFilter) {
@@ -397,13 +407,9 @@ function applyFilters() {
   // 🔤 ORDEN ALFABÉTICO
   const sort = sortAlphabet?.value;
   if (sort === "az") {
-    result.sort((a, b) =>
-      (a.name || "").localeCompare(b.name || "")
-    );
+    result.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   } else if (sort === "za") {
-    result.sort((a, b) =>
-      (b.name || "").localeCompare(a.name || "")
-    );
+    result.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
   }
 
   renderPlayerBoard(result);
@@ -417,7 +423,6 @@ searchInput?.addEventListener("input", applyFilters);
 sortAlphabet?.addEventListener("change", applyFilters);
 filterLevel?.addEventListener("change", applyFilters);
 
-
 // =============================================================
 // 🔧 COMPATIBILIDAD HTML LEGACY
 // =============================================================
@@ -426,9 +431,8 @@ function searchPlayer() {
   applyFilters();
 }
 
-
 // =============================================================
-// INIT 
+// INIT
 // =============================================================
 
 window.addEventListener("load", () => {

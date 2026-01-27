@@ -7,7 +7,6 @@ const { uploadImage, deleteImage } = require("../utils/cloudinary");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-
 // ============================================================
 // 🧠 CACHE EN MEMORIA (REACTIVADO)
 // ============================================================
@@ -20,12 +19,11 @@ function invalidateCache() {
   CACHE = { etag: null, data: null };
 }
 
-
 // ============================================================
 // 🧩 NORMALIZACIÓN (CLAVE ABSOLUTA)
 // ============================================================
 function normalizePlayer(p) {
-  const resolveImg = img => {
+  const resolveImg = (img) => {
     if (!img) return null;
     if (typeof img === "string") return img;
     if (typeof img === "object") return img.url || img.secure_url || null;
@@ -39,6 +37,8 @@ function normalizePlayer(p) {
     life: Number(p.life) || 10,
     exp: Number(p.exp) || 0,
     level: Number(p.level) || 1,
+    // 🪙 ORO
+    gold: Number(p.gold) || 0,
     milestones: p.milestones || "",
     attributes: p.attributes || "",
     skills: Array.isArray(p.skills) ? p.skills : [],
@@ -57,7 +57,6 @@ function normalizePlayer(p) {
     updatedAt: p.updatedAt,
   };
 }
-
 
 // ============================================================
 // GET ALL PLAYERS (CACHE + ETAG)
@@ -82,7 +81,7 @@ router.get("/", async (req, res) => {
     const normalized = players.map(normalizePlayer);
 
     const signature = normalized
-      .map(p => `${p._id}:${new Date(p.updatedAt).getTime()}`)
+      .map((p) => `${p._id}:${new Date(p.updatedAt).getTime()}`)
       .join("|");
 
     const etag = crypto.createHash("sha1").update(signature).digest("hex");
@@ -97,7 +96,6 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo jugadores" });
   }
 });
-
 
 // ============================================================
 // CREATE PLAYER
@@ -125,7 +123,7 @@ router.post(
       let items = [];
       if (req.files?.items?.length) {
         items = await Promise.all(
-          req.files.items.map(f => uploadImage(f.buffer, "items"))
+          req.files.items.map((f) => uploadImage(f.buffer, "items")),
         );
       }
 
@@ -153,9 +151,8 @@ router.post(
       console.error("CREATE PLAYER ERROR:", err);
       res.status(400).json({ error: "Error creando jugador" });
     }
-  }
+  },
 );
-
 
 // ============================================================
 // UPDATE PLAYER (EDICIÓN DE IMÁGENES 100% FUNCIONAL)
@@ -179,11 +176,14 @@ router.put(
       // CAMPOS SIMPLES
       // ------------------------------
       player.name = req.body.name ?? player.name;
-      player.life = req.body.life !== undefined ? Number(req.body.life) : player.life;
+      player.life =
+        req.body.life !== undefined ? Number(req.body.life) : player.life;
       player.milestones = req.body.milestones ?? player.milestones;
       player.attributes = req.body.attributes ?? player.attributes;
-      player.exp = req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
-      player.level = req.body.level !== undefined ? Number(req.body.level) : player.level;
+      player.exp =
+        req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
+      player.level =
+        req.body.level !== undefined ? Number(req.body.level) : player.level;
 
       if (req.body.skills) {
         player.skills = JSON.parse(req.body.skills);
@@ -197,11 +197,13 @@ router.put(
         : [];
 
       if (itemsToDelete.length) {
-        itemsToDelete.sort((a, b) => b - a).forEach(i => {
-          if (player.items[i]) deleteImage(player.items[i]);
-          player.items.splice(i, 1);
-          player.itemDescriptions.splice(i, 1);
-        });
+        itemsToDelete
+          .sort((a, b) => b - a)
+          .forEach((i) => {
+            if (player.items[i]) deleteImage(player.items[i]);
+            player.items.splice(i, 1);
+            player.itemDescriptions.splice(i, 1);
+          });
         player.markModified("items");
       }
 
@@ -245,7 +247,7 @@ router.put(
         : [];
 
       player.itemDescriptions = player.items.map(
-        (_, i) => newDescriptions[i] || ""
+        (_, i) => newDescriptions[i] || "",
       );
 
       // ------------------------------
@@ -265,9 +267,8 @@ router.put(
       console.error("UPDATE PLAYER ERROR:", err);
       res.status(500).json({ error: "Error actualizando jugador" });
     }
-  }
+  },
 );
-
 
 // ============================================================
 // DELETE PLAYER
@@ -295,6 +296,51 @@ router.delete("/:id", async (req, res) => {
   } catch (err) {
     console.error("DELETE PLAYER ERROR:", err);
     res.status(500).json({ error: "Error eliminando jugador" });
+  }
+});
+
+// ============================================================
+// 🪙 UPDATE GOLD (MASTER)
+// ============================================================
+router.patch("/:id/gold", async (req, res) => {
+  try {
+    const notify = req.app.get("notifyPlayersUpdate");
+
+    const { amount, mode } = req.body;
+    // mode: "add" | "set" (opcional, por defecto suma/resta)
+
+    if (typeof amount !== "number") {
+      return res.status(400).json({ error: "Cantidad inválida" });
+    }
+
+    const player = await Player.findById(req.params.id);
+    if (!player) {
+      return res.status(404).json({ error: "Jugador no encontrado" });
+    }
+
+    // ------------------------------
+    // APLICAR CAMBIO DE ORO
+    // ------------------------------
+    if (mode === "set") {
+      player.gold = Math.max(0, amount);
+    } else {
+      player.gold = Math.max(0, (player.gold || 0) + amount);
+    }
+
+    player.updatedAt = new Date();
+    const saved = await player.save();
+
+    invalidateCache();
+    notify?.();
+
+    res.json({
+      ok: true,
+      gold: saved.gold,
+      player: normalizePlayer(saved),
+    });
+  } catch (err) {
+    console.error("UPDATE GOLD ERROR:", err);
+    res.status(500).json({ error: "Error actualizando oro" });
   }
 });
 

@@ -255,6 +255,35 @@ function deleteItemImage(index) {
   console.log("🗑️ Item marcado para borrar:", realIndex);
 }
 
+
+// =============================================================
+// 🪙 GOLD (MASTER)
+// =============================================================
+async function updateGold(playerId, amount, mode = "add") {
+  try {
+    await fetchJson(
+      `${API_PLAYERS}/${playerId}/gold`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount,
+          mode,
+        }),
+      },
+      true
+    );
+
+    refreshPlayers(true);
+  } catch (err) {
+    console.error("❌ Error actualizando oro:", err);
+    alert("Error actualizando el oro");
+  }
+}
+
+
 // =============================================================
 // PLAYERS LIST
 // =============================================================
@@ -290,17 +319,34 @@ function renderPlayersList() {
       <p>❤️ Vida: ${p.life}</p>
       <p>⭐ EXP: ${p.exp}</p>
 
-      <div class="mt-auto">
-        <button onclick="editPlayer('${p._id}')"
-          class="mt-3 w-full bg-green-600 p-2 rounded">
-          Editar
-        </button>
+      <div class="mt-auto space-y-2">
 
-        <button onclick="deletePlayer('${p._id}')"
-          class="mt-2 w-full bg-red-600 p-2 rounded">
-          Eliminar
-        </button>
-      </div>
+  <!-- 🪙 ORO -->
+  <div class="flex gap-2">
+    <button
+      onclick="updateGold('${p._id}', -10)"
+      class="flex-1 bg-yellow-700 hover:bg-yellow-800 p-1 rounded text-sm">
+      −10
+    </button>
+
+    <button
+      onclick="updateGold('${p._id}', 10)"
+      class="flex-1 bg-yellow-600 hover:bg-yellow-700 p-1 rounded text-sm">
+      +10
+    </button>
+  </div>
+
+  <button onclick="editPlayer('${p._id}')"
+    class="w-full bg-green-600 p-2 rounded">
+    Editar
+  </button>
+
+  <button onclick="deletePlayer('${p._id}')"
+    class="w-full bg-red-600 p-2 rounded">
+    Eliminar
+  </button>
+</div>
+
     `;
     list.appendChild(card);
   });

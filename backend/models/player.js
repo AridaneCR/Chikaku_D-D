@@ -16,7 +16,7 @@ const ImageSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const PlayerSchema = new mongoose.Schema(
@@ -52,6 +52,12 @@ const PlayerSchema = new mongoose.Schema(
     level: {
       type: Number,
       default: 1,
+    },
+
+    // 🪙 ORO
+    gold: {
+      type: Number,
+      default: 0,
     },
 
     milestones: {
@@ -112,7 +118,7 @@ const PlayerSchema = new mongoose.Schema(
   },
   {
     timestamps: true, // 🔥 CLAVE para cache + ETag
-  }
+  },
 );
 
 module.exports = mongoose.model("Player", PlayerSchema);
