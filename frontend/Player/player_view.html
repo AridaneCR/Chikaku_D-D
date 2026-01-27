@@ -9,7 +9,7 @@
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Transiciones -->
+  <!-- Transiciones y extras -->
   <style>
     .exp-bar {
       transition: width 1s ease-in-out;
@@ -33,6 +33,17 @@
       opacity: 0;
       transform: translateY(10px);
       transition: all 0.3s ease;
+    }
+
+    /* =============================================================
+       CALCULADORA
+       ============================================================= */
+    .calc-btn {
+      @apply bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg text-lg;
+    }
+
+    .calc-op {
+      @apply bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-lg;
     }
   </style>
 </head>
@@ -60,13 +71,15 @@
       <div class="flex flex-col md:flex-row gap-4 justify-center items-center">
 
         <!-- 🔍 BUSCAR POR NOMBRE -->
-        <input id="searchInput" type="text" placeholder="Buscar por nombre" class="w-full md:w-64 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
-             text-zinc-100 placeholder-zinc-500 focus:outline-none
-             focus:ring-2 focus:ring-red-500" />
+        <input id="searchInput" type="text" placeholder="Buscar por nombre"
+          class="w-full md:w-64 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
+                 text-zinc-100 placeholder-zinc-500 focus:outline-none
+                 focus:ring-2 focus:ring-red-500" />
 
         <!-- 🎚️ FILTRO POR NIVEL -->
-        <select id="filterLevel" class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
-             text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500">
+        <select id="filterLevel"
+          class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
+                 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500">
           <option value="">Todos los niveles</option>
           <option value="1-3">Nivel 1–3</option>
           <option value="4-6">Nivel 4–6</option>
@@ -75,8 +88,9 @@
         </select>
 
         <!-- 🔤 ORDEN ALFABÉTICO -->
-        <select id="sortAlphabet" class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
-             text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500">
+        <select id="sortAlphabet"
+          class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
+                 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500">
           <option value="">Ordenar</option>
           <option value="az">A → Z</option>
           <option value="za">Z → A</option>
@@ -84,7 +98,6 @@
 
       </div>
     </section>
-
 
     <!-- TABLERO -->
     <section id="playerBoard" class="relative min-h-screen">
@@ -102,25 +115,75 @@
     <div onclick="event.stopPropagation()"
       class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-sm w-full relative shadow-2xl">
 
-      <!-- Botón cerrar -->
       <button onclick="closeObjectModal()" class="absolute top-2 right-2 text-stone-300 hover:text-white text-xl">
         ✕
       </button>
 
-      <!-- Imagen objeto -->
       <img id="objectModalImg" src="" alt="Objeto"
         class="w-full h-48 object-cover rounded mb-4 border border-stone-700" />
 
-      <!-- Descripción -->
-      <p id="objectModalDesc" class="text-stone-200 text-sm whitespace-pre-line">
-      </p>
+      <p id="objectModalDesc" class="text-stone-200 text-sm whitespace-pre-line"></p>
     </div>
   </div>
 
   <!-- =============================================================
-  TOAST CONTAINER (🔥 NUEVO)
+  TOAST CONTAINER
   ============================================================= -->
-  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none">
+  <div id="toastContainer"
+    class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+  <!-- =============================================================
+  BOTÓN CALCULADORA
+  ============================================================= -->
+  <button onclick="openCalc()"
+    class="fixed bottom-6 left-6 z-50 bg-red-500 hover:bg-red-600
+           text-white px-4 py-3 rounded-full shadow-xl text-xl">
+    🧮
+  </button>
+
+  <!-- =============================================================
+  MODAL CALCULADORA
+  ============================================================= -->
+  <div id="calcModal" onclick="closeCalc()"
+    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
+
+    <div onclick="event.stopPropagation()"
+      class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-80 shadow-2xl">
+
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-red-400">🧮 Calculadora</h2>
+        <button onclick="closeCalc()" class="text-zinc-400 hover:text-white text-xl">✕</button>
+      </div>
+
+      <input id="calcDisplay" type="text" readonly
+        class="w-full mb-4 px-3 py-2 text-right text-xl rounded-lg
+               bg-zinc-800 border border-zinc-700 text-zinc-100" />
+
+      <div class="grid grid-cols-4 gap-3">
+        <button onclick="calcInput('7')" class="calc-btn">7</button>
+        <button onclick="calcInput('8')" class="calc-btn">8</button>
+        <button onclick="calcInput('9')" class="calc-btn">9</button>
+        <button onclick="calcInput('/')" class="calc-op">÷</button>
+
+        <button onclick="calcInput('4')" class="calc-btn">4</button>
+        <button onclick="calcInput('5')" class="calc-btn">5</button>
+        <button onclick="calcInput('6')" class="calc-btn">6</button>
+        <button onclick="calcInput('*')" class="calc-op">×</button>
+
+        <button onclick="calcInput('1')" class="calc-btn">1</button>
+        <button onclick="calcInput('2')" class="calc-btn">2</button>
+        <button onclick="calcInput('3')" class="calc-btn">3</button>
+        <button onclick="calcInput('-')" class="calc-op">−</button>
+
+        <button onclick="calcInput('0')" class="calc-btn col-span-2">0</button>
+        <button onclick="calcClear()" class="calc-op">C</button>
+        <button onclick="calcInput('+')" class="calc-op">+</button>
+
+        <button onclick="calcResult()"
+          class="col-span-4 bg-green-600 hover:bg-green-700
+                 text-white py-2 rounded-lg font-bold">=</button>
+      </div>
+    </div>
   </div>
 
   <!-- =============================================================
@@ -128,6 +191,44 @@
   ============================================================= -->
   <script src="/js/player_view.js"></script>
 
-</body>
+  <!-- =============================================================
+  SCRIPT CALCULADORA
+  ============================================================= -->
+  <script>
+    let calcValue = "";
 
+    function openCalc() {
+      const modal = document.getElementById("calcModal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeCalc() {
+      const modal = document.getElementById("calcModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function calcInput(value) {
+      calcValue += value;
+      document.getElementById("calcDisplay").value = calcValue;
+    }
+
+    function calcClear() {
+      calcValue = "";
+      document.getElementById("calcDisplay").value = "";
+    }
+
+    function calcResult() {
+      try {
+        calcValue = eval(calcValue).toString();
+        document.getElementById("calcDisplay").value = calcValue;
+      } catch {
+        document.getElementById("calcDisplay").value = "Error";
+        calcValue = "";
+      }
+    }
+  </script>
+
+</body>
 </html>
