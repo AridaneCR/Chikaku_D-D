@@ -17,6 +17,7 @@ let itemsToDelete = [];
 
 const BASE_EXP = 100;
 const EXP_STEP = 40;
+const charGoldInput = document.getElementById("charGoldInput");
 
 function resolveImage(img) {
   if (!img) return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
@@ -371,6 +372,8 @@ function editPlayer(id) {
   charMilestonesInput.value = player.milestones || "";
   charAttributesInput.value = player.attributes || "";
   charExpInput.value = player.exp ?? 0;
+  charGoldInput.value = player.gold ?? 0;
+
 
   skillsContainer.innerHTML = "";
   (player.skills || []).forEach(addSkillInput);
@@ -437,52 +440,41 @@ async function submitCharacter() {
   fd.append("level", calculatedLevel);
   fd.append("skills", JSON.stringify(skills));
   fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
-  // 🔥 LIMPIAR CONFLICTOS: no borrar slots con imagen nueva
-  const indicesWithNewImages = [];
 
+  // 🪙 SOLO EN CREATE
+  if (formMode === "create") {
+    fd.append("gold", Number(charGoldInput.value) || 0);
+  }
+
+  // =============================
+  // LIMPIEZA ITEMS
+  // =============================
+  const indicesWithNewImages = [];
   for (let i = 1; i <= 6; i++) {
     const input = document.getElementById(`item${i}Input`);
-    if (input?.files?.[0]) {
-      indicesWithNewImages.push(i - 1);
-    }
+    if (input?.files?.[0]) indicesWithNewImages.push(i - 1);
   }
 
   itemsToDelete = itemsToDelete.filter(
     (i) => !indicesWithNewImages.includes(i)
   );
-
   fd.append("itemsToDelete", JSON.stringify(itemsToDelete));
 
   // =============================
-  // IMAGEN PRINCIPAL
+  // IMÁGENES
   // =============================
   if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
-    console.log("🖼️ Enviando imagen principal:", charImgInput.files[0].name);
     fd.append("charImg", charImgInput.files[0]);
   }
 
-  // =============================
-  // OBJETOS POR SLOT (CLAVE)
-  // =============================
   for (let i = 1; i <= 6; i++) {
     const input = document.getElementById(`item${i}Input`);
     const file = input?.files?.[0];
-
     if (file && validateImage(file)) {
-      console.log(`📦 Objeto slot ${i - 1}:`, file.name);
       fd.append("items", file);
-      fd.append("itemsIndex", i - 1); // 🔥 CLAVE ABSOLUTA
+      fd.append("itemsIndex", i - 1);
     }
   }
-
-  // =============================
-  // DEBUG FINAL (MUY IMPORTANTE)
-  // =============================
-  console.group("📤 FormData enviado");
-  for (const [key, value] of fd.entries()) {
-    console.log(key, value);
-  }
-  console.groupEnd();
 
   // =============================
   // FETCH
@@ -492,11 +484,15 @@ async function submitCharacter() {
   } else {
     await fetchJson(
       `${API_PLAYERS}/${editingPlayerId}`,
-      {
-        method: "PUT",
-        body: fd,
-      },
+      { method: "PUT", body: fd },
       true
+    );
+
+    // 🪙 EDIT → actualizar oro DESPUÉS
+    await updateGold(
+      editingPlayerId,
+      Number(charGoldInput.value) || 0,
+      "set"
     );
   }
 
@@ -508,6 +504,7 @@ async function submitCharacter() {
   toggleCreateCard();
   refreshPlayers(true);
 }
+
 
 // =============================================================
 // DELETE
