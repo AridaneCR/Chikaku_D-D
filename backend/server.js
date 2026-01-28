@@ -106,5 +106,5 @@ app.listen(PORT, () =>
 // KEEPALIVE (RENDER)
 // =============================================================
 setInterval(() => {
-  fetch("https://chikaku-d-d.onrender.com").catch(() => {});
+  fetch("https://chikaku-d-d-backend-pbe.onrender.com").catch(() => {});
 }, 10 * 60 * 1000);
