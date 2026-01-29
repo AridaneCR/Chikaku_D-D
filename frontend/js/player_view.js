@@ -286,23 +286,38 @@ function renderPlayerBoard(list = players) {
       />
 
      <p class="text-sm">❤️ Salud: <span class="font-semibold">${p.life}</span></p>
-     <p class="text-sm">🏆 ${p.milestones || "-"}</p>
-     <p class="text-sm">⭐ EXP total: ${totalExp}</p>
 
-     <!-- 🪙 ORO -->
-     <p class="text-sm text-yellow-400 font-bold">
-     🪙 Oro: ${p.gold ?? 0}
-     </p>
+${p.class
+        ? `
+      <div class="class-container">
+        <span class="class-badge">🧙 ${p.class}</span>
+        ${p.subclass
+          ? `<span class="subclass-badge">✨ ${p.subclass}</span>`
+          : ""
+        }
+      </div>
+    `
+        : ""
+      }
+
+<p class="text-sm">🏆 ${p.milestones || "-"}</p>
+
+<p class="text-sm">⭐ EXP total: ${totalExp}</p>
+
+<!-- 🪙 ORO -->
+<p class="text-sm text-yellow-400 font-bold">
+  🪙 Oro: ${p.gold ?? 0}
+</p>
 
 
-      ${
-        skills.length
-          ? `<button
+
+      ${skills.length
+        ? `<button
               onclick='openSkillsModal(${JSON.stringify(skills)})'
               class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
               Ver habilidades (${skills.length})
             </button>`
-          : ""
+        : ""
       }
 
       <div class="mt-auto">
@@ -316,9 +331,9 @@ function renderPlayerBoard(list = players) {
 
         <div class="grid grid-cols-6 gap-1 mt-3">
           ${(p.items || [])
-            .slice(0, 6)
-            .map(
-              (item, i) => `
+        .slice(0, 6)
+        .map(
+          (item, i) => `
             <img
               src="${resolveImage(item)}"
               data-img="${resolveImage(item)}"
@@ -326,8 +341,8 @@ function renderPlayerBoard(list = players) {
               class="w-10 h-10 object-cover rounded border cursor-pointer"
             />
           `,
-            )
-            .join("")}
+        )
+        .join("")}
         </div>
       </div>
     `;

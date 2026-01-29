@@ -92,6 +92,45 @@ const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 // =============================================================
+// 🧙 CLASE / SUBCLASE (DEPENDIENTES)
+// =============================================================
+
+const charClassInput = document.getElementById("charClassInput");
+const charSubclassInput = document.getElementById("charSubclassInput");
+
+const SUBCLASSES_BY_CLASS = {
+  Guerrero: ["Explorador", "Luchador"],
+  Mago: ["Arcano", "Elemental"],
+  Apoyo: ["Sanador", "Monje"],
+};
+
+function updateSubclassOptions(selectedClass, selectedSubclass = "") {
+  charSubclassInput.innerHTML =
+    `<option value="">— Selecciona subclase —</option>`;
+
+  if (!selectedClass || !SUBCLASSES_BY_CLASS[selectedClass]) {
+    charSubclassInput.disabled = true;
+    return;
+  }
+
+  SUBCLASSES_BY_CLASS[selectedClass].forEach((sub) => {
+    const opt = document.createElement("option");
+    opt.value = sub;
+    opt.textContent = sub;
+    if (sub === selectedSubclass) opt.selected = true;
+    charSubclassInput.appendChild(opt);
+  });
+
+  charSubclassInput.disabled = false;
+}
+
+// Evento cuando cambia la clase
+charClassInput?.addEventListener("change", () => {
+  updateSubclassOptions(charClassInput.value);
+});
+
+
+// =============================================================
 // LOADER
 // =============================================================
 function showLoader() {
@@ -373,6 +412,9 @@ function editPlayer(id) {
   charAttributesInput.value = player.attributes || "";
   charExpInput.value = player.exp ?? 0;
   charGoldInput.value = player.gold ?? 0;
+  charClassInput.value = player.class || "";
+  updateSubclassOptions(player.class, player.subclass || "");
+
 
 
   skillsContainer.innerHTML = "";
@@ -440,6 +482,9 @@ async function submitCharacter() {
   fd.append("level", calculatedLevel);
   fd.append("skills", JSON.stringify(skills));
   fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
+  fd.append("class", charClassInput.value);
+  fd.append("subclass", charSubclassInput.value);
+
 
   // 🪙 SOLO EN CREATE
   if (formMode === "create") {
@@ -503,6 +548,7 @@ async function submitCharacter() {
   resetForm();
   toggleCreateCard();
   refreshPlayers(true);
+
 }
 
 
@@ -534,6 +580,9 @@ function resetForm() {
   skillsContainer.innerHTML = "";
   charImgInput.value = "";
   previewCharMain.classList.add("hidden");
+  charClassInput.value = "";
+  updateSubclassOptions("");
+
 
   initItems();
 }

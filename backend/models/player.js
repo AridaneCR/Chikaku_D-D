@@ -69,6 +69,18 @@ const PlayerSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    class: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    subclass: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
 
     // -------------------------
     // SKILLS
@@ -116,6 +128,8 @@ const PlayerSchema = new mongoose.Schema(
       default: [],
     },
   },
+
+
   {
     timestamps: true, // 🔥 CLAVE para cache + ETag
   },

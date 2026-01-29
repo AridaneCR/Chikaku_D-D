@@ -139,6 +139,9 @@ router.post(
         img,
         items,
         itemDescriptions: items.map((_, i) => itemDescriptions[i] || ""),
+        class: req.body.class || "",
+        subclass: req.body.subclass || "",
+
       });
 
       const saved = await player.save();
