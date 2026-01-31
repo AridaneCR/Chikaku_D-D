@@ -37,8 +37,14 @@ function normalizePlayer(p) {
     life: Number(p.life) || 10,
     exp: Number(p.exp) || 0,
     level: Number(p.level) || 1,
+
     // 🪙 ORO
     gold: Number(p.gold) || 0,
+
+    // 🧙 CLASE / SUBCLASE
+    class: p.class || "",
+    subclass: p.subclass || "",
+
     milestones: p.milestones || "",
     attributes: p.attributes || "",
     skills: Array.isArray(p.skills) ? p.skills : [],
@@ -141,7 +147,6 @@ router.post(
         itemDescriptions: items.map((_, i) => itemDescriptions[i] || ""),
         class: req.body.class || "",
         subclass: req.body.subclass || "",
-
       });
 
       const saved = await player.save();
@@ -181,12 +186,19 @@ router.put(
       player.name = req.body.name ?? player.name;
       player.life =
         req.body.life !== undefined ? Number(req.body.life) : player.life;
-      player.milestones = req.body.milestones ?? player.milestones;
-      player.attributes = req.body.attributes ?? player.attributes;
+
       player.exp =
         req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
+
       player.level =
         req.body.level !== undefined ? Number(req.body.level) : player.level;
+
+      // 🧙 CLASE / SUBCLASE
+      player.class =
+        req.body.class !== undefined ? req.body.class : player.class;
+
+      player.subclass =
+        req.body.subclass !== undefined ? req.body.subclass : player.subclass;
 
       if (req.body.skills) {
         player.skills = JSON.parse(req.body.skills);
