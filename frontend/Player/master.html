@@ -130,11 +130,22 @@
       </div>
 
       <!-- OBJETOS -->
-      <div class="mt-8 bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
-        <h3 class="section-title text-emerald-400">Objetos (máx. 6)</h3>
-        <div id="objectsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-        </div>
-      </div>
+<div class="mt-8 bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
+  <h3 class="section-title text-emerald-400">Objetos</h3>
+
+  <div
+    id="objectsContainer"
+    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4"
+  ></div>
+
+  <button
+    type="button"
+    onclick="addItemSlot()"
+    class="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 py-2 rounded-lg font-bold"
+  >
+    ➕ Añadir objeto
+  </button>
+</div>
 
       <!-- BOTÓN -->
       <button id="submitCharacterBtn" onclick="submitCharacter()" class="mt-10 w-full py-3 rounded-xl
