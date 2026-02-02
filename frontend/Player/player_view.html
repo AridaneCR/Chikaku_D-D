@@ -1,70 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tablero de D&D - Jugador</title>
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Transiciones y extras -->
   <style>
     .exp-bar {
       transition: width 1s ease-in-out;
     }
 
-    /* =============================================================
-       TOAST ANIMATIONS
-       ============================================================= */
-    .toast-enter {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-
-    .toast-enter-active {
-      opacity: 1;
-      transform: translateY(0);
-      transition: all 0.3s ease;
-    }
-
-    .toast-exit {
-      opacity: 0;
-      transform: translateY(10px);
-      transition: all 0.3s ease;
-    }
-
-    /* =============================================================
-       CALCULADORA
-       ============================================================= */
-    .calc-btn {
-      background-color: #27272a;
-      color: white;
-      padding: 0.5rem;
-      border-radius: 0.5rem;
-      font-size: 1.125rem;
-    }
-
-    .calc-btn:hover {
-      background-color: #3f3f46;
-    }
-
-    .calc-op {
-      background-color: #ef4444;
-      color: white;
-      padding: 0.5rem;
-      border-radius: 0.5rem;
-      font-size: 1.125rem;
-    }
-
-    .calc-op:hover {
-      background-color: #dc2626;
-    }
-
-    /* =============================================================
-       CLASE / SUBCLASE (PLAYER VIEW)
-       ============================================================= */
     .class-container {
       display: flex;
       gap: 0.5rem;
@@ -73,23 +21,21 @@
     }
 
     .class-badge {
-      display: inline-block;
       padding: 0.15rem 0.6rem;
       border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 600;
-      background-color: #312e81; /* indigo-900 */
-      color: #c7d2fe; /* indigo-200 */
+      background-color: #312e81;
+      color: #c7d2fe;
     }
 
     .subclass-badge {
-      display: inline-block;
       padding: 0.15rem 0.6rem;
       border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 600;
-      background-color: #064e3b; /* emerald-900 */
-      color: #a7f3d0; /* emerald-200 */
+      background-color: #064e3b;
+      color: #a7f3d0;
     }
   </style>
 </head>
@@ -143,17 +89,14 @@
     </section>
 
     <!-- TABLERO -->
-    <section id="playerBoard" class="relative min-h-screen">
-      <!-- Cards renderizadas desde player_view.js -->
-    </section>
-
+    <section id="playerBoard" class="relative min-h-screen"></section>
   </main>
 
   <!-- =============================================================
-  MODAL OBJETOS
+  MODAL OBJETO (🔥 SIEMPRE ARRIBA)
   ============================================================= -->
   <div id="objectModal" onclick="closeObjectModal()"
-    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
+    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[999]">
 
     <div onclick="event.stopPropagation()"
       class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-sm w-full relative shadow-2xl">
@@ -163,27 +106,34 @@
         ✕
       </button>
 
-      <img id="objectModalImg" src="" alt="Objeto"
+      <img id="objectModalImg"
         class="w-full h-48 object-cover rounded mb-4 border border-stone-700" />
 
-      <p id="objectModalDesc" class="text-stone-200 text-sm whitespace-pre-line"></p>
+      <p id="objectModalDesc"
+        class="text-stone-200 text-sm whitespace-pre-line"></p>
     </div>
   </div>
 
-  <!-- TOAST -->
+  <!-- =============================================================
+  TOASTS
+  ============================================================= -->
   <div id="toastContainer"
     class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none"></div>
 
-  <!-- BOTÓN CALCULADORA -->
+  <!-- =============================================================
+  BOTÓN CALCULADORA
+  ============================================================= -->
   <button onclick="openCalc()"
     class="fixed bottom-6 left-6 z-50 bg-red-500 hover:bg-yellow-600
            text-white px-4 py-3 rounded-full shadow-xl text-xl">
     🧮
   </button>
 
-  <!-- MODAL CALCULADORA -->
+  <!-- =============================================================
+  MODAL CALCULADORA
+  ============================================================= -->
   <div id="calcModal" onclick="closeCalc()"
-    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
+    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[200]">
 
     <div onclick="event.stopPropagation()"
       class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-80 shadow-2xl">
@@ -193,7 +143,7 @@
         <button onclick="closeCalc()" class="text-zinc-400 hover:text-white text-xl">✕</button>
       </div>
 
-      <input id="calcDisplay" type="text" readonly
+      <input id="calcDisplay" readonly
         class="w-full mb-4 px-3 py-2 text-right text-xl rounded-lg
                bg-zinc-800 border border-zinc-700 text-zinc-100" />
 
@@ -224,7 +174,7 @@
     </div>
   </div>
 
-  <!-- SCRIPT -->
+  <!-- SCRIPT PRINCIPAL -->
   <script src="/js/player_view.js"></script>
 
   <!-- SCRIPT CALCULADORA -->
@@ -232,37 +182,34 @@
     let calcValue = "";
 
     function openCalc() {
-      const modal = document.getElementById("calcModal");
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
+      calcModal.classList.remove("hidden");
+      calcModal.classList.add("flex");
     }
 
     function closeCalc() {
-      const modal = document.getElementById("calcModal");
-      modal.classList.add("hidden");
-      modal.classList.remove("flex");
+      calcModal.classList.add("hidden");
+      calcModal.classList.remove("flex");
     }
 
-    function calcInput(value) {
-      calcValue += value;
-      document.getElementById("calcDisplay").value = calcValue;
+    function calcInput(v) {
+      calcValue += v;
+      calcDisplay.value = calcValue;
     }
 
     function calcClear() {
       calcValue = "";
-      document.getElementById("calcDisplay").value = "";
+      calcDisplay.value = "";
     }
 
     function calcResult() {
       try {
         calcValue = eval(calcValue).toString();
-        document.getElementById("calcDisplay").value = calcValue;
+        calcDisplay.value = calcValue;
       } catch {
-        document.getElementById("calcDisplay").value = "Error";
+        calcDisplay.value = "Error";
         calcValue = "";
       }
     }
   </script>
-
 </body>
 </html>
