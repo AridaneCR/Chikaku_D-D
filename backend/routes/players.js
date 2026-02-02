@@ -8,7 +8,7 @@ const { uploadImage, deleteImage } = require("../utils/cloudinary");
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ============================================================
-// 🧠 CACHE EN MEMORIA (REACTIVADO)
+// 🧠 CACHE EN MEMORIA
 // ============================================================
 let CACHE = {
   etag: null,
@@ -20,7 +20,7 @@ function invalidateCache() {
 }
 
 // ============================================================
-// 🧩 NORMALIZACIÓN (CLAVE ABSOLUTA)
+// 🧩 NORMALIZACIÓN
 // ============================================================
 function normalizePlayer(p) {
   const resolveImg = (img) => {
@@ -37,11 +37,8 @@ function normalizePlayer(p) {
     life: Number(p.life) || 10,
     exp: Number(p.exp) || 0,
     level: Number(p.level) || 1,
-
-    // 🪙 ORO
     gold: Number(p.gold) || 0,
 
-    // 🧙 CLASE / SUBCLASE
     class: p.class || "",
     subclass: p.subclass || "",
 
@@ -65,13 +62,11 @@ function normalizePlayer(p) {
 }
 
 // ============================================================
-// GET ALL PLAYERS (CACHE + ETAG)
+// GET ALL PLAYERS
 // ============================================================
 router.get("/", async (req, res) => {
   try {
-    if (req.headers["x-realtime"] === "1") {
-      invalidateCache();
-    }
+    if (req.headers["x-realtime"] === "1") invalidateCache();
 
     if (CACHE.etag && req.headers["if-none-match"] === CACHE.etag) {
       return res.status(304).end();
@@ -104,13 +99,13 @@ router.get("/", async (req, res) => {
 });
 
 // ============================================================
-// CREATE PLAYER
+// CREATE PLAYER (OBJETOS DINÁMICOS)
 // ============================================================
 router.post(
   "/",
   upload.fields([
     { name: "charImg", maxCount: 1 },
-    { name: "items", maxCount: 6 },
+    { name: "items", maxCount: 100 },
   ]),
   async (req, res) => {
     try {
@@ -121,17 +116,38 @@ router.post(
         ? JSON.parse(req.body.itemDescriptions)
         : [];
 
+      // ---------- IMAGEN PRINCIPAL ----------
       let img = null;
       if (req.files?.charImg?.[0]) {
         img = await uploadImage(req.files.charImg[0].buffer, "players");
       }
 
+      // ---------- OBJETOS CON ÍNDICES ----------
       let items = [];
+      let finalDescriptions = [];
+
+      const indices = req.body.itemsIndex
+        ? Array.isArray(req.body.itemsIndex)
+          ? req.body.itemsIndex.map(Number)
+          : [Number(req.body.itemsIndex)]
+        : [];
+
       if (req.files?.items?.length) {
-        items = await Promise.all(
-          req.files.items.map((f) => uploadImage(f.buffer, "items")),
-        );
+        for (let i = 0; i < req.files.items.length; i++) {
+          const index = indices[i] ?? i;
+          const uploaded = await uploadImage(
+            req.files.items[i].buffer,
+            "items",
+          );
+
+          while (items.length <= index) items.push(null);
+          items[index] = uploaded;
+        }
       }
+
+      finalDescriptions = items.map(
+        (_, i) => itemDescriptions[i] || "",
+      );
 
       const player = new Player({
         campaign: req.body.campaign || "default",
@@ -141,12 +157,13 @@ router.post(
         attributes: req.body.attributes || "",
         exp: Number(req.body.exp) || 0,
         level: Number(req.body.level) || 1,
+        gold: Number(req.body.gold) || 0,
+        class: req.body.class || "",
+        subclass: req.body.subclass || "",
         skills,
         img,
         items,
-        itemDescriptions: items.map((_, i) => itemDescriptions[i] || ""),
-        class: req.body.class || "",
-        subclass: req.body.subclass || "",
+        itemDescriptions: finalDescriptions,
       });
 
       const saved = await player.save();
@@ -157,19 +174,19 @@ router.post(
       res.json(normalizePlayer(saved));
     } catch (err) {
       console.error("CREATE PLAYER ERROR:", err);
-      res.status(400).json({ error: "Error creando jugador" });
+      res.status(500).json({ error: "Error creando jugador" });
     }
   },
 );
 
 // ============================================================
-// UPDATE PLAYER (EDICIÓN DE IMÁGENES 100% FUNCIONAL)
+// UPDATE PLAYER (OBJETOS ILIMITADOS)
 // ============================================================
 router.put(
   "/:id",
   upload.fields([
     { name: "charImg", maxCount: 1 },
-    { name: "items", maxCount: 6 },
+    { name: "items", maxCount: 100 },
   ]),
   async (req, res) => {
     try {
@@ -180,23 +197,16 @@ router.put(
         return res.status(404).json({ error: "Jugador no encontrado" });
       }
 
-      // ------------------------------
-      // CAMPOS SIMPLES
-      // ------------------------------
+      // ---------- CAMPOS ----------
       player.name = req.body.name ?? player.name;
       player.life =
         req.body.life !== undefined ? Number(req.body.life) : player.life;
-
       player.exp =
         req.body.exp !== undefined ? Number(req.body.exp) : player.exp;
-
       player.level =
         req.body.level !== undefined ? Number(req.body.level) : player.level;
-
-      // 🧙 CLASE / SUBCLASE
       player.class =
         req.body.class !== undefined ? req.body.class : player.class;
-
       player.subclass =
         req.body.subclass !== undefined ? req.body.subclass : player.subclass;
 
@@ -204,9 +214,7 @@ router.put(
         player.skills = JSON.parse(req.body.skills);
       }
 
-      // ------------------------------
-      // BORRAR ITEMS
-      // ------------------------------
+      // ---------- BORRAR OBJETOS ----------
       const itemsToDelete = req.body.itemsToDelete
         ? JSON.parse(req.body.itemsToDelete)
         : [];
@@ -222,18 +230,13 @@ router.put(
         player.markModified("items");
       }
 
-      // ------------------------------
-      // IMAGEN PRINCIPAL
-      // ------------------------------
+      // ---------- IMAGEN PRINCIPAL ----------
       if (req.files?.charImg?.[0]) {
         if (player.img) await deleteImage(player.img);
         player.img = await uploadImage(req.files.charImg[0].buffer, "players");
-        player.markModified("img");
       }
 
-      // ------------------------------
-      // REEMPLAZO DE ITEMS POR SLOT
-      // ------------------------------
+      // ---------- SUBIR / REEMPLAZAR OBJETOS ----------
       if (req.files?.items?.length && req.body.itemsIndex !== undefined) {
         const indices = Array.isArray(req.body.itemsIndex)
           ? req.body.itemsIndex.map(Number)
@@ -247,16 +250,19 @@ router.put(
             await deleteImage(player.items[index]);
           }
 
-          const img = await uploadImage(req.files.items[i].buffer, "items");
-          player.items[index] = img;
+          const uploaded = await uploadImage(
+            req.files.items[i].buffer,
+            "items",
+          );
+
+          while (player.items.length <= index) player.items.push(null);
+          player.items[index] = uploaded;
         }
 
         player.markModified("items");
       }
 
-      // ------------------------------
-      // DESCRIPCIONES
-      // ------------------------------
+      // ---------- DESCRIPCIONES ----------
       const newDescriptions = req.body.itemDescriptions
         ? JSON.parse(req.body.itemDescriptions)
         : [];
@@ -265,11 +271,6 @@ router.put(
         (_, i) => newDescriptions[i] || "",
       );
 
-      // ------------------------------
-      // FINAL
-      // ------------------------------
-      player.items = player.items.slice(0, 6);
-      player.itemDescriptions = player.itemDescriptions.slice(0, 6);
       player.updatedAt = new Date();
 
       const saved = await player.save();
@@ -315,14 +316,12 @@ router.delete("/:id", async (req, res) => {
 });
 
 // ============================================================
-// 🪙 UPDATE GOLD (MASTER)
+// 🪙 UPDATE GOLD
 // ============================================================
 router.patch("/:id/gold", async (req, res) => {
   try {
     const notify = req.app.get("notifyPlayersUpdate");
-
     const { amount, mode } = req.body;
-    // mode: "add" | "set" (opcional, por defecto suma/resta)
 
     if (typeof amount !== "number") {
       return res.status(400).json({ error: "Cantidad inválida" });
@@ -333,9 +332,6 @@ router.patch("/:id/gold", async (req, res) => {
       return res.status(404).json({ error: "Jugador no encontrado" });
     }
 
-    // ------------------------------
-    // APLICAR CAMBIO DE ORO
-    // ------------------------------
     if (mode === "set") {
       player.gold = Math.max(0, amount);
     } else {
