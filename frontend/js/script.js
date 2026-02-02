@@ -247,18 +247,21 @@ function initItems() {
   if (!container) return;
 
   container.innerHTML = "";
+  totalItemSlots = 6;
+
   for (let i = 1; i <= 6; i++) {
     const div = document.createElement("div");
     div.className = "object-card";
     div.innerHTML = `
       <label class="label-sm">Objeto ${i}</label>
       <input id="item${i}Input" type="file" class="file" />
-      <textarea id="item${i}Desc" class="input mt-2 resize-none"
-        rows="2" placeholder="Descripción del objeto..."></textarea>
+      <textarea id="item${i}Desc"
+        class="input mt-2 resize-none"
+        rows="2"
+        placeholder="Descripción del objeto..."></textarea>
 
       <img id="previewItem${i}" class="preview mt-3 hidden" />
 
-      <!-- 🔥 NUEVO -->
       <button
         id="deleteItemBtn${i}"
         type="button"
@@ -438,7 +441,7 @@ function editPlayer(id) {
 
   formMode = "edit";
   editingPlayerId = id;
-  itemsToDelete = []; // 🔥 NUEVO
+  itemsToDelete = [];
 
   toggleCreateCard(true);
   submitCharacterBtn.textContent = "✏️ Guardar cambios";
@@ -451,8 +454,6 @@ function editPlayer(id) {
   charGoldInput.value = player.gold ?? 0;
   charClassInput.value = player.class || "";
   updateSubclassOptions(player.class, player.subclass || "");
-
-
 
   skillsContainer.innerHTML = "";
   (player.skills || []).forEach(addSkillInput);
@@ -467,28 +468,15 @@ function editPlayer(id) {
 
   initItems();
 
-  totalItemSlots = 6;
-
   (player.items || []).forEach((img, i) => {
-    if (i >= 6) {
-      addItemSlot();
-    }
+    if (i >= 6) addItemSlot();
 
-    const p = document.getElementById(`previewItem${i + 1}`);
+    const preview = document.getElementById(`previewItem${i + 1}`);
     const btn = document.getElementById(`deleteItemBtn${i + 1}`);
-    if (p && img) {
-      p.src = resolveImage(img);
-      p.classList.remove("hidden");
-      btn?.classList.remove("hidden");
-    }
-  });
 
-  (player.items || []).forEach((img, i) => {
-    const p = document.getElementById(`previewItem${i + 1}`);
-    const btn = document.getElementById(`deleteItemBtn${i + 1}`);
-    if (p && img) {
-      p.src = resolveImage(img);
-      p.classList.remove("hidden");
+    if (preview && img) {
+      preview.src = resolveImage(img);
+      preview.classList.remove("hidden");
       btn?.classList.remove("hidden");
     }
   });
@@ -512,6 +500,9 @@ async function submitCharacter() {
     .map((i) => i.value.trim())
     .filter(Boolean);
 
+  // =============================
+  // DESCRIPCIONES (DINÁMICAS)
+  // =============================
   const itemDescriptions = [];
   for (let i = 1; i <= totalItemSlots; i++) {
     itemDescriptions.push(
@@ -538,8 +529,6 @@ async function submitCharacter() {
   fd.append("class", charClassInput.value);
   fd.append("subclass", charSubclassInput.value);
 
-
-  // 🪙 SOLO EN CREATE
   if (formMode === "create") {
     fd.append("gold", Number(charGoldInput.value) || 0);
   }
@@ -548,7 +537,8 @@ async function submitCharacter() {
   // LIMPIEZA ITEMS
   // =============================
   const indicesWithNewImages = [];
-  for (let i = 1; i <= 6; i++) {
+
+  for (let i = 1; i <= totalItemSlots; i++) {
     const input = document.getElementById(`item${i}Input`);
     if (input?.files?.[0]) indicesWithNewImages.push(i - 1);
   }
@@ -565,7 +555,7 @@ async function submitCharacter() {
     fd.append("charImg", charImgInput.files[0]);
   }
 
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= totalItemSlots; i++) {
     const input = document.getElementById(`item${i}Input`);
     const file = input?.files?.[0];
     if (file && validateImage(file)) {
@@ -586,7 +576,6 @@ async function submitCharacter() {
       true
     );
 
-    // 🪙 EDIT → actualizar oro DESPUÉS
     await updateGold(
       editingPlayerId,
       Number(charGoldInput.value) || 0,
@@ -601,7 +590,6 @@ async function submitCharacter() {
   resetForm();
   toggleCreateCard();
   refreshPlayers(true);
-
 }
 
 
