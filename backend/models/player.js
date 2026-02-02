@@ -16,7 +16,7 @@ const ImageSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const PlayerSchema = new mongoose.Schema(
@@ -54,6 +54,12 @@ const PlayerSchema = new mongoose.Schema(
       default: 1,
     },
 
+    // 🪙 ORO
+    gold: {
+      type: Number,
+      default: 0,
+    },
+
     milestones: {
       type: String,
       default: "",
@@ -63,6 +69,18 @@ const PlayerSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    class: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    subclass: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
 
     // -------------------------
     // SKILLS
@@ -110,9 +128,11 @@ const PlayerSchema = new mongoose.Schema(
       default: [],
     },
   },
+
+
   {
     timestamps: true, // 🔥 CLAVE para cache + ETag
-  }
+  },
 );
 
 module.exports = mongoose.model("Player", PlayerSchema);

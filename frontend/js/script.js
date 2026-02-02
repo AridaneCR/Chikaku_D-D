@@ -7,6 +7,8 @@ let lastSignature = "";
 
 // 🔥 NUEVO → objetos a borrar
 let itemsToDelete = [];
+let totalItemSlots = 6;
+const MAX_ITEM_SLOTS = 100;
 
 // =============================================================
 // XP SYSTEM (ACUMULATIVO)
@@ -17,21 +19,26 @@ let itemsToDelete = [];
 
 const BASE_EXP = 100;
 const EXP_STEP = 40;
+const charGoldInput = document.getElementById("charGoldInput");
 
 function resolveImage(img) {
-  if (!img) return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
+  if (!img)
+    return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
 
   // imagen nueva (string)
   if (typeof img === "string") return img;
 
   // imagen antigua (Cloudinary object)
   if (typeof img === "object") {
-    return img.url || img.secure_url || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
+    return (
+      img.url ||
+      img.secure_url ||
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s"
+    );
   }
 
   return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
 }
-
 
 // Calcula el nivel a partir de la EXP TOTAL acumulada
 function calculateLevelFromExp(totalExp) {
@@ -82,13 +89,50 @@ function openPlayerBoard() {
 const BASE_URL =
   window.__env && window.__env.API_URL
     ? window.__env.API_URL
-    : "https://chikaku-d-d-ptyl.onrender.com";
+    : "https://chikaku-d-d-backend-pbe.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 let players = [];
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+// =============================================================
+// 🧙 CLASE / SUBCLASE (DEPENDIENTES)
+// =============================================================
+
+const charClassInput = document.getElementById("charClassInput");
+const charSubclassInput = document.getElementById("charSubclassInput");
+
+const SUBCLASSES_BY_CLASS = {
+  Guerrero: ["Explorador", "Luchador"],
+  Mago: ["Arcano", "Elemental"],
+  Apoyo: ["Sanador", "Monje"],
+};
+
+function updateSubclassOptions(selectedClass, selectedSubclass = "") {
+  charSubclassInput.innerHTML = `<option value="">— Selecciona subclase —</option>`;
+
+  if (!selectedClass || !SUBCLASSES_BY_CLASS[selectedClass]) {
+    charSubclassInput.disabled = true;
+    return;
+  }
+
+  SUBCLASSES_BY_CLASS[selectedClass].forEach((sub) => {
+    const opt = document.createElement("option");
+    opt.value = sub;
+    opt.textContent = sub;
+    if (sub === selectedSubclass) opt.selected = true;
+    charSubclassInput.appendChild(opt);
+  });
+
+  charSubclassInput.disabled = false;
+}
+
+// Evento cuando cambia la clase
+charClassInput?.addEventListener("change", () => {
+  updateSubclassOptions(charClassInput.value);
+});
 
 // =============================================================
 // LOADER
@@ -204,18 +248,21 @@ function initItems() {
   if (!container) return;
 
   container.innerHTML = "";
+  totalItemSlots = 6;
+
   for (let i = 1; i <= 6; i++) {
     const div = document.createElement("div");
     div.className = "object-card";
     div.innerHTML = `
       <label class="label-sm">Objeto ${i}</label>
       <input id="item${i}Input" type="file" class="file" />
-      <textarea id="item${i}Desc" class="input mt-2 resize-none"
-        rows="2" placeholder="Descripción del objeto..."></textarea>
+      <textarea id="item${i}Desc"
+        class="input mt-2 resize-none"
+        rows="2"
+        placeholder="Descripción del objeto..."></textarea>
 
       <img id="previewItem${i}" class="preview mt-3 hidden" />
 
-      <!-- 🔥 NUEVO -->
       <button
         id="deleteItemBtn${i}"
         type="button"
@@ -227,6 +274,40 @@ function initItems() {
     container.appendChild(div);
     addPreview(`item${i}Input`, `previewItem${i}`, i - 1);
   }
+}
+
+function addItemSlot() {
+  if (totalItemSlots >= MAX_ITEM_SLOTS) {
+    alert("Máximo 100 objetos");
+    return;
+  }
+
+  totalItemSlots++;
+  const i = totalItemSlots;
+
+  const container = document.getElementById("objectsContainer");
+
+  const div = document.createElement("div");
+  div.className = "object-card";
+  div.innerHTML = `
+    <label class="label-sm">Objeto ${i}</label>
+    <input id="item${i}Input" type="file" class="file" />
+    <textarea id="item${i}Desc" class="input mt-2 resize-none"
+      rows="2" placeholder="Descripción del objeto..."></textarea>
+
+    <img id="previewItem${i}" class="preview mt-3 hidden" />
+
+    <button
+      id="deleteItemBtn${i}"
+      type="button"
+      onclick="deleteItemImage(${i})"
+      class="mt-2 w-full bg-red-600 hover:bg-red-700 text-sm rounded p-1 hidden">
+      🗑️ Eliminar imagen
+    </button>
+  `;
+
+  container.appendChild(div);
+  addPreview(`item${i}Input`, `previewItem${i}`, i - 1);
 }
 
 // =============================================================
@@ -253,6 +334,33 @@ function deleteItemImage(index) {
   if (btn) btn.classList.add("hidden");
 
   console.log("🗑️ Item marcado para borrar:", realIndex);
+}
+
+// =============================================================
+// 🪙 GOLD (MASTER)
+// =============================================================
+async function updateGold(playerId, amount, mode = "add") {
+  try {
+    await fetchJson(
+      `${API_PLAYERS}/${playerId}/gold`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount,
+          mode,
+        }),
+      },
+      true,
+    );
+
+    refreshPlayers(true);
+  } catch (err) {
+    console.error("❌ Error actualizando oro:", err);
+    alert("Error actualizando el oro");
+  }
 }
 
 // =============================================================
@@ -290,17 +398,34 @@ function renderPlayersList() {
       <p>❤️ Vida: ${p.life}</p>
       <p>⭐ EXP: ${p.exp}</p>
 
-      <div class="mt-auto">
-        <button onclick="editPlayer('${p._id}')"
-          class="mt-3 w-full bg-green-600 p-2 rounded">
-          Editar
-        </button>
+      <div class="mt-auto space-y-2">
 
-        <button onclick="deletePlayer('${p._id}')"
-          class="mt-2 w-full bg-red-600 p-2 rounded">
-          Eliminar
-        </button>
-      </div>
+  <!-- 🪙 ORO -->
+  <div class="flex gap-2">
+    <button
+      onclick="updateGold('${p._id}', -10)"
+      class="flex-1 bg-yellow-700 hover:bg-yellow-800 p-1 rounded text-sm">
+      −10
+    </button>
+
+    <button
+      onclick="updateGold('${p._id}', 10)"
+      class="flex-1 bg-yellow-600 hover:bg-yellow-700 p-1 rounded text-sm">
+      +10
+    </button>
+  </div>
+
+  <button onclick="editPlayer('${p._id}')"
+    class="w-full bg-green-600 p-2 rounded">
+    Editar
+  </button>
+
+  <button onclick="deletePlayer('${p._id}')"
+    class="w-full bg-red-600 p-2 rounded">
+    Eliminar
+  </button>
+</div>
+
     `;
     list.appendChild(card);
   });
@@ -315,7 +440,7 @@ function editPlayer(id) {
 
   formMode = "edit";
   editingPlayerId = id;
-  itemsToDelete = []; // 🔥 NUEVO
+  itemsToDelete = [];
 
   toggleCreateCard(true);
   submitCharacterBtn.textContent = "✏️ Guardar cambios";
@@ -325,6 +450,9 @@ function editPlayer(id) {
   charMilestonesInput.value = player.milestones || "";
   charAttributesInput.value = player.attributes || "";
   charExpInput.value = player.exp ?? 0;
+  charGoldInput.value = player.gold ?? 0;
+  charClassInput.value = player.class || "";
+  updateSubclassOptions(player.class, player.subclass || "");
 
   skillsContainer.innerHTML = "";
   (player.skills || []).forEach(addSkillInput);
@@ -340,11 +468,14 @@ function editPlayer(id) {
   initItems();
 
   (player.items || []).forEach((img, i) => {
-    const p = document.getElementById(`previewItem${i + 1}`);
+    if (i >= 6) addItemSlot();
+
+    const preview = document.getElementById(`previewItem${i + 1}`);
     const btn = document.getElementById(`deleteItemBtn${i + 1}`);
-    if (p && img) {
-      p.src = resolveImage(img);
-      p.classList.remove("hidden");
+
+    if (preview && img) {
+      preview.src = resolveImage(img);
+      preview.classList.remove("hidden");
       btn?.classList.remove("hidden");
     }
   });
@@ -364,17 +495,26 @@ async function submitCharacter() {
   const name = charNameInput.value.trim();
   if (!name) return;
 
+  // =============================
+  // SKILLS
+  // =============================
   const skills = [...document.querySelectorAll("#skillsContainer input")]
     .map((i) => i.value.trim())
     .filter(Boolean);
 
+  // =============================
+  // DESCRIPCIONES (DINÁMICAS)
+  // =============================
   const itemDescriptions = [];
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= totalItemSlots; i++) {
     itemDescriptions.push(
-      document.getElementById(`item${i}Desc`)?.value.trim() || ""
+      document.getElementById(`item${i}Desc`)?.value.trim() || "",
     );
   }
 
+  // =============================
+  // EXP / LEVEL
+  // =============================
   const totalExp = Number(charExpInput.value) || 0;
   const calculatedLevel = calculateLevelFromExp(totalExp);
 
@@ -391,10 +531,19 @@ async function submitCharacter() {
   fd.append("level", calculatedLevel);
   fd.append("skills", JSON.stringify(skills));
   fd.append("itemDescriptions", JSON.stringify(itemDescriptions));
-  // 🔥 LIMPIAR CONFLICTOS: no borrar slots con imagen nueva
+  fd.append("class", charClassInput.value);
+  fd.append("subclass", charSubclassInput.value);
+
+  if (formMode === "create") {
+    fd.append("gold", Number(charGoldInput.value) || 0);
+  }
+
+  // =============================
+  // LIMPIEZA ITEMS A BORRAR
+  // =============================
   const indicesWithNewImages = [];
 
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= totalItemSlots; i++) {
     const input = document.getElementById(`item${i}Input`);
     if (input?.files?.[0]) {
       indicesWithNewImages.push(i - 1);
@@ -402,65 +551,62 @@ async function submitCharacter() {
   }
 
   itemsToDelete = itemsToDelete.filter(
-    (i) => !indicesWithNewImages.includes(i)
+    (i) => !indicesWithNewImages.includes(i),
   );
-
   fd.append("itemsToDelete", JSON.stringify(itemsToDelete));
 
   // =============================
   // IMAGEN PRINCIPAL
   // =============================
   if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
-    console.log("🖼️ Enviando imagen principal:", charImgInput.files[0].name);
     fd.append("charImg", charImgInput.files[0]);
   }
 
   // =============================
-  // OBJETOS POR SLOT (CLAVE)
+  // 🔥 IMÁGENES DE OBJETOS (CLAVE)
+  // SOLO si existe archivo
   // =============================
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= totalItemSlots; i++) {
     const input = document.getElementById(`item${i}Input`);
     const file = input?.files?.[0];
 
     if (file && validateImage(file)) {
-      console.log(`📦 Objeto slot ${i - 1}:`, file.name);
       fd.append("items", file);
-      fd.append("itemsIndex", i - 1); // 🔥 CLAVE ABSOLUTA
+      fd.append("itemsIndex", String(i - 1));
     }
   }
 
   // =============================
-  // DEBUG FINAL (MUY IMPORTANTE)
-  // =============================
-  console.group("📤 FormData enviado");
-  for (const [key, value] of fd.entries()) {
-    console.log(key, value);
-  }
-  console.groupEnd();
-
-  // =============================
   // FETCH
   // =============================
-  if (formMode === "create") {
-    await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
-  } else {
-    await fetchJson(
-      `${API_PLAYERS}/${editingPlayerId}`,
-      {
-        method: "PUT",
-        body: fd,
-      },
-      true
-    );
-  }
+  try {
+    if (formMode === "create") {
+      await fetchJson(API_PLAYERS, { method: "POST", body: fd }, true);
+    } else {
+      await fetchJson(
+        `${API_PLAYERS}/${editingPlayerId}`,
+        { method: "PUT", body: fd },
+        true,
+      );
 
-  // =============================
-  // RESET
-  // =============================
-  itemsToDelete = [];
-  resetForm();
-  toggleCreateCard();
-  refreshPlayers(true);
+      await updateGold(
+        editingPlayerId,
+        Number(charGoldInput.value) || 0,
+        "set",
+      );
+    }
+
+    // =============================
+    // RESET
+    // =============================
+    itemsToDelete = [];
+    resetForm();
+    toggleCreateCard();
+    refreshPlayers(true);
+  } catch (err) {
+    console.error("❌ Error submitCharacter:", err);
+    alert("Error guardando el personaje");
+  }
 }
 
 // =============================================================
@@ -487,10 +633,13 @@ function resetForm() {
   charMilestonesInput.value = "";
   charAttributesInput.value = "";
   charExpInput.value = 0;
+  totalItemSlots = 6;
 
   skillsContainer.innerHTML = "";
   charImgInput.value = "";
   previewCharMain.classList.add("hidden");
+  charClassInput.value = "";
+  updateSubclassOptions("");
 
   initItems();
 }

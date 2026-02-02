@@ -5,7 +5,7 @@
 const BASE_URL =
   window.__env && window.__env.API_URL
     ? window.__env.API_URL
-    : "https://chikaku-d-d-ptyl.onrender.com";
+    : "https://chikaku-d-d-backend-pbe.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 const SSE_URL = `${BASE_URL}/api/players/stream`;
@@ -148,7 +148,7 @@ async function fetchJson(url, realtime = false) {
 // =============================================================
 
 function buildSignature(list = []) {
-  return list.map(p => `${p._id}:${p.updatedAt}`).join("|");
+  return list.map((p) => `${p._id}:${p.updatedAt}`).join("|");
 }
 
 // =============================================================
@@ -157,7 +157,9 @@ function buildSignature(list = []) {
 
 async function loadPlayers(fromRealtime = false) {
   try {
-    showLoader(fromRealtime ? "Actualizando jugadores…" : "Cargando jugadores…");
+    showLoader(
+      fromRealtime ? "Actualizando jugadores…" : "Cargando jugadores…",
+    );
 
     const { data, duration } = await fetchJson(API_PLAYERS, fromRealtime);
 
@@ -267,59 +269,105 @@ function renderPlayerBoard(list = players) {
     const totalExp = Number(p.exp) || 0;
     const exp = expProgress(totalExp);
     const skills = Array.isArray(p.skills) ? p.skills : [];
+    const visibleItems = (p.items || []).slice(0, 6);
 
     const card = document.createElement("div");
     card.className =
       "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[460px]";
 
-    card.innerHTML = `
-      <h2 class="text-lg font-bold mb-2 truncate text-white">
-        ${p.name} (Nivel ${exp.level})
-      </h2>
+  card.innerHTML = `
+  <h2 class="text-lg font-bold mb-2 truncate text-white">
+    ${p.name} (Nivel ${exp.level})
+  </h2>
 
-      <img
-        src="${resolveImage(p.img)}"
-        class="w-full h-44 object-cover rounded mb-3"
-        loading="lazy"
-      />
+  <img
+    src="${resolveImage(p.img)}"
+    class="w-full h-44 object-cover rounded mb-3"
+    loading="lazy"
+  />
 
-      <p class="text-sm">❤️ Salud: ${p.life}</p>
-      <p class="text-sm">🏆 ${p.milestones || "-"}</p>
-      <p class="text-sm">⭐ EXP total: ${totalExp}</p>
+  <p class="text-sm">
+    ❤️ Salud: <span class="font-semibold">${p.life}</span>
+  </p>
 
-      ${
-        skills.length
-          ? `<button
-              onclick='openSkillsModal(${JSON.stringify(skills)})'
-              class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
-              Ver habilidades (${skills.length})
-            </button>`
-          : ""
-      }
-
-      <div class="mt-auto">
-        <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
-          <div class="bg-green-500 h-3" style="width:${exp.percent}%"></div>
+  ${
+    p.class
+      ? `
+        <div class="flex flex-wrap gap-2 mt-1 mb-1">
+          <span class="bg-indigo-600 text-white text-xs px-2 py-1 rounded">
+            🧙 ${p.class}
+          </span>
+          ${
+            p.subclass
+              ? `<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded">
+                   ✨ ${p.subclass}
+                 </span>`
+              : ""
+          }
         </div>
+      `
+      : ""
+  }
 
-        <p class="text-xs text-stone-300 mt-1 text-center">
-          ${exp.current} / ${exp.required} · faltan ${exp.remaining}
-        </p>
+  <p class="text-sm">🏆 ${p.milestones || "-"}</p>
+  <p class="text-sm">⭐ EXP total: ${totalExp}</p>
 
-        <div class="grid grid-cols-6 gap-1 mt-3">
-          ${(p.items || []).slice(0, 6).map((item, i) => `
+  <p class="text-sm text-yellow-400 font-bold">
+    🪙 Oro: ${p.gold ?? 0}
+  </p>
+
+  ${
+    skills.length
+      ? `<button
+          onclick='openSkillsModal(${JSON.stringify(skills)})'
+          class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
+          Ver habilidades (${skills.length})
+        </button>`
+      : ""
+  }
+
+  <div class="mt-auto">
+    <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
+      <div class="bg-green-500 h-3" style="width:${exp.percent}%"></div>
+    </div>
+
+    <p class="text-xs text-stone-300 mt-1 text-center">
+      ${exp.current} / ${exp.required} · faltan ${exp.remaining}
+    </p>
+
+    <!-- OBJETOS VISIBLES (máx 6) -->
+    <div class="grid grid-cols-6 gap-1 mt-3">
+      ${visibleItems
+        .map(
+          (item, i) => `
             <img
               src="${resolveImage(item)}"
               data-img="${resolveImage(item)}"
               data-desc="${(p.itemDescriptions?.[i] || "Sin descripción").replace(/"/g, "&quot;")}"
               class="w-10 h-10 object-cover rounded border cursor-pointer"
             />
-          `).join("")}
-        </div>
-      </div>
+          `,
+        )
+        .join("")}
+    </div>
+
+    <!-- BOTÓN INVENTARIO -->
+    ${
+      (p.items?.length || 0) > 6
+        ? `<button
+            class="mt-2 w-full bg-zinc-700 hover:bg-zinc-600 text-xs rounded p-1"
+            onclick='openInventoryModal(
+              ${JSON.stringify(p.items)},
+              ${JSON.stringify(p.itemDescriptions || [])}
+            )'>
+            📦 Ver inventario (${p.items.length})
+          </button>`
+        : ""
+    }
+  </div>
     `;
 
-    card.querySelectorAll("[data-img]").forEach(el => {
+    card.querySelectorAll("[data-img]").forEach((el) => {
       el.addEventListener("click", () => {
         openItemModal(el.dataset.img, el.dataset.desc);
       });
@@ -352,6 +400,54 @@ function initSSE() {
   };
 }
 
+
+// =============================================================
+// INVENTARIO
+// =============================================================
+function openInventoryModal(items = [], descriptions = []) {
+  let modal = document.getElementById("inventoryModal");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "inventoryModal";
+    modal.className =
+      "fixed inset-0 bg-black/80 z-50 flex items-center justify-center";
+
+    modal.innerHTML = `
+      <div class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-2xl w-full relative">
+        <button
+          onclick="document.getElementById('inventoryModal').remove()"
+          class="absolute top-2 right-2 text-xl text-white">✕</button>
+
+        <h3 class="text-lg font-bold mb-4 text-center">
+          📦 Inventario
+        </h3>
+
+        <div id="inventoryGrid"
+          class="grid grid-cols-6 gap-2 max-h-[60vh] overflow-y-auto">
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  const grid = modal.querySelector("#inventoryGrid");
+  grid.innerHTML = "";
+
+  items.forEach((item, i) => {
+    const img = document.createElement("img");
+    img.src = resolveImage(item);
+    img.className =
+      "w-12 h-12 object-cover rounded border cursor-pointer";
+    img.onclick = () =>
+      openItemModal(
+        resolveImage(item),
+        descriptions[i] || "Sin descripción"
+      );
+    grid.appendChild(img);
+  });
+}
+
 // =============================================================
 // 🔍 FILTROS (BUSCADOR + ORDEN + NIVEL)
 // =============================================================
@@ -364,19 +460,16 @@ function applyFilters() {
   let result = [...players];
 
   // 🔍 BUSCADOR POR NOMBRE (FIX DEFINITIVO)
-  const query =
-    searchInput?.value?.trim()?.toLowerCase() || "";
+  const query = searchInput?.value?.trim()?.toLowerCase() || "";
 
   if (query) {
-    result = result.filter(p =>
-      (p.name || "").toLowerCase().includes(query)
-    );
+    result = result.filter((p) => (p.name || "").toLowerCase().includes(query));
   }
 
   // 🎚️ FILTRO POR NIVEL
   const levelFilter = filterLevel?.value;
   if (levelFilter) {
-    result = result.filter(p => {
+    result = result.filter((p) => {
       const lvl = Number(p.level) || 1;
 
       switch (levelFilter) {
@@ -397,13 +490,9 @@ function applyFilters() {
   // 🔤 ORDEN ALFABÉTICO
   const sort = sortAlphabet?.value;
   if (sort === "az") {
-    result.sort((a, b) =>
-      (a.name || "").localeCompare(b.name || "")
-    );
+    result.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   } else if (sort === "za") {
-    result.sort((a, b) =>
-      (b.name || "").localeCompare(a.name || "")
-    );
+    result.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
   }
 
   renderPlayerBoard(result);
@@ -417,7 +506,6 @@ searchInput?.addEventListener("input", applyFilters);
 sortAlphabet?.addEventListener("change", applyFilters);
 filterLevel?.addEventListener("change", applyFilters);
 
-
 // =============================================================
 // 🔧 COMPATIBILIDAD HTML LEGACY
 // =============================================================
@@ -426,9 +514,8 @@ function searchPlayer() {
   applyFilters();
 }
 
-
 // =============================================================
-// INIT 
+// INIT
 // =============================================================
 
 window.addEventListener("load", () => {
