@@ -145,9 +145,7 @@ router.post(
         }
       }
 
-      finalDescriptions = items.map(
-        (_, i) => itemDescriptions[i] || "",
-      );
+      finalDescriptions = items.map((_, i) => itemDescriptions[i] || "");
 
       const player = new Player({
         campaign: req.body.campaign || "default",
@@ -213,6 +211,17 @@ router.put(
       if (req.body.skills) {
         player.skills = JSON.parse(req.body.skills);
       }
+
+      // ---------- HITOS Y ATRIBUTOS ----------
+      player.milestones =
+        req.body.milestones !== undefined
+          ? req.body.milestones
+          : player.milestones;
+
+      player.attributes =
+        req.body.attributes !== undefined
+          ? req.body.attributes
+          : player.attributes;
 
       // ---------- BORRAR OBJETOS ----------
       const itemsToDelete = req.body.itemsToDelete
