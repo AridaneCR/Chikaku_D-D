@@ -18,7 +18,6 @@ let players = [];
 let lastSignature = "";
 let isFiltering = false;
 let sseConnected = false;
-const visibleItems = (p.items || []).slice(0, 6);
 
 // 🧊 cold start
 let coldStartChecked = false;
@@ -270,90 +269,75 @@ function renderPlayerBoard(list = players) {
     const totalExp = Number(p.exp) || 0;
     const exp = expProgress(totalExp);
     const skills = Array.isArray(p.skills) ? p.skills : [];
+    const visibleItems = (p.items || []).slice(0, 6);
 
     const card = document.createElement("div");
     card.className =
       "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[460px]";
 
-    card.innerHTML = `
-      <h2 class="text-lg font-bold mb-2 truncate text-white">
-        ${p.name} (Nivel ${exp.level})
-      </h2>
+  card.innerHTML = `
+  <h2 class="text-lg font-bold mb-2 truncate text-white">
+    ${p.name} (Nivel ${exp.level})
+  </h2>
 
-      <img
-        src="${resolveImage(p.img)}"
-        class="w-full h-44 object-cover rounded mb-3"
-        loading="lazy"
-      />
+  <img
+    src="${resolveImage(p.img)}"
+    class="w-full h-44 object-cover rounded mb-3"
+    loading="lazy"
+  />
 
-     <p class="text-sm">❤️ Salud: <span class="font-semibold">${p.life}</span></p>
+  <p class="text-sm">
+    ❤️ Salud: <span class="font-semibold">${p.life}</span>
+  </p>
 
-${p.class
-        ? `
-      <div class="class-container">
-        <span class="class-badge">🧙 ${p.class}</span>
-        ${p.subclass
-          ? `<span class="subclass-badge">✨ ${p.subclass}</span>`
-          : ""
-        }
-      </div>
-    `
-        : ""
-      }
-
-<p class="text-sm">🏆 ${p.milestones || "-"}</p>
-
-<p class="text-sm">⭐ EXP total: ${totalExp}</p>
-
-<!-- 🪙 ORO -->
-<p class="text-sm text-yellow-400 font-bold">
-  🪙 Oro: ${p.gold ?? 0}
-</p>
-
-
-
-      ${skills.length
-        ? `<button
-              onclick='openSkillsModal(${JSON.stringify(skills)})'
-              class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
-              Ver habilidades (${skills.length})
-            </button>`
-        : ""
-      }
-
-      <div class="mt-auto">
-        <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
-          <div class="bg-green-500 h-3" style="width:${exp.percent}%"></div>
+  ${
+    p.class
+      ? `
+        <div class="flex flex-wrap gap-2 mt-1 mb-1">
+          <span class="bg-indigo-600 text-white text-xs px-2 py-1 rounded">
+            🧙 ${p.class}
+          </span>
+          ${
+            p.subclass
+              ? `<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded">
+                   ✨ ${p.subclass}
+                 </span>`
+              : ""
+          }
         </div>
+      `
+      : ""
+  }
 
-        <p class="text-xs text-stone-300 mt-1 text-center">
-          ${exp.current} / ${exp.required} · faltan ${exp.remaining}
-        </p>
+  <p class="text-sm">🏆 ${p.milestones || "-"}</p>
+  <p class="text-sm">⭐ EXP total: ${totalExp}</p>
 
-       <div class="grid grid-cols-6 gap-1 mt-3">
-  ${visibleItems
-        .map(
-          (item, i) => `
-        <img
-          src="${resolveImage(item)}"
-          data-img="${resolveImage(item)}"
-          data-desc="${(p.itemDescriptions?.[i] || "Sin descripción").replace(/"/g, "&quot;")}"
-          class="w-10 h-10 object-cover rounded border cursor-pointer"
-        />
-      `,
-        )
-        .join("")}
-</div>
+  <p class="text-sm text-yellow-400 font-bold">
+    🪙 Oro: ${p.gold ?? 0}
+  </p>
 
-${(p.items?.length || 0) > 6
-        ? `<button
-        class="mt-2 w-full bg-zinc-700 hover:bg-zinc-600 text-xs rounded p-1"
-        onclick='openInventoryModal(${JSON.stringify(p.items)}, ${JSON.stringify(p.itemDescriptions || [])})'>
-        📦 Ver inventario (${p.items.length})
-     </button>`
-        : ""} <div class="grid grid-cols-6 gap-1 mt-3">
-          ${(p.items || [])
-        .slice(0, 6)
+  ${
+    skills.length
+      ? `<button
+          onclick='openSkillsModal(${JSON.stringify(skills)})'
+          class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
+          Ver habilidades (${skills.length})
+        </button>`
+      : ""
+  }
+
+  <div class="mt-auto">
+    <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
+      <div class="bg-green-500 h-3" style="width:${exp.percent}%"></div>
+    </div>
+
+    <p class="text-xs text-stone-300 mt-1 text-center">
+      ${exp.current} / ${exp.required} · faltan ${exp.remaining}
+    </p>
+
+    <!-- OBJETOS VISIBLES (máx 6) -->
+    <div class="grid grid-cols-6 gap-1 mt-3">
+      ${visibleItems
         .map(
           (item, i) => `
             <img
@@ -365,8 +349,22 @@ ${(p.items?.length || 0) > 6
           `,
         )
         .join("")}
-        </div>
-      </div>
+    </div>
+
+    <!-- BOTÓN INVENTARIO -->
+    ${
+      (p.items?.length || 0) > 6
+        ? `<button
+            class="mt-2 w-full bg-zinc-700 hover:bg-zinc-600 text-xs rounded p-1"
+            onclick='openInventoryModal(
+              ${JSON.stringify(p.items)},
+              ${JSON.stringify(p.itemDescriptions || [])}
+            )'>
+            📦 Ver inventario (${p.items.length})
+          </button>`
+        : ""
+    }
+  </div>
     `;
 
     card.querySelectorAll("[data-img]").forEach((el) => {
