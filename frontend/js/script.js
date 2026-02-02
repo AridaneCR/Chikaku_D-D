@@ -496,12 +496,15 @@ async function submitCharacter() {
   const name = charNameInput.value.trim();
   if (!name) return;
 
+  // =============================
+  // SKILLS
+  // =============================
   const skills = [...document.querySelectorAll("#skillsContainer input")]
     .map((i) => i.value.trim())
     .filter(Boolean);
 
   // =============================
-  // DESCRIPCIONES (DINÁMICAS)
+  // DESCRIPCIONES DE OBJETOS
   // =============================
   const itemDescriptions = [];
   for (let i = 1; i <= totalItemSlots; i++) {
@@ -510,6 +513,9 @@ async function submitCharacter() {
     );
   }
 
+  // =============================
+  // EXP / LEVEL
+  // =============================
   const totalExp = Number(charExpInput.value) || 0;
   const calculatedLevel = calculateLevelFromExp(totalExp);
 
@@ -534,7 +540,7 @@ async function submitCharacter() {
   }
 
   // =============================
-  // LIMPIEZA ITEMS
+  // LIMPIEZA DE ITEMS BORRADOS
   // =============================
   const indicesWithNewImages = [];
 
@@ -549,18 +555,22 @@ async function submitCharacter() {
   fd.append("itemsToDelete", JSON.stringify(itemsToDelete));
 
   // =============================
-  // IMÁGENES
+  // IMAGEN PRINCIPAL
   // =============================
   if (charImgInput.files[0] && validateImage(charImgInput.files[0])) {
     fd.append("charImg", charImgInput.files[0]);
   }
 
+  // =============================
+  // 🔥 IMÁGENES DE OBJETOS (CORRECTO)
+  // =============================
   for (let i = 1; i <= totalItemSlots; i++) {
     const input = document.getElementById(`item${i}Input`);
     const file = input?.files?.[0];
+
     if (file && validateImage(file)) {
-      fd.append("items", file);
-      fd.append("itemsIndex", i - 1);
+      // 🔥 CLAVE: índice embebido en el nombre
+      fd.append(`items[${i - 1}]`, file);
     }
   }
 
@@ -576,6 +586,7 @@ async function submitCharacter() {
       true
     );
 
+    // 🪙 actualizar oro tras editar
     await updateGold(
       editingPlayerId,
       Number(charGoldInput.value) || 0,
