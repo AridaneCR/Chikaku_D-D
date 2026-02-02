@@ -21,21 +21,24 @@ const BASE_EXP = 100;
 const EXP_STEP = 40;
 const charGoldInput = document.getElementById("charGoldInput");
 
-
 function resolveImage(img) {
-  if (!img) return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
+  if (!img)
+    return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
 
   // imagen nueva (string)
   if (typeof img === "string") return img;
 
   // imagen antigua (Cloudinary object)
   if (typeof img === "object") {
-    return img.url || img.secure_url || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
+    return (
+      img.url ||
+      img.secure_url ||
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s"
+    );
   }
 
   return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
 }
-
 
 // Calcula el nivel a partir de la EXP TOTAL acumulada
 function calculateLevelFromExp(totalExp) {
@@ -108,8 +111,7 @@ const SUBCLASSES_BY_CLASS = {
 };
 
 function updateSubclassOptions(selectedClass, selectedSubclass = "") {
-  charSubclassInput.innerHTML =
-    `<option value="">— Selecciona subclase —</option>`;
+  charSubclassInput.innerHTML = `<option value="">— Selecciona subclase —</option>`;
 
   if (!selectedClass || !SUBCLASSES_BY_CLASS[selectedClass]) {
     charSubclassInput.disabled = true;
@@ -131,7 +133,6 @@ function updateSubclassOptions(selectedClass, selectedSubclass = "") {
 charClassInput?.addEventListener("change", () => {
   updateSubclassOptions(charClassInput.value);
 });
-
 
 // =============================================================
 // LOADER
@@ -335,7 +336,6 @@ function deleteItemImage(index) {
   console.log("🗑️ Item marcado para borrar:", realIndex);
 }
 
-
 // =============================================================
 // 🪙 GOLD (MASTER)
 // =============================================================
@@ -353,7 +353,7 @@ async function updateGold(playerId, amount, mode = "add") {
           mode,
         }),
       },
-      true
+      true,
     );
 
     refreshPlayers(true);
@@ -362,7 +362,6 @@ async function updateGold(playerId, amount, mode = "add") {
     alert("Error actualizando el oro");
   }
 }
-
 
 // =============================================================
 // PLAYERS LIST
@@ -509,7 +508,7 @@ async function submitCharacter() {
   const itemDescriptions = [];
   for (let i = 1; i <= totalItemSlots; i++) {
     itemDescriptions.push(
-      document.getElementById(`item${i}Desc`)?.value.trim() || ""
+      document.getElementById(`item${i}Desc`)?.value.trim() || "",
     );
   }
 
@@ -552,7 +551,7 @@ async function submitCharacter() {
   }
 
   itemsToDelete = itemsToDelete.filter(
-    (i) => !indicesWithNewImages.includes(i)
+    (i) => !indicesWithNewImages.includes(i),
   );
   fd.append("itemsToDelete", JSON.stringify(itemsToDelete));
 
@@ -587,13 +586,13 @@ async function submitCharacter() {
       await fetchJson(
         `${API_PLAYERS}/${editingPlayerId}`,
         { method: "PUT", body: fd },
-        true
+        true,
       );
 
       await updateGold(
         editingPlayerId,
         Number(charGoldInput.value) || 0,
-        "set"
+        "set",
       );
     }
 
@@ -604,13 +603,11 @@ async function submitCharacter() {
     resetForm();
     toggleCreateCard();
     refreshPlayers(true);
-
   } catch (err) {
     console.error("❌ Error submitCharacter:", err);
     alert("Error guardando el personaje");
   }
 }
-
 
 // =============================================================
 // DELETE
@@ -643,7 +640,6 @@ function resetForm() {
   previewCharMain.classList.add("hidden");
   charClassInput.value = "";
   updateSubclassOptions("");
-
 
   initItems();
 }
