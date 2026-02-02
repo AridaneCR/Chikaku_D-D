@@ -7,6 +7,8 @@ let lastSignature = "";
 
 // 🔥 NUEVO → objetos a borrar
 let itemsToDelete = [];
+let totalItemSlots = 6;
+const MAX_ITEM_SLOTS = 100;
 
 // =============================================================
 // XP SYSTEM (ACUMULATIVO)
@@ -18,6 +20,7 @@ let itemsToDelete = [];
 const BASE_EXP = 100;
 const EXP_STEP = 40;
 const charGoldInput = document.getElementById("charGoldInput");
+
 
 function resolveImage(img) {
   if (!img) return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZKJPFi4auwgPfdm7iTiWRDOe0hLdofEy4Zw&s";
@@ -269,6 +272,40 @@ function initItems() {
   }
 }
 
+function addItemSlot() {
+  if (totalItemSlots >= MAX_ITEM_SLOTS) {
+    alert("Máximo 100 objetos");
+    return;
+  }
+
+  totalItemSlots++;
+  const i = totalItemSlots;
+
+  const container = document.getElementById("objectsContainer");
+
+  const div = document.createElement("div");
+  div.className = "object-card";
+  div.innerHTML = `
+    <label class="label-sm">Objeto ${i}</label>
+    <input id="item${i}Input" type="file" class="file" />
+    <textarea id="item${i}Desc" class="input mt-2 resize-none"
+      rows="2" placeholder="Descripción del objeto..."></textarea>
+
+    <img id="previewItem${i}" class="preview mt-3 hidden" />
+
+    <button
+      id="deleteItemBtn${i}"
+      type="button"
+      onclick="deleteItemImage(${i})"
+      class="mt-2 w-full bg-red-600 hover:bg-red-700 text-sm rounded p-1 hidden">
+      🗑️ Eliminar imagen
+    </button>
+  `;
+
+  container.appendChild(div);
+  addPreview(`item${i}Input`, `previewItem${i}`, i - 1);
+}
+
 // =============================================================
 // 🔥 NUEVO → BORRAR IMAGEN DE OBJETO
 // =============================================================
@@ -430,6 +467,22 @@ function editPlayer(id) {
 
   initItems();
 
+  totalItemSlots = 6;
+
+  (player.items || []).forEach((img, i) => {
+    if (i >= 6) {
+      addItemSlot();
+    }
+
+    const p = document.getElementById(`previewItem${i + 1}`);
+    const btn = document.getElementById(`deleteItemBtn${i + 1}`);
+    if (p && img) {
+      p.src = resolveImage(img);
+      p.classList.remove("hidden");
+      btn?.classList.remove("hidden");
+    }
+  });
+
   (player.items || []).forEach((img, i) => {
     const p = document.getElementById(`previewItem${i + 1}`);
     const btn = document.getElementById(`deleteItemBtn${i + 1}`);
@@ -460,7 +513,7 @@ async function submitCharacter() {
     .filter(Boolean);
 
   const itemDescriptions = [];
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= totalItemSlots; i++) {
     itemDescriptions.push(
       document.getElementById(`item${i}Desc`)?.value.trim() || ""
     );
@@ -576,6 +629,7 @@ function resetForm() {
   charMilestonesInput.value = "";
   charAttributesInput.value = "";
   charExpInput.value = 0;
+  totalItemSlots = 6;
 
   skillsContainer.innerHTML = "";
   charImgInput.value = "";

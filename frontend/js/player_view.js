@@ -18,6 +18,7 @@ let players = [];
 let lastSignature = "";
 let isFiltering = false;
 let sseConnected = false;
+const visibleItems = (p.items || []).slice(0, 6);
 
 // 🧊 cold start
 let coldStartChecked = false;
@@ -329,7 +330,28 @@ ${p.class
           ${exp.current} / ${exp.required} · faltan ${exp.remaining}
         </p>
 
-        <div class="grid grid-cols-6 gap-1 mt-3">
+       <div class="grid grid-cols-6 gap-1 mt-3">
+  ${visibleItems
+        .map(
+          (item, i) => `
+        <img
+          src="${resolveImage(item)}"
+          data-img="${resolveImage(item)}"
+          data-desc="${(p.itemDescriptions?.[i] || "Sin descripción").replace(/"/g, "&quot;")}"
+          class="w-10 h-10 object-cover rounded border cursor-pointer"
+        />
+      `,
+        )
+        .join("")}
+</div>
+
+${(p.items?.length || 0) > 6
+        ? `<button
+        class="mt-2 w-full bg-zinc-700 hover:bg-zinc-600 text-xs rounded p-1"
+        onclick='openInventoryModal(${JSON.stringify(p.items)}, ${JSON.stringify(p.itemDescriptions || [])})'>
+        📦 Ver inventario (${p.items.length})
+     </button>`
+        : ""} <div class="grid grid-cols-6 gap-1 mt-3">
           ${(p.items || [])
         .slice(0, 6)
         .map(
@@ -378,6 +400,54 @@ function initSSE() {
     source.close();
     showToast("⚠️ Conexión tiempo real perdida", "warning");
   };
+}
+
+
+// =============================================================
+// INVENTARIO
+// =============================================================
+function openInventoryModal(items = [], descriptions = []) {
+  let modal = document.getElementById("inventoryModal");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "inventoryModal";
+    modal.className =
+      "fixed inset-0 bg-black/80 z-50 flex items-center justify-center";
+
+    modal.innerHTML = `
+      <div class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-2xl w-full relative">
+        <button
+          onclick="document.getElementById('inventoryModal').remove()"
+          class="absolute top-2 right-2 text-xl text-white">✕</button>
+
+        <h3 class="text-lg font-bold mb-4 text-center">
+          📦 Inventario
+        </h3>
+
+        <div id="inventoryGrid"
+          class="grid grid-cols-6 gap-2 max-h-[60vh] overflow-y-auto">
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  const grid = modal.querySelector("#inventoryGrid");
+  grid.innerHTML = "";
+
+  items.forEach((item, i) => {
+    const img = document.createElement("img");
+    img.src = resolveImage(item);
+    img.className =
+      "w-12 h-12 object-cover rounded border cursor-pointer";
+    img.onclick = () =>
+      openItemModal(
+        resolveImage(item),
+        descriptions[i] || "Sin descripción"
+      );
+    grid.appendChild(img);
+  });
 }
 
 // =============================================================
