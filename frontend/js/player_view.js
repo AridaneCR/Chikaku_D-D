@@ -185,6 +185,7 @@ async function loadPlayers(fromRealtime = false) {
 
     players = data;
     renderPlayerBoard(players);
+    populateClassFilters(players);
 
     if (fromRealtime) {
       showToast("⚡ Jugadores actualizados", "success");
@@ -275,7 +276,7 @@ function renderPlayerBoard(list = players) {
     card.className =
       "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[460px]";
 
-  card.innerHTML = `
+    card.innerHTML = `
   <h2 class="text-lg font-bold mb-2 truncate text-white">
     ${p.name} (Nivel ${exp.level})
   </h2>
@@ -290,24 +291,22 @@ function renderPlayerBoard(list = players) {
     ❤️ Salud: <span class="font-semibold">${p.life}</span>
   </p>
 
-  ${
-    p.class
-      ? `
+  ${p.class
+        ? `
         <div class="flex flex-wrap gap-2 mt-1 mb-1">
           <span class="bg-indigo-600 text-white text-xs px-2 py-1 rounded">
             🧙 ${p.class}
           </span>
-          ${
-            p.subclass
-              ? `<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded">
+          ${p.subclass
+          ? `<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded">
                    ✨ ${p.subclass}
                  </span>`
-              : ""
-          }
+          : ""
+        }
         </div>
       `
-      : ""
-  }
+        : ""
+      }
 
   <p class="text-sm">🏆 ${p.milestones || "-"}</p>
   <p class="text-sm">⭐ EXP total: ${totalExp}</p>
@@ -316,15 +315,14 @@ function renderPlayerBoard(list = players) {
     🪙 Oro: ${p.gold ?? 0}
   </p>
 
-  ${
-    skills.length
-      ? `<button
+  ${skills.length
+        ? `<button
           onclick='openSkillsModal(${JSON.stringify(skills)})'
           class="mt-2 bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-xs">
           Ver habilidades (${skills.length})
         </button>`
-      : ""
-  }
+        : ""
+      }
 
   <div class="mt-auto">
     <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
@@ -352,8 +350,7 @@ function renderPlayerBoard(list = players) {
     </div>
 
     <!-- BOTÓN INVENTARIO -->
-    ${
-      (p.items?.length || 0) > 6
+    ${(p.items?.length || 0) > 6
         ? `<button
             class="mt-2 w-full bg-zinc-700 hover:bg-zinc-600 text-xs rounded p-1"
             onclick='openInventoryModal(
@@ -363,7 +360,7 @@ function renderPlayerBoard(list = players) {
             📦 Ver inventario (${p.items.length})
           </button>`
         : ""
-    }
+      }
   </div>
     `;
 
@@ -455,6 +452,10 @@ function openInventoryModal(items = [], descriptions = []) {
 const searchInput = document.getElementById("searchInput");
 const sortAlphabet = document.getElementById("sortAlphabet");
 const filterLevel = document.getElementById("filterLevel");
+const filterClass = document.getElementById("filterClass");
+const filterSubclass = document.getElementById("filterSubclass");
+
+
 
 function applyFilters() {
   let result = [...players];
@@ -495,7 +496,66 @@ function applyFilters() {
     result.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
   }
 
+  // 🧙 FILTRO POR CLASE
+  const selectedClass = filterClass?.value;
+  if (selectedClass) {
+    result = result.filter((p) => p.class === selectedClass);
+  }
+
+  // ✨ FILTRO POR SUBCLASE
+  const selectedSubclass = filterSubclass?.value;
+  if (selectedSubclass) {
+    result = result.filter((p) => p.subclass === selectedSubclass);
+  }
+
   renderPlayerBoard(result);
+}
+
+function populateClassFilters(players = []) {
+  const classes = new Set();
+  const subclassesByClass = {};
+
+  players.forEach((p) => {
+    if (p.class) {
+      classes.add(p.class);
+      if (!subclassesByClass[p.class]) {
+        subclassesByClass[p.class] = new Set();
+      }
+      if (p.subclass) {
+        subclassesByClass[p.class].add(p.subclass);
+      }
+    }
+  });
+
+  // ----- CLASES -----
+  filterClass.innerHTML = `<option value="">Todas las clases</option>`;
+  [...classes].sort().forEach((cls) => {
+    const opt = document.createElement("option");
+    opt.value = cls;
+    opt.textContent = cls;
+    filterClass.appendChild(opt);
+  });
+
+  // ----- SUBCLASES -----
+  filterSubclass.innerHTML = `<option value="">Todas las subclases</option>`;
+
+  filterClass.onchange = () => {
+    const selectedClass = filterClass.value;
+    filterSubclass.innerHTML = `<option value="">Todas las subclases</option>`;
+
+    if (!selectedClass || !subclassesByClass[selectedClass]) return;
+
+    [...subclassesByClass[selectedClass]]
+      .sort()
+      .forEach((sub) => {
+        const opt = document.createElement("option");
+        opt.value = sub;
+        opt.textContent = sub;
+        filterSubclass.appendChild(opt);
+      });
+
+    applyFilters();
+  };
 }
 
 // =============================================================
@@ -505,6 +565,8 @@ function applyFilters() {
 searchInput?.addEventListener("input", applyFilters);
 sortAlphabet?.addEventListener("change", applyFilters);
 filterLevel?.addEventListener("change", applyFilters);
+filterClass?.addEventListener("change", applyFilters);
+filterSubclass?.addEventListener("change", applyFilters);
 
 // =============================================================
 // 🔧 COMPATIBILIDAD HTML LEGACY
