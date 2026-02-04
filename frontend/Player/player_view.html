@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -14,6 +13,15 @@
       transition: width 1s ease-in-out;
     }
 
+    /* ===== Clamp títulos (evita solapes) ===== */
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* ===== Clases ===== */
     .class-container {
       display: flex;
       gap: 0.5rem;
@@ -43,9 +51,7 @@
 
 <body class="bg-zinc-950 text-zinc-100 min-h-screen">
 
-  <!-- =============================================================
-  HEADER
-  ============================================================= -->
+  <!-- ================= HEADER ================= -->
   <header class="sticky top-0 z-40 bg-zinc-900/80 backdrop-blur border-b border-zinc-800">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <h1 class="text-3xl font-bold tracking-wide text-red-400 text-center">
@@ -54,20 +60,25 @@
     </div>
   </header>
 
-  <!-- =============================================================
-  CONTENIDO
-  ============================================================= -->
+  <!-- ================= CONTENIDO ================= -->
   <main class="max-w-6xl mx-auto px-6 py-8">
 
-    <!-- BUSCADOR -->
+    <!-- ===== FILTROS ===== -->
     <section class="mb-8 bg-zinc-900 border border-zinc-700 rounded-2xl p-4 shadow-lg">
       <div class="flex flex-col md:flex-row gap-4 justify-center items-center">
 
-        <input id="searchInput" type="text" placeholder="Buscar por nombre" class="w-full md:w-64 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Buscar por nombre"
+          class="w-full md:w-64 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
                  text-zinc-100 placeholder-zinc-500 focus:outline-none
-                 focus:ring-2 focus:ring-red-500" />
+                 focus:ring-2 focus:ring-red-500"
+        />
 
-        <select id="filterLevel" class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
+        <select
+          id="filterLevel"
+          class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
                  text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500">
           <option value="">Todos los niveles</option>
           <option value="1-3">Nivel 1–3</option>
@@ -76,76 +87,95 @@
           <option value="10+">Nivel 10+</option>
         </select>
 
-        <select id="sortAlphabet" class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
+        <select
+          id="sortAlphabet"
+          class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
                  text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500">
           <option value="">Ordenar</option>
           <option value="az">A → Z</option>
           <option value="za">Z → A</option>
         </select>
 
-        <select id="filterClass" class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
-         text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500">
-          <option value="">clases</option>
+        <!-- 🔥 CLASE -->
+        <select
+          id="filterClass"
+          class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
+                 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500">
+          <option value="">Todas las clases</option>
         </select>
 
-        <select id="filterSubclass" class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
-         text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500">
-          <option value="">subclases</option>
+        <!-- 🔥 SUBCLASE -->
+        <select
+          id="filterSubclass"
+          class="w-full md:w-40 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700
+                 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500">
+          <option value="">Todas las subclases</option>
         </select>
 
       </div>
     </section>
 
-    <!-- TABLERO -->
+    <!-- ===== TABLERO ===== -->
     <section id="playerBoard" class="relative min-h-screen"></section>
   </main>
 
-  <!-- =============================================================
-  MODAL OBJETO (🔥 SIEMPRE ARRIBA)
-  ============================================================= -->
-  <div id="objectModal" onclick="closeObjectModal()"
-    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[999]">
+  <!-- ================= MODAL OBJETO (SIEMPRE ARRIBA) ================= -->
+  <div
+    id="objectModal"
+    onclick="closeObjectModal()"
+    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[9999]">
 
-    <div onclick="event.stopPropagation()"
+    <div
+      onclick="event.stopPropagation()"
       class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-sm w-full relative shadow-2xl">
 
-      <button onclick="closeObjectModal()" class="absolute top-2 right-2 text-stone-300 hover:text-white text-xl">
+      <button
+        onclick="closeObjectModal()"
+        class="absolute top-2 right-2 text-stone-300 hover:text-white text-xl">
         ✕
       </button>
 
-      <img id="objectModalImg" class="w-full h-48 object-cover rounded mb-4 border border-stone-700" />
+      <img
+        id="objectModalImg"
+        class="w-full h-48 object-cover rounded mb-4 border border-stone-700" />
 
-      <p id="objectModalDesc" class="text-stone-200 text-sm whitespace-pre-line"></p>
+      <p
+        id="objectModalDesc"
+        class="text-stone-200 text-sm whitespace-pre-line"></p>
     </div>
   </div>
 
-  <!-- =============================================================
-  TOASTS
-  ============================================================= -->
-  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none"></div>
+  <!-- ================= TOASTS ================= -->
+  <div
+    id="toastContainer"
+    class="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
 
-  <!-- =============================================================
-  BOTÓN CALCULADORA
-  ============================================================= -->
-  <button onclick="openCalc()" class="fixed bottom-6 left-6 z-50 bg-red-500 hover:bg-yellow-600
+  <!-- ================= CALCULADORA ================= -->
+  <button
+    onclick="openCalc()"
+    class="fixed bottom-6 left-6 z-[900] bg-red-500 hover:bg-yellow-600
            text-white px-4 py-3 rounded-full shadow-xl text-xl">
     🧮
   </button>
 
-  <!-- =============================================================
-  MODAL CALCULADORA
-  ============================================================= -->
-  <div id="calcModal" onclick="closeCalc()"
-    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[200]">
+  <div
+    id="calcModal"
+    onclick="closeCalc()"
+    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[800]">
 
-    <div onclick="event.stopPropagation()" class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-80 shadow-2xl">
+    <div
+      onclick="event.stopPropagation()"
+      class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-80 shadow-2xl">
 
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-bold text-red-400">🧮 Calculadora</h2>
         <button onclick="closeCalc()" class="text-zinc-400 hover:text-white text-xl">✕</button>
       </div>
 
-      <input id="calcDisplay" readonly class="w-full mb-4 px-3 py-2 text-right text-xl rounded-lg
+      <input
+        id="calcDisplay"
+        readonly
+        class="w-full mb-4 px-3 py-2 text-right text-xl rounded-lg
                bg-zinc-800 border border-zinc-700 text-zinc-100" />
 
       <div class="grid grid-cols-4 gap-3">
@@ -168,7 +198,9 @@
         <button onclick="calcClear()" class="calc-op">C</button>
         <button onclick="calcInput('+')" class="calc-op">+</button>
 
-        <button onclick="calcResult()" class="col-span-4 bg-green-600 hover:bg-green-700
+        <button
+          onclick="calcResult()"
+          class="col-span-4 bg-green-600 hover:bg-green-700
                  text-white py-2 rounded-lg font-bold">=</button>
       </div>
     </div>
@@ -177,40 +209,5 @@
   <!-- SCRIPT PRINCIPAL -->
   <script src="/js/player_view.js"></script>
 
-  <!-- SCRIPT CALCULADORA -->
-  <script>
-    let calcValue = "";
-
-    function openCalc() {
-      calcModal.classList.remove("hidden");
-      calcModal.classList.add("flex");
-    }
-
-    function closeCalc() {
-      calcModal.classList.add("hidden");
-      calcModal.classList.remove("flex");
-    }
-
-    function calcInput(v) {
-      calcValue += v;
-      calcDisplay.value = calcValue;
-    }
-
-    function calcClear() {
-      calcValue = "";
-      calcDisplay.value = "";
-    }
-
-    function calcResult() {
-      try {
-        calcValue = eval(calcValue).toString();
-        calcDisplay.value = calcValue;
-      } catch {
-        calcDisplay.value = "Error";
-        calcValue = "";
-      }
-    }
-  </script>
 </body>
-
 </html>
