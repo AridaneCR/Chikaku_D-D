@@ -277,7 +277,9 @@ function renderPlayerBoard(list = players) {
       "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[460px]";
 
     card.innerHTML = `
-  <h2 class="text-lg font-bold mb-2 truncate text-white">
+  <h2
+    class="text-lg font-bold text-white mb-2
+         line-clamp-2 min-h-[3rem] leading-tight">
     ${p.name} (Nivel ${exp.level})
   </h2>
 
