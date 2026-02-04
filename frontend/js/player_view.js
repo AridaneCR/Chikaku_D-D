@@ -274,8 +274,7 @@ function renderPlayerBoard(list = players) {
 
     const card = document.createElement("div");
     card.className =
-      "bg-stone-800 rounded-xl shadow-xl p-4 flex flex-col h-[460px]";
-
+      "bg-stone-800 rounded-xl shadow-xl p-5 flex flex-col h-[580px]";
     card.innerHTML = `
   <h2
     class="text-lg font-bold text-white mb-2
