@@ -20,6 +20,7 @@ const MAX_ITEM_SLOTS = 100;
 const BASE_EXP = 100;
 const EXP_STEP = 40;
 const charGoldInput = document.getElementById("charGoldInput");
+const charPasswordInput = document.getElementById("charPasswordInput");
 
 function resolveImage(img) {
   if (!img)
@@ -96,6 +97,11 @@ let players = [];
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+const MASTER_TOKEN = sessionStorage.getItem("masterToken");
+
+if (!MASTER_TOKEN) {
+  window.location.href = "../index.html";
+}
 
 // =============================================================
 // 🧙 CLASE / SUBCLASE (DEPENDIENTES)
@@ -159,6 +165,7 @@ async function fetchJson(url, opts = {}, showLoading = false) {
         ...(opts.headers || {}),
         "Cache-Control": "no-cache",
         Pragma: "no-cache",
+        Authorization: `Bearer ${MASTER_TOKEN}`,
       },
     });
 
@@ -249,6 +256,7 @@ function initItems() {
 
   container.innerHTML = "";
   totalItemSlots = 6;
+  charPasswordInput.value = "";
 
   for (let i = 1; i <= 6; i++) {
     const div = document.createElement("div");
@@ -538,6 +546,16 @@ async function submitCharacter() {
     fd.append("gold", Number(charGoldInput.value) || 0);
   }
 
+  const loginPassword = charPasswordInput.value.trim();
+  if (formMode === "create" && loginPassword.length < 4) {
+    alert("La contraseña del personaje debe tener al menos 4 caracteres");
+    return;
+  }
+
+  if (loginPassword) {
+    fd.append("loginPassword", loginPassword);
+  }
+
   // =============================
   // LIMPIEZA ITEMS A BORRAR
   // =============================
@@ -634,6 +652,7 @@ function resetForm() {
   charAttributesInput.value = "";
   charExpInput.value = 0;
   totalItemSlots = 6;
+  charPasswordInput.value = "";
 
   skillsContainer.innerHTML = "";
   charImgInput.value = "";
@@ -642,6 +661,11 @@ function resetForm() {
   updateSubclassOptions("");
 
   initItems();
+}
+
+function logoutMaster() {
+  sessionStorage.removeItem("masterToken");
+  window.location.href = "../index.html";
 }
 
 // =============================================================

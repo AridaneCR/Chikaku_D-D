@@ -4,6 +4,7 @@ const multer = require("multer");
 const crypto = require("crypto");
 const Player = require("../models/player");
 const { uploadImage, deleteImage } = require("../utils/cloudinary");
+const { hashPassword, authenticateAny, authenticateMaster } = require("../utils/auth");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -64,7 +65,7 @@ function normalizePlayer(p) {
 // ============================================================
 // GET ALL PLAYERS
 // ============================================================
-router.get("/", async (req, res) => {
+router.get("/", authenticateAny, async (req, res) => {
   try {
     if (req.headers["x-realtime"] === "1") invalidateCache();
 
@@ -103,6 +104,7 @@ router.get("/", async (req, res) => {
 // ============================================================
 router.post(
   "/",
+  authenticateMaster,
   upload.fields([
     { name: "charImg", maxCount: 1 },
     { name: "items", maxCount: 100 },
@@ -164,6 +166,17 @@ router.post(
         itemDescriptions: finalDescriptions,
       });
 
+      const loginPassword = (req.body.loginPassword || "").trim();
+      if (loginPassword.length < 4) {
+        return res
+          .status(400)
+          .json({ error: "La contraseña del personaje debe tener al menos 4 caracteres" });
+      }
+
+      const { hash, salt } = hashPassword(loginPassword);
+      player.passwordHash = hash;
+      player.passwordSalt = salt;
+
       const saved = await player.save();
 
       invalidateCache();
@@ -182,6 +195,7 @@ router.post(
 // ============================================================
 router.put(
   "/:id",
+  authenticateMaster,
   upload.fields([
     { name: "charImg", maxCount: 1 },
     { name: "items", maxCount: 100 },
@@ -282,6 +296,19 @@ router.put(
 
       player.updatedAt = new Date();
 
+      const loginPassword = (req.body.loginPassword || "").trim();
+      if (loginPassword) {
+        if (loginPassword.length < 4) {
+          return res
+            .status(400)
+            .json({ error: "La contraseña del personaje debe tener al menos 4 caracteres" });
+        }
+
+        const { hash, salt } = hashPassword(loginPassword);
+        player.passwordHash = hash;
+        player.passwordSalt = salt;
+      }
+
       const saved = await player.save();
 
       invalidateCache();
@@ -298,7 +325,7 @@ router.put(
 // ============================================================
 // DELETE PLAYER
 // ============================================================
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateMaster, async (req, res) => {
   try {
     const notify = req.app.get("notifyPlayersUpdate");
 
@@ -327,7 +354,7 @@ router.delete("/:id", async (req, res) => {
 // ============================================================
 // 🪙 UPDATE GOLD
 // ============================================================
-router.patch("/:id/gold", async (req, res) => {
+router.patch("/:id/gold", authenticateMaster, async (req, res) => {
   try {
     const notify = req.app.get("notifyPlayersUpdate");
     const { amount, mode } = req.body;
