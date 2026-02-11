@@ -89,7 +89,7 @@ function openPlayerBoard() {
 const BASE_URL =
   window.__env && window.__env.API_URL
     ? window.__env.API_URL
-    : "https://chikaku-d-d-backend-pbe.onrender.com";
+    : "https://chikaku-d-d-ptyl.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 let players = [];
