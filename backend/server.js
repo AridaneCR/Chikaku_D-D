@@ -5,6 +5,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 
 const playersRouter = require("./routes/players");
+const authRouter = require("./routes/auth");
+const { verifyToken, extractTokenFromReq } = require("./utils/auth");
 
 const app = express();
 
@@ -66,6 +68,13 @@ app.set("notifyPlayersUpdate", notifyPlayersUpdate);
 // SSE ENDPOINT
 // =============================================================
 app.get("/api/players/stream", (req, res) => {
+  const token = extractTokenFromReq(req);
+  const auth = verifyToken(token);
+
+  if (!auth) {
+    return res.status(401).json({ error: "No autorizado" });
+  }
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -87,6 +96,7 @@ app.get("/api/players/stream", (req, res) => {
 // =============================================================
 // ROUTES
 // =============================================================
+app.use("/api/auth", authRouter);
 app.use("/api/players", playersRouter);
 
 // =============================================================

@@ -1,78 +1,113 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>D&D App</title>
 
-  <!-- 🔥 CSP PERMITIENDO CLOUDINARY -->
-  <meta
-  http-equiv="Content-Security-Policy"
-  content="
+  <meta http-equiv="Content-Security-Policy" content="
     default-src 'self' https: data: blob:;
     img-src 'self' https://res.cloudinary.com data: blob:;
     script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https:;
     style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
     connect-src 'self' https:;
-  "
-/>
-
+  " />
 
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="./js/config.js"></script>
 </head>
 
 <body class="bg-stone-900 text-stone-100 min-h-screen p-6 flex items-center justify-center">
 
-  <!-- LOGIN MASTER / PLAYER -->
-  <div id="loginScreen"
-    class="w-full max-w-md bg-stone-800 p-6 rounded-xl shadow-xl">
+  <div id="loginScreen" class="w-full max-w-md bg-stone-800 p-6 rounded-xl shadow-xl space-y-6">
+    <h1 class="text-4xl font-bold text-center text-red-400">Dungeons & Dragons</h1>
 
-    <h1 class="text-4xl font-bold text-center mb-6 text-red-400">
-      Dungeons & Dragons
-    </h1>
-
-    <!-- MASTER LOGIN -->
-    <div class="mb-6">
-      <label class="block mb-1 text-sm text-stone-300">
-        Entrar como Master
-      </label>
-
-      <input
-        id="masterPass"
-        type="password"
-        placeholder="Contraseña del Master"
-        class="w-full p-2 rounded text-black mb-3" />
-
-      <button
-        onclick="loginMaster()"
-        class="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold">
-        Entrar como Master
-      </button>
+    <div>
+      <label class="block mb-1 text-sm text-stone-300">Entrar como Master</label>
+      <input id="masterPass" type="password" placeholder="Contraseña del Master" class="w-full p-2 rounded text-black mb-3" />
+      <button onclick="loginMaster()" class="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold">Entrar como Master</button>
     </div>
 
-    <div class="border-t border-stone-700 my-6"></div>
+    <div class="border-t border-stone-700"></div>
 
-    <button
-      onclick="enterBoard()"
-      class="w-full bg-purple-600 hover:bg-purple-700 p-2 rounded font-semibold">
-      Entrar como Jugador
-    </button>
+    <div>
+      <label class="block mb-1 text-sm text-stone-300">Entrar como Personaje</label>
+      <select id="playerSelect" class="w-full p-2 rounded text-black mb-3">
+        <option value="">Selecciona personaje</option>
+      </select>
+      <input id="playerPass" type="password" placeholder="Contraseña del personaje" class="w-full p-2 rounded text-black mb-3" />
+      <button onclick="loginPlayer()" class="w-full bg-purple-600 hover:bg-purple-700 p-2 rounded font-semibold">Entrar como Jugador</button>
+    </div>
   </div>
 
   <script>
-    function loginMaster() {
-      const pass = document.getElementById("masterPass").value;
-      if (pass === "dragon") {
-        window.location.href = "./Player/master.html";
-      } else {
-        alert("Contraseña incorrecta");
+    const BASE_URL = window.__env && window.__env.API_URL
+      ? window.__env.API_URL
+      : "https://chikaku-d-d-backend-pbe.onrender.com";
+
+    async function loadPlayersForLogin() {
+      try {
+        const res = await fetch(`${BASE_URL}/api/auth/players`, { cache: "no-store" });
+        const players = await res.json();
+        const select = document.getElementById("playerSelect");
+
+        players.forEach((p) => {
+          const option = document.createElement("option");
+          option.value = p._id;
+          option.textContent = p.name;
+          select.appendChild(option);
+        });
+      } catch {
+        alert("No se pudieron cargar los personajes");
       }
     }
 
-    function enterBoard() {
+    async function loginMaster() {
+      const password = document.getElementById("masterPass").value;
+      const res = await fetch(`${BASE_URL}/api/auth/master/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      if (!res.ok) {
+        alert("Contraseña incorrecta");
+        return;
+      }
+
+      const data = await res.json();
+      sessionStorage.setItem("masterToken", data.token);
+      sessionStorage.removeItem("playerToken");
+      sessionStorage.removeItem("playerId");
+      window.location.href = "./Player/master.html";
+    }
+
+    async function loginPlayer() {
+      const playerId = document.getElementById("playerSelect").value;
+      const password = document.getElementById("playerPass").value;
+
+      const res = await fetch(`${BASE_URL}/api/auth/player/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, password }),
+      });
+
+      if (!res.ok) {
+        alert("Credenciales inválidas");
+        return;
+      }
+
+      const data = await res.json();
+      sessionStorage.setItem("playerToken", data.token);
+      sessionStorage.setItem("playerId", data.playerId);
+      sessionStorage.removeItem("masterToken");
       window.location.href = "./Player/player_view.html";
     }
+
+    loadPlayersForLogin();
   </script>
 
 </body>
+
 </html>

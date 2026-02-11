@@ -8,7 +8,13 @@ const BASE_URL =
     : "https://chikaku-d-d-backend-pbe.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
-const SSE_URL = `${BASE_URL}/api/players/stream`;
+const PLAYER_TOKEN = sessionStorage.getItem("playerToken");
+const PLAYER_ID = sessionStorage.getItem("playerId");
+const SSE_URL = `${BASE_URL}/api/players/stream?token=${encodeURIComponent(PLAYER_TOKEN || "")}`;
+
+if (!PLAYER_TOKEN || !PLAYER_ID) {
+  window.location.href = "../index.html";
+}
 
 // =============================================================
 // STATE
@@ -132,7 +138,10 @@ async function fetchJson(url, realtime = false) {
 
   const res = await fetch(url, {
     cache: "no-store",
-    headers: realtime ? { "x-realtime": "1" } : {},
+    headers: {
+      ...(realtime ? { "x-realtime": "1" } : {}),
+      Authorization: `Bearer ${PLAYER_TOKEN}` ,
+    },
   });
 
   const duration = performance.now() - start;
@@ -183,7 +192,11 @@ async function loadPlayers(fromRealtime = false) {
       lastSignature = "";
     }
 
-    players = data;
+    players = data.filter((p) => p._id === PLAYER_ID);
+
+    const sessionLabel = document.getElementById("playerSessionLabel");
+    if (sessionLabel && players[0]) sessionLabel.textContent = `Personaje: ${players[0].name}`;
+
     renderPlayerBoard(players);
     populateClassFilters(players);
 
@@ -657,6 +670,12 @@ filterSubclass?.addEventListener("change", applyFilters);
 
 function searchPlayer() {
   applyFilters();
+}
+
+function logoutPlayer() {
+  sessionStorage.removeItem("playerToken");
+  sessionStorage.removeItem("playerId");
+  window.location.href = "../index.html";
 }
 
 // =============================================================
