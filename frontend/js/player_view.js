@@ -488,7 +488,7 @@ function openInventoryModal(items = [], descriptions = []) {
 }
 
 // =============================================================
-// 🔍 FILTROS (BUSCADOR + ORDEN + NIVEL)
+// 🔍 FILTROS (BUSCADOR + ORDEN + NIVEL + CLASE + SUBCLASE)
 // =============================================================
 
 const searchInput = document.getElementById("searchInput");
@@ -497,16 +497,15 @@ const filterLevel = document.getElementById("filterLevel");
 const filterClass = document.getElementById("filterClass");
 const filterSubclass = document.getElementById("filterSubclass");
 
-
-
 function applyFilters() {
   let result = [...players];
 
-  // 🔍 BUSCADOR POR NOMBRE (FIX DEFINITIVO)
+  // 🔍 BUSCADOR POR NOMBRE
   const query = searchInput?.value?.trim()?.toLowerCase() || "";
-
   if (query) {
-    result = result.filter((p) => (p.name || "").toLowerCase().includes(query));
+    result = result.filter((p) =>
+      (p.name || "").toLowerCase().includes(query)
+    );
   }
 
   // 🎚️ FILTRO POR NIVEL
@@ -538,67 +537,109 @@ function applyFilters() {
     result.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
   }
 
-  // 🧙 FILTRO POR CLASE
+  // 🧙 FILTRO POR CLASE (NORMALIZADO)
   const selectedClass = filterClass?.value;
   if (selectedClass) {
-    result = result.filter((p) => p.class === selectedClass);
+    result = result.filter(
+      (p) => p.class?.trim().toLowerCase() === selectedClass
+    );
   }
 
-  // ✨ FILTRO POR SUBCLASE
+  // ✨ FILTRO POR SUBCLASE (NORMALIZADO)
   const selectedSubclass = filterSubclass?.value;
   if (selectedSubclass) {
-    result = result.filter((p) => p.subclass === selectedSubclass);
+    result = result.filter(
+      (p) => p.subclass?.trim().toLowerCase() === selectedSubclass
+    );
   }
 
   renderPlayerBoard(result);
 }
 
+// =============================================================
+// 🔥 GENERAR FILTROS SIN DUPLICADOS
+// =============================================================
+
 function populateClassFilters(players = []) {
-  const classes = new Set();
+  const classes = new Map();
   const subclassesByClass = {};
 
   players.forEach((p) => {
-    if (p.class) {
-      classes.add(p.class);
-      if (!subclassesByClass[p.class]) {
-        subclassesByClass[p.class] = new Set();
-      }
-      if (p.subclass) {
-        subclassesByClass[p.class].add(p.subclass);
-      }
+    if (!p.class) return;
+
+    const normalizedClass = p.class.trim().toLowerCase();
+    const displayClass =
+      p.class.trim().charAt(0).toUpperCase() +
+      p.class.trim().slice(1).toLowerCase();
+
+    classes.set(normalizedClass, displayClass);
+
+    if (!subclassesByClass[normalizedClass]) {
+      subclassesByClass[normalizedClass] = new Map();
+    }
+
+    if (p.subclass) {
+      const normalizedSub = p.subclass.trim().toLowerCase();
+      const displaySub =
+        p.subclass.trim().charAt(0).toUpperCase() +
+        p.subclass.trim().slice(1).toLowerCase();
+
+      subclassesByClass[normalizedClass].set(
+        normalizedSub,
+        displaySub
+      );
     }
   });
 
-  // ----- CLASES -----
+  // ---- CLASES ----
   filterClass.innerHTML = `<option value="">Todas las clases</option>`;
-  [...classes].sort().forEach((cls) => {
-    const opt = document.createElement("option");
-    opt.value = cls;
-    opt.textContent = cls;
-    filterClass.appendChild(opt);
-  });
 
-  // ----- SUBCLASES -----
+  [...classes.entries()]
+    .sort((a, b) => a[1].localeCompare(b[1]))
+    .forEach(([value, label]) => {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = label;
+      filterClass.appendChild(opt);
+    });
+
+  // ---- SUBCLASES ----
   filterSubclass.innerHTML = `<option value="">Todas las subclases</option>`;
 
   filterClass.onchange = () => {
     const selectedClass = filterClass.value;
-    filterSubclass.innerHTML = `<option value="">Todas las subclases</option>`;
 
-    if (!selectedClass || !subclassesByClass[selectedClass]) return;
+    filterSubclass.innerHTML =
+      `<option value="">Todas las subclases</option>`;
 
-    [...subclassesByClass[selectedClass]]
-      .sort()
-      .forEach((sub) => {
+    if (!selectedClass || !subclassesByClass[selectedClass]) {
+      applyFilters();
+      return;
+    }
+
+    [...subclassesByClass[selectedClass].entries()]
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .forEach(([value, label]) => {
         const opt = document.createElement("option");
-        opt.value = sub;
-        opt.textContent = sub;
+        opt.value = value;
+        opt.textContent = label;
         filterSubclass.appendChild(opt);
       });
 
     applyFilters();
   };
 }
+
+// =============================================================
+// 🎧 EVENTOS
+// =============================================================
+
+searchInput?.addEventListener("input", applyFilters);
+sortAlphabet?.addEventListener("change", applyFilters);
+filterLevel?.addEventListener("change", applyFilters);
+filterClass?.addEventListener("change", applyFilters);
+filterSubclass?.addEventListener("change", applyFilters);
+
 
 // =============================================================
 // 🎧 EVENTOS
