@@ -236,6 +236,47 @@ function openSkillsModal(skills = []) {
 }
 
 // =============================================================
+// 🧮 CALCULADORA
+// =============================================================
+
+let calcValue = "";
+
+function openCalc() {
+  const modal = document.getElementById("calcModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+}
+
+function closeCalc() {
+  const modal = document.getElementById("calcModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+}
+
+function calcInput(value) {
+  calcValue += value;
+  document.getElementById("calcDisplay").value = calcValue;
+}
+
+function calcClear() {
+  calcValue = "";
+  document.getElementById("calcDisplay").value = "";
+}
+
+function calcResult() {
+  try {
+    calcValue = eval(calcValue).toString();
+    document.getElementById("calcDisplay").value = calcValue;
+  } catch {
+    document.getElementById("calcDisplay").value = "Error";
+    calcValue = "";
+  }
+}
+
+
+// =============================================================
 // OBJECT MODAL
 // =============================================================
 
