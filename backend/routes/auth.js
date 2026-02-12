@@ -20,6 +20,8 @@ function matchesDefaultPassword(inputPassword = "", playerName = "") {
   const defaultPassword = buildDefaultPlayerPassword(playerName);
   const input = String(inputPassword || "").trim();
 
+  if (!defaultPassword) return false;
+
   return (
     input === defaultPassword ||
     input.toLowerCase() === defaultPassword.toLowerCase()
