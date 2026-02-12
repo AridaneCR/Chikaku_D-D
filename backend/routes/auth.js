@@ -16,13 +16,6 @@ function buildDefaultPlayerPassword(name = "") {
   return name.replace(/\s+/g, "");
 }
 
-function matchesDefaultPassword(inputPassword = "", playerName = "") {
-  const defaultPassword = buildDefaultPlayerPassword(playerName);
-  const input = String(inputPassword || "").trim();
-
-  return input === defaultPassword || input.toLowerCase() === defaultPassword.toLowerCase();
-}
-
 async function getOrCreateMasterAuth() {
   let masterAuth = await MasterAuth.findOne({ key: "master" }).select("+passwordHash +passwordSalt mustChangePassword");
 
@@ -122,14 +115,6 @@ router.post("/player/login", async (req, res) => {
     return res.status(401).json({ error: "Credenciales inválidas" });
   }
 
-  const validSavedPassword =
-    player.passwordHash && player.passwordSalt
-      ? verifyPassword(password, player.passwordHash, player.passwordSalt)
-      : false;
-
-  const validDefaultPassword = matchesDefaultPassword(password, player.name);
-
-  if (!validSavedPassword && !validDefaultPassword) {
     return res.status(401).json({ error: "Credenciales inválidas" });
   }
 
