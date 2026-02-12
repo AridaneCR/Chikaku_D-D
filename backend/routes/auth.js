@@ -20,11 +20,16 @@ function matchesDefaultPassword(inputPassword = "", playerName = "") {
   const defaultPassword = buildDefaultPlayerPassword(playerName);
   const input = String(inputPassword || "").trim();
 
-  return input === defaultPassword || input.toLowerCase() === defaultPassword.toLowerCase();
+  return (
+    input === defaultPassword ||
+    input.toLowerCase() === defaultPassword.toLowerCase()
+  );
 }
 
 async function getOrCreateMasterAuth() {
-  let masterAuth = await MasterAuth.findOne({ key: "master" }).select("+passwordHash +passwordSalt mustChangePassword");
+  let masterAuth = await MasterAuth.findOne({ key: "master" }).select(
+    "+passwordHash +passwordSalt mustChangePassword",
+  );
 
   if (!masterAuth) {
     const { hash, salt } = hashPassword(MASTER_DEFAULT_PASSWORD);
@@ -47,7 +52,11 @@ router.post("/master/login", async (req, res) => {
   }
 
   const masterAuth = await getOrCreateMasterAuth();
-  const validSavedPassword = verifyPassword(password, masterAuth.passwordHash, masterAuth.passwordSalt);
+  const validSavedPassword = verifyPassword(
+    password,
+    masterAuth.passwordHash,
+    masterAuth.passwordSalt,
+  );
   const validDefaultPassword = password === MASTER_DEFAULT_PASSWORD;
 
   if (!validSavedPassword && !validDefaultPassword) {
@@ -75,15 +84,23 @@ router.post("/master/change-password", authenticateMaster, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: "Faltan datos para cambiar contraseña" });
+    return res
+      .status(400)
+      .json({ error: "Faltan datos para cambiar contraseña" });
   }
 
   if (newPassword.length < 4) {
-    return res.status(400).json({ error: "La nueva contraseña debe tener al menos 4 caracteres" });
+    return res
+      .status(400)
+      .json({ error: "La nueva contraseña debe tener al menos 4 caracteres" });
   }
 
   const masterAuth = await getOrCreateMasterAuth();
-  const valid = verifyPassword(currentPassword, masterAuth.passwordHash, masterAuth.passwordSalt);
+  const valid = verifyPassword(
+    currentPassword,
+    masterAuth.passwordHash,
+    masterAuth.passwordSalt,
+  );
 
   if (!valid) {
     return res.status(401).json({ error: "Credenciales inválidas" });
@@ -115,8 +132,9 @@ router.post("/player/login", async (req, res) => {
     return res.status(400).json({ error: "Faltan datos de login" });
   }
 
-  const player = await Player.findById(playerId)
-    .select("name passwordHash passwordSalt mustChangePassword");
+  const player = await Player.findById(playerId).select(
+    "name passwordHash passwordSalt mustChangePassword",
+  );
 
   if (!player) {
     return res.status(401).json({ error: "Credenciales inválidas" });
@@ -162,21 +180,30 @@ router.post("/player/change-password", authenticateAny, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: "Faltan datos para cambiar contraseña" });
+    return res
+      .status(400)
+      .json({ error: "Faltan datos para cambiar contraseña" });
   }
 
   if (newPassword.length < 4) {
-    return res.status(400).json({ error: "La nueva contraseña debe tener al menos 4 caracteres" });
+    return res
+      .status(400)
+      .json({ error: "La nueva contraseña debe tener al menos 4 caracteres" });
   }
 
-  const player = await Player.findById(req.auth.playerId)
-    .select("name passwordHash passwordSalt mustChangePassword");
+  const player = await Player.findById(req.auth.playerId).select(
+    "name passwordHash passwordSalt mustChangePassword",
+  );
 
   if (!player || !player.passwordHash || !player.passwordSalt) {
     return res.status(404).json({ error: "Jugador no encontrado" });
   }
 
-  const valid = verifyPassword(currentPassword, player.passwordHash, player.passwordSalt);
+  const valid = verifyPassword(
+    currentPassword,
+    player.passwordHash,
+    player.passwordSalt,
+  );
   if (!valid) {
     return res.status(401).json({ error: "Credenciales inválidas" });
   }
