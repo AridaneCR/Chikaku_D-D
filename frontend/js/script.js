@@ -547,12 +547,11 @@ async function submitCharacter() {
   }
 
   const loginPassword = charPasswordInput.value.trim();
-  if (formMode === "create" && loginPassword.length < 4) {
-    alert("La contraseña del personaje debe tener al menos 4 caracteres");
-    return;
-  }
-
   if (loginPassword) {
+    if (loginPassword.length < 4) {
+      alert("La contraseña del personaje debe tener al menos 4 caracteres");
+      return;
+    }
     fd.append("loginPassword", loginPassword);
   }
 

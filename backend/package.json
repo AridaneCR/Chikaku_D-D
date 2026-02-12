@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check:syntax": "node --check routes/auth.js && node --check routes/players.js && node --check server.js",
+    "prestart": "npm run check:syntax"
   },
   "dependencies": {
     "cloudinary": "^2.8.0",
