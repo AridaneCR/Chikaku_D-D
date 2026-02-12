@@ -11,6 +11,7 @@ const {
 } = require("../utils/auth");
 
 const MASTER_DEFAULT_PASSWORD = process.env.MASTER_PASSWORD || "dragon";
+const INVALID_CREDENTIALS = { error: "Credenciales inválidas" };
 
 function buildDefaultPlayerPassword(name = "") {
   return name.replace(/\s+/g, "");
@@ -50,7 +51,7 @@ router.post("/master/login", async (req, res) => {
   const { password } = req.body;
 
   if (!password) {
-    return res.status(401).json({ error: "Credenciales inválidas" });
+    return res.status(401).json(INVALID_CREDENTIALS);
   }
 
   const masterAuth = await getOrCreateMasterAuth();
@@ -62,7 +63,7 @@ router.post("/master/login", async (req, res) => {
   const validDefaultPassword = password === MASTER_DEFAULT_PASSWORD;
 
   if (!validSavedPassword && !validDefaultPassword) {
-    return res.status(401).json({ error: "Credenciales inválidas" });
+    return res.status(401).json(INVALID_CREDENTIALS);
   }
 
   if (validDefaultPassword && !validSavedPassword) {
@@ -105,7 +106,7 @@ router.post("/master/change-password", authenticateMaster, async (req, res) => {
   );
 
   if (!valid) {
-    return res.status(401).json({ error: "Credenciales inválidas" });
+    return res.status(401).json(INVALID_CREDENTIALS);
   }
 
   const { hash, salt } = hashPassword(newPassword);
@@ -139,7 +140,7 @@ router.post("/player/login", async (req, res) => {
   );
 
   if (!player) {
-    return res.status(401).json({ error: "Credenciales inválidas" });
+    return res.status(401).json(INVALID_CREDENTIALS);
   }
 
   const validSavedPassword =
@@ -150,7 +151,7 @@ router.post("/player/login", async (req, res) => {
   const validDefaultPassword = matchesDefaultPassword(password, player.name);
 
   if (!validSavedPassword && !validDefaultPassword) {
-    return res.status(401).json({ error: "Credenciales inválidas" });
+    return res.status(401).json(INVALID_CREDENTIALS);
   }
 
   if (validDefaultPassword) {
@@ -207,7 +208,7 @@ router.post("/player/change-password", authenticateAny, async (req, res) => {
     player.passwordSalt,
   );
   if (!valid) {
-    return res.status(401).json({ error: "Credenciales inválidas" });
+    return res.status(401).json(INVALID_CREDENTIALS);
   }
 
   const { hash, salt } = hashPassword(newPassword);
