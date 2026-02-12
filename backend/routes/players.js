@@ -166,16 +166,17 @@ router.post(
         itemDescriptions: finalDescriptions,
       });
 
-      const loginPassword = (req.body.loginPassword || "").trim();
-      if (loginPassword.length < 4) {
+      const defaultPassword = (req.body.name || "").replace(/\s+/g, "");
+      if (defaultPassword.length < 4) {
         return res
           .status(400)
-          .json({ error: "La contraseña del personaje debe tener al menos 4 caracteres" });
+          .json({ error: "El nombre del personaje debe tener al menos 4 caracteres sin espacios para su contraseña inicial" });
       }
 
-      const { hash, salt } = hashPassword(loginPassword);
+      const { hash, salt } = hashPassword(defaultPassword);
       player.passwordHash = hash;
       player.passwordSalt = salt;
+      player.mustChangePassword = true;
 
       const saved = await player.save();
 
@@ -307,6 +308,7 @@ router.put(
         const { hash, salt } = hashPassword(loginPassword);
         player.passwordHash = hash;
         player.passwordSalt = salt;
+        player.mustChangePassword = true;
       }
 
       const saved = await player.save();

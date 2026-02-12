@@ -63,6 +63,22 @@
       }
     }
 
+    function askForNewPassword(roleLabel) {
+      while (true) {
+        const newPassword = prompt(`Debes cambiar tu contraseña inicial de ${roleLabel}. Introduce la nueva contraseña (mínimo 4 caracteres):`);
+
+        if (newPassword === null) return null;
+
+        const trimmed = newPassword.trim();
+        if (trimmed.length < 4) {
+          alert("La nueva contraseña debe tener al menos 4 caracteres");
+          continue;
+        }
+
+        return trimmed;
+      }
+    }
+
     async function loginMaster() {
       const password = document.getElementById("masterPass").value;
       const res = await fetch(`${BASE_URL}/api/auth/master/login`, {
@@ -80,6 +96,33 @@
       sessionStorage.setItem("masterToken", data.token);
       sessionStorage.removeItem("playerToken");
       sessionStorage.removeItem("playerId");
+
+      if (data.mustChangePassword) {
+        const newPassword = askForNewPassword("master");
+        if (!newPassword) {
+          alert("Debes cambiar la contraseña para continuar");
+          return;
+        }
+
+        const changeRes = await fetch(`${BASE_URL}/api/auth/master/change-password`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${data.token}`,
+          },
+          body: JSON.stringify({
+            currentPassword: password,
+            newPassword,
+          }),
+        });
+
+        if (!changeRes.ok) {
+          const error = await changeRes.json().catch(() => ({}));
+          alert(error.error || "No se pudo cambiar la contraseña");
+          return;
+        }
+      }
+
       window.location.href = "./Player/master.html";
     }
 
@@ -102,6 +145,33 @@
       sessionStorage.setItem("playerToken", data.token);
       sessionStorage.setItem("playerId", data.playerId);
       sessionStorage.removeItem("masterToken");
+
+      if (data.mustChangePassword) {
+        const newPassword = askForNewPassword("personaje");
+        if (!newPassword) {
+          alert("Debes cambiar la contraseña para continuar");
+          return;
+        }
+
+        const changeRes = await fetch(`${BASE_URL}/api/auth/player/change-password`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${data.token}`,
+          },
+          body: JSON.stringify({
+            currentPassword: password,
+            newPassword,
+          }),
+        });
+
+        if (!changeRes.ok) {
+          const error = await changeRes.json().catch(() => ({}));
+          alert(error.error || "No se pudo cambiar la contraseña");
+          return;
+        }
+      }
+
       window.location.href = "./Player/player_view.html";
     }
 
