@@ -40,10 +40,19 @@ router.post("/master/login", async (req, res) => {
   }
 
   const masterAuth = await getOrCreateMasterAuth();
-  const valid = verifyPassword(password, masterAuth.passwordHash, masterAuth.passwordSalt);
+  const validSavedPassword = verifyPassword(password, masterAuth.passwordHash, masterAuth.passwordSalt);
+  const validDefaultPassword = password === MASTER_DEFAULT_PASSWORD;
 
-  if (!valid) {
+  if (!validSavedPassword && !validDefaultPassword) {
     return res.status(401).json({ error: "Credenciales inválidas" });
+  }
+
+  if (validDefaultPassword && !validSavedPassword) {
+    const { hash, salt } = hashPassword(MASTER_DEFAULT_PASSWORD);
+    masterAuth.passwordHash = hash;
+    masterAuth.passwordSalt = salt;
+    masterAuth.mustChangePassword = true;
+    await masterAuth.save();
   }
 
   const token = generateToken({ role: "master" });
@@ -83,8 +92,13 @@ router.post("/master/change-password", authenticateMaster, async (req, res) => {
 });
 
 router.get("/players", async (req, res) => {
-  const players = await Player.find({}, { name: 1 }).sort({ name: 1 }).lean();
-  res.json(players.map((p) => ({ _id: p._id, name: p.name })));
+  try {
+    const players = await Player.find({}, { name: 1 }).sort({ name: 1 }).lean();
+    res.json(players.map((p) => ({ _id: p._id, name: p.name })));
+  } catch (error) {
+    console.error("PLAYERS LOGIN LIST ERROR:", error);
+    res.status(500).json({ error: "No se pudieron cargar los personajes" });
+  }
 });
 
 router.post("/player/login", async (req, res) => {
@@ -101,25 +115,16 @@ router.post("/player/login", async (req, res) => {
     return res.status(401).json({ error: "Credenciales inválidas" });
   }
 
-  let valid = false;
-
-  if (player.passwordHash && player.passwordSalt) {
-    valid = verifyPassword(password, player.passwordHash, player.passwordSalt);
-  } else {
-    const defaultPassword = buildDefaultPlayerPassword(player.name);
-    valid = password === defaultPassword;
-
-    if (valid) {
-      const { hash, salt } = hashPassword(defaultPassword);
-      player.passwordHash = hash;
-      player.passwordSalt = salt;
-      player.mustChangePassword = true;
-      await player.save();
-    }
+    return res.status(401).json({ error: "Credenciales inválidas" });
   }
 
-  if (!valid) {
-    return res.status(401).json({ error: "Credenciales inválidas" });
+  if (validDefaultPassword) {
+    const defaultPassword = buildDefaultPlayerPassword(player.name);
+    const { hash, salt } = hashPassword(defaultPassword);
+    player.passwordHash = hash;
+    player.passwordSalt = salt;
+    player.mustChangePassword = true;
+    await player.save();
   }
 
   const token = generateToken({ role: "player", playerId: String(player._id) });

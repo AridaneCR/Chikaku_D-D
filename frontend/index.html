@@ -49,8 +49,17 @@
     async function loadPlayersForLogin() {
       try {
         const res = await fetch(`${BASE_URL}/api/auth/players`, { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error(`Error ${res.status}`);
+        }
+
         const players = await res.json();
+        if (!Array.isArray(players)) {
+          throw new Error("Respuesta inválida");
+        }
+
         const select = document.getElementById("playerSelect");
+        select.innerHTML = '<option value="">Selecciona personaje</option>';
 
         players.forEach((p) => {
           const option = document.createElement("option");
@@ -58,7 +67,8 @@
           option.textContent = p.name;
           select.appendChild(option);
         });
-      } catch {
+      } catch (error) {
+        console.error("Error cargando personajes:", error);
         alert("No se pudieron cargar los personajes");
       }
     }
