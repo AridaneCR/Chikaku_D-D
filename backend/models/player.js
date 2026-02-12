@@ -139,6 +139,11 @@ const PlayerSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+
+    mustChangePassword: {
+      type: Boolean,
+      default: true,
+    },
   },
 
 
