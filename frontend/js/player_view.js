@@ -5,7 +5,7 @@
 const BASE_URL =
   window.__env && window.__env.API_URL
     ? window.__env.API_URL
-    : "https://chikaku-d-d-ptyl.onrender.com";
+    : "https://chikaku-d-d-1.onrender.com";
 
 const API_PLAYERS = `${BASE_URL}/api/players`;
 const SSE_URL = `${BASE_URL}/api/players/stream`;
