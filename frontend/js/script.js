@@ -647,22 +647,33 @@ function resetForm() {
 
 
 // =============================================================
-// ⚡ QUICK EXP MASTER (SELECT BUSCADOR REAL)
+// ⚡ PANEL RÁPIDO MASTER COMPLETO
 // =============================================================
 
-const quickExpSearch = document.getElementById("quickExpSearch");
-const quickExpDropdown = document.getElementById("quickExpDropdown");
-const quickExpAmount = document.getElementById("quickExpAmount");
-const quickExpFeedback = document.getElementById("quickExpFeedback");
+const quickActionSearch = document.getElementById("quickActionSearch");
+const quickActionDropdown = document.getElementById("quickActionDropdown");
+const quickActionType = document.getElementById("quickActionType");
+const quickActionMode = document.getElementById("quickActionMode");
+const quickActionAmount = document.getElementById("quickActionAmount");
+const quickActionFeedback = document.getElementById("quickActionFeedback");
 
 let selectedQuickPlayerId = null;
 
+// Mostrar / ocultar modo según tipo
+quickActionType.addEventListener("change", () => {
+  if (quickActionType.value === "gold" || quickActionType.value === "life") {
+    quickActionMode.classList.remove("hidden");
+  } else {
+    quickActionMode.classList.add("hidden");
+  }
+});
+
 // Render dropdown
 function renderQuickDropdown(list = players) {
-  quickExpDropdown.innerHTML = "";
+  quickActionDropdown.innerHTML = "";
 
   if (!list.length) {
-    quickExpDropdown.innerHTML =
+    quickActionDropdown.innerHTML =
       `<div class="px-3 py-2 text-sm text-zinc-400">Sin resultados</div>`;
     return;
   }
@@ -675,18 +686,16 @@ function renderQuickDropdown(list = players) {
 
     div.onclick = () => {
       selectedQuickPlayerId = p._id;
-      quickExpSearch.value = p.name;
-      quickExpDropdown.classList.add("hidden");
+      quickActionSearch.value = p.name;
+      quickActionDropdown.classList.add("hidden");
     };
 
-    quickExpDropdown.appendChild(div);
+    quickActionDropdown.appendChild(div);
   });
 }
 
-// Mostrar dropdown al escribir
-quickExpSearch?.addEventListener("input", () => {
-  const query = quickExpSearch.value.trim().toLowerCase();
-
+quickActionSearch?.addEventListener("input", () => {
+  const query = quickActionSearch.value.trim().toLowerCase();
   selectedQuickPlayerId = null;
 
   const filtered = players.filter((p) =>
@@ -694,41 +703,44 @@ quickExpSearch?.addEventListener("input", () => {
   );
 
   renderQuickDropdown(filtered);
-  quickExpDropdown.classList.remove("hidden");
+  quickActionDropdown.classList.remove("hidden");
 });
 
-// Mostrar todos al hacer focus
-quickExpSearch?.addEventListener("focus", () => {
+quickActionSearch?.addEventListener("focus", () => {
   renderQuickDropdown(players);
-  quickExpDropdown.classList.remove("hidden");
+  quickActionDropdown.classList.remove("hidden");
 });
 
-// Cerrar si clic fuera
 document.addEventListener("click", (e) => {
-  if (!quickExpSearch.contains(e.target) &&
-      !quickExpDropdown.contains(e.target)) {
-    quickExpDropdown.classList.add("hidden");
+  if (
+    !quickActionSearch.contains(e.target) &&
+    !quickActionDropdown.contains(e.target)
+  ) {
+    quickActionDropdown.classList.add("hidden");
   }
 });
 
-// Añadir EXP
-async function quickAddExp() {
-  const amount = Number(quickExpAmount.value);
+// =============================================================
+// APLICAR MODIFICACIÓN
+// =============================================================
 
-  quickExpFeedback.textContent = "";
-  quickExpFeedback.className = "mt-3 text-sm font-semibold";
+async function quickModifyPlayer() {
+  const amount = Number(quickActionAmount.value);
+  const type = quickActionType.value;
+  const mode = quickActionMode.value;
+
+  quickActionFeedback.textContent = "";
+  quickActionFeedback.className = "mt-3 text-sm font-semibold";
 
   if (!selectedQuickPlayerId) {
-    quickExpFeedback.textContent =
-      "Selecciona un personaje válido.";
-    quickExpFeedback.classList.add("text-red-400");
+    quickActionFeedback.textContent = "Selecciona un personaje.";
+    quickActionFeedback.classList.add("text-red-400");
     return;
   }
 
   if (!amount || amount <= 0) {
-    quickExpFeedback.textContent =
-      "Introduce una cantidad válida de experiencia.";
-    quickExpFeedback.classList.add("text-red-400");
+    quickActionFeedback.textContent = "Cantidad inválida.";
+    quickActionFeedback.classList.add("text-red-400");
     return;
   }
 
@@ -737,31 +749,80 @@ async function quickAddExp() {
       (p) => p._id === selectedQuickPlayerId
     );
 
-    const newTotalExp = (Number(player.exp) || 0) + amount;
-    const newLevel = calculateLevelFromExp(newTotalExp);
+    if (!player) return;
 
-    const fd = new FormData();
-    fd.append("exp", newTotalExp);
-    fd.append("level", newLevel);
+    let newValue;
+    let fd = new FormData();
 
-    await fetchJson(
-      `${API_PLAYERS}/${selectedQuickPlayerId}`,
-      { method: "PUT", body: fd },
-      true
-    );
+    // ================= EXP =================
+    if (type === "exp") {
+      newValue = (Number(player.exp) || 0) + amount;
+      const newLevel = calculateLevelFromExp(newValue);
 
-    quickExpFeedback.textContent =
-      `✅ ${player.name} recibió ${amount} EXP correctamente.`;
-    quickExpFeedback.classList.add("text-green-400");
+      fd.append("exp", newValue);
+      fd.append("level", newLevel);
 
-    quickExpAmount.value = "";
+      await fetchJson(
+        `${API_PLAYERS}/${player._id}`,
+        { method: "PUT", body: fd },
+        true
+      );
+
+      quickActionFeedback.textContent =
+        `✅ ${player.name} recibió ${amount} EXP.`;
+    }
+
+    // ================= ORO =================
+    if (type === "gold") {
+      const finalAmount = mode === "subtract" ? -amount : amount;
+
+      await fetchJson(
+        `${API_PLAYERS}/${player._id}/gold`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: finalAmount,
+            mode: "add",
+          }),
+        },
+        true
+      );
+
+      quickActionFeedback.textContent =
+        `✅ ${mode === "subtract" ? "Se restaron" : "Se añadieron"} ${amount} de oro.`;
+    }
+
+    // ================= VIDA =================
+    if (type === "life") {
+      const currentLife = Number(player.life) || 0;
+
+      newValue =
+        mode === "subtract"
+          ? Math.max(0, currentLife - amount)
+          : currentLife + amount;
+
+      fd.append("life", newValue);
+
+      await fetchJson(
+        `${API_PLAYERS}/${player._id}`,
+        { method: "PUT", body: fd },
+        true
+      );
+
+      quickActionFeedback.textContent =
+        `✅ ${mode === "subtract" ? "Se restaron" : "Se añadieron"} ${amount} puntos de vida.`;
+    }
+
+    quickActionFeedback.classList.add("text-green-400");
+    quickActionAmount.value = "";
     refreshPlayers(true);
 
   } catch (err) {
     console.error(err);
-    quickExpFeedback.textContent =
-      "Error añadiendo experiencia.";
-    quickExpFeedback.classList.add("text-red-400");
+    quickActionFeedback.textContent =
+      "Error aplicando modificación.";
+    quickActionFeedback.classList.add("text-red-400");
   }
 }
 
