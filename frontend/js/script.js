@@ -835,6 +835,7 @@ else if (type === "life") {
       "Error aplicando modificación.";
     quickActionFeedback.classList.add("text-red-400");
   }
+  refreshPlayers(true)
 }
 
 
