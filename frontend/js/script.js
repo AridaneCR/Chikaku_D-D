@@ -647,16 +647,87 @@ function resetForm() {
 
 
 // =============================================================
-// ⚡ FUNCIÓN COMPLETA - MODIFICACIÓN RÁPIDA MASTER
+// ⚡ PANEL RÁPIDO MASTER COMPLETO
+// =============================================================
+
+const quickActionSearch = document.getElementById("quickActionSearch");
+const quickActionDropdown = document.getElementById("quickActionDropdown");
+const quickActionType = document.getElementById("quickActionType");
+const quickActionMode = document.getElementById("quickActionMode");
+const quickActionAmount = document.getElementById("quickActionAmount");
+const quickActionFeedback = document.getElementById("quickActionFeedback");
+
+let selectedQuickPlayerId = null;
+
+// Mostrar / ocultar modo según tipo
+quickActionType.addEventListener("change", () => {
+  if (quickActionType.value === "gold" || quickActionType.value === "life") {
+    quickActionMode.classList.remove("hidden");
+  } else {
+    quickActionMode.classList.add("hidden");
+  }
+});
+
+// Render dropdown
+function renderQuickDropdown(list = players) {
+  quickActionDropdown.innerHTML = "";
+
+  if (!list.length) {
+    quickActionDropdown.innerHTML =
+      `<div class="px-3 py-2 text-sm text-zinc-400">Sin resultados</div>`;
+    return;
+  }
+
+  list.forEach((p) => {
+    const div = document.createElement("div");
+    div.className =
+      "px-3 py-2 cursor-pointer hover:bg-indigo-600 hover:text-white text-sm";
+    div.textContent = `${p.name} (Nivel ${p.level})`;
+
+    div.onclick = () => {
+      selectedQuickPlayerId = p._id;
+      quickActionSearch.value = p.name;
+      quickActionDropdown.classList.add("hidden");
+    };
+
+    quickActionDropdown.appendChild(div);
+  });
+}
+
+quickActionSearch?.addEventListener("input", () => {
+  const query = quickActionSearch.value.trim().toLowerCase();
+  selectedQuickPlayerId = null;
+
+  const filtered = players.filter((p) =>
+    p.name.toLowerCase().includes(query)
+  );
+
+  renderQuickDropdown(filtered);
+  quickActionDropdown.classList.remove("hidden");
+});
+
+quickActionSearch?.addEventListener("focus", () => {
+  renderQuickDropdown(players);
+  quickActionDropdown.classList.remove("hidden");
+});
+
+document.addEventListener("click", (e) => {
+  if (
+    !quickActionSearch.contains(e.target) &&
+    !quickActionDropdown.contains(e.target)
+  ) {
+    quickActionDropdown.classList.add("hidden");
+  }
+});
+
+// =============================================================
+// APLICAR MODIFICACIÓN
 // =============================================================
 
 async function quickModifyPlayer() {
-
-  const quickActionSearch = document.getElementById("quickActionSearch");
-  const quickActionType = document.getElementById("quickActionType");
-  const quickActionMode = document.getElementById("quickActionMode");
-  const quickActionAmount = document.getElementById("quickActionAmount");
-  const quickActionFeedback = document.getElementById("quickActionFeedback");
+  const amount = Number(quickActionAmount.value);
+  const type = quickActionType.value;
+  const mode = quickActionMode.value;
 
   quickActionFeedback.textContent = "";
   quickActionFeedback.className = "mt-3 text-sm font-semibold";
@@ -666,10 +737,6 @@ async function quickModifyPlayer() {
     quickActionFeedback.classList.add("text-red-400");
     return;
   }
-
-  // =========================
-  // VALIDACIÓN CANTIDAD
-  // =========================
 
   const rawValue = quickActionAmount.value.trim();
 
@@ -681,36 +748,33 @@ async function quickModifyPlayer() {
 
   const amount = Number(rawValue);
 
-  if (isNaN(amount) || amount <= 0) {
-    quickActionFeedback.textContent = "Introduce una cantidad válida.";
+  if (isNaN(amount)) {
+    quickActionFeedback.textContent = "Introduce un número válido.";
     quickActionFeedback.classList.add("text-red-400");
     return;
   }
 
-  const type = quickActionType.value;
-  const mode = quickActionMode.value;
-
+  if (amount <= 0) {
+    quickActionFeedback.textContent = "La cantidad debe ser mayor que 0.";
+    quickActionFeedback.classList.add("text-red-400");
+    return;
+  }
   try {
     const player = players.find(
       (p) => p._id === selectedQuickPlayerId
     );
 
-    if (!player) {
-      quickActionFeedback.textContent = "Jugador no encontrado.";
-      quickActionFeedback.classList.add("text-red-400");
-      return;
-    }
+    if (!player) return;
 
-    // =============================================================
-    // EXP
-    // =============================================================
+    let newValue;
+    let fd = new FormData();
+
+    // ================= EXP =================
     if (type === "exp") {
+      newValue = (Number(player.exp) || 0) + amount;
+      const newLevel = calculateLevelFromExp(newValue);
 
-      const newTotalExp = (Number(player.exp) || 0) + amount;
-      const newLevel = calculateLevelFromExp(newTotalExp);
-
-      const fd = new FormData();
-      fd.append("exp", newTotalExp);
+      fd.append("exp", newValue);
       fd.append("level", newLevel);
 
       await fetchJson(
@@ -723,13 +787,9 @@ async function quickModifyPlayer() {
         `✅ ${player.name} recibió ${amount} EXP.`;
     }
 
-    // =============================================================
-    // ORO
-    // =============================================================
+    // ================= ORO =================
     if (type === "gold") {
-
-      const finalAmount =
-        mode === "subtract" ? -amount : amount;
+      const finalAmount = mode === "subtract" ? -amount : amount;
 
       await fetchJson(
         `${API_PLAYERS}/${player._id}/gold`,
@@ -748,20 +808,16 @@ async function quickModifyPlayer() {
         `✅ ${mode === "subtract" ? "Se restaron" : "Se añadieron"} ${amount} de oro.`;
     }
 
-    // =============================================================
-    // VIDA
-    // =============================================================
+    // ================= VIDA =================
     if (type === "life") {
-
       const currentLife = Number(player.life) || 0;
 
-      const newLife =
+      newValue =
         mode === "subtract"
           ? Math.max(0, currentLife - amount)
           : currentLife + amount;
 
-      const fd = new FormData();
-      fd.append("life", newLife);
+      fd.append("life", newValue);
 
       await fetchJson(
         `${API_PLAYERS}/${player._id}`,
@@ -775,11 +831,10 @@ async function quickModifyPlayer() {
 
     quickActionFeedback.classList.add("text-green-400");
     quickActionAmount.value = "";
-
     refreshPlayers(true);
 
   } catch (err) {
-    console.error("Error aplicando modificación:", err);
+    console.error(err);
     quickActionFeedback.textContent =
       "Error aplicando modificación.";
     quickActionFeedback.classList.add("text-red-400");
