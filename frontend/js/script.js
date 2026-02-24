@@ -738,27 +738,7 @@ async function quickModifyPlayer() {
     return;
   }
 
-  const rawValue = quickActionAmount.value.trim();
-
-  if (rawValue === "") {
-    quickActionFeedback.textContent = "Introduce una cantidad.";
-    quickActionFeedback.classList.add("text-red-400");
-    return;
-  }
-
-  const amount = Number(rawValue);
-
-  if (isNaN(amount)) {
-    quickActionFeedback.textContent = "Introduce un número válido.";
-    quickActionFeedback.classList.add("text-red-400");
-    return;
-  }
-
-  if (amount <= 0) {
-    quickActionFeedback.textContent = "La cantidad debe ser mayor que 0.";
-    quickActionFeedback.classList.add("text-red-400");
-    return;
-  }
+ 
   try {
     const player = players.find(
       (p) => p._id === selectedQuickPlayerId
