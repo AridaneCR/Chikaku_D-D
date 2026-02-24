@@ -375,6 +375,7 @@ async function refreshPlayers(force = false) {
   lastSignature = signature;
   players = data;
   renderPlayersList();
+  populateQuickExpSelect(players);
 }
 
 function renderPlayersList() {
@@ -642,6 +643,100 @@ function resetForm() {
   updateSubclassOptions("");
 
   initItems();
+}
+
+
+// =============================================================
+// ⚡ QUICK EXP MASTER
+// =============================================================
+
+const quickExpSearch = document.getElementById("quickExpSearch");
+const quickExpSelect = document.getElementById("quickExpSelect");
+const quickExpAmount = document.getElementById("quickExpAmount");
+const quickExpFeedback = document.getElementById("quickExpFeedback");
+
+// Rellenar select con jugadores
+function populateQuickExpSelect(list = players) {
+  if (!quickExpSelect) return;
+
+  quickExpSelect.innerHTML =
+    `<option value="">Selecciona personaje</option>`;
+
+  list.forEach((p) => {
+    const opt = document.createElement("option");
+    opt.value = p._id;
+    opt.textContent = `${p.name} (Nivel ${p.level})`;
+    quickExpSelect.appendChild(opt);
+  });
+}
+
+// Filtro por buscador
+quickExpSearch?.addEventListener("input", () => {
+  const query = quickExpSearch.value.trim().toLowerCase();
+
+  const filtered = players.filter((p) =>
+    p.name.toLowerCase().includes(query)
+  );
+
+  populateQuickExpSelect(filtered);
+});
+
+// Añadir EXP rápida
+async function quickAddExp() {
+  const playerId = quickExpSelect.value;
+  const amount = Number(quickExpAmount.value);
+
+  quickExpFeedback.textContent = "";
+  quickExpFeedback.className = "mt-3 text-sm font-semibold";
+
+  if (!playerId) {
+    quickExpFeedback.textContent = "Selecciona un personaje.";
+    quickExpFeedback.classList.add("text-red-400");
+    return;
+  }
+
+  if (!amount || amount <= 0) {
+    quickExpFeedback.textContent =
+      "Introduce una cantidad válida de experiencia.";
+    quickExpFeedback.classList.add("text-red-400");
+    return;
+  }
+
+  try {
+    const player = players.find((p) => p._id === playerId);
+    if (!player) return;
+
+    const newTotalExp = (Number(player.exp) || 0) + amount;
+    const newLevel = calculateLevelFromExp(newTotalExp);
+
+    await fetchJson(
+      `${API_PLAYERS}/${playerId}`,
+      {
+        method: "PUT",
+        body: (() => {
+          const fd = new FormData();
+          fd.append("exp", newTotalExp);
+          fd.append("level", newLevel);
+          return fd;
+        })(),
+      },
+      true
+    );
+
+    quickExpFeedback.textContent =
+      `✅ Se añadieron ${amount} EXP correctamente.`;
+    quickExpFeedback.classList.add("text-green-400");
+
+    quickExpAmount.value = "";
+
+    refreshPlayers(true);
+    populateQuickExpSelect(players);
+  } catch (err) {
+    console.error("❌ Error añadiendo EXP:", err);
+    quickExpFeedback.textContent =
+      "Error añadiendo experiencia.";
+    quickExpFeedback.classList.add("text-red-400");
+  }
 }
 
 // =============================================================

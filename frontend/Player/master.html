@@ -40,6 +40,39 @@
   ============================================================= -->
   <main class="max-w-7xl mx-auto px-6 py-10">
 
+
+    <!-- ============================================================= -->
+    <!-- ⚡ ACCESO RÁPIDO EXP MASTER -->
+    <!-- ============================================================= -->
+    <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-4 mb-6 shadow">
+      <h3 class="text-lg font-bold mb-3">⚡ Añadir Experiencia Rápida</h3>
+
+      <div class="flex flex-col md:flex-row gap-3">
+
+        <!-- Buscador jugador -->
+        <input id="quickExpSearch" type="text" placeholder="Buscar personaje..." class="flex-1 input" />
+
+        <!-- Select dinámico -->
+        <select id="quickExpSelect" class="flex-1 input">
+          <option value="">Selecciona personaje</option>
+        </select>
+
+        <!-- Cantidad -->
+        <input id="quickExpAmount" type="number" placeholder="Cantidad EXP" class="w-40 input" />
+
+        <!-- Botón -->
+        <button onclick="quickAddExp()" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded font-bold">
+          Añadir
+        </button>
+
+      </div>
+
+      <!-- Feedback -->
+      <p id="quickExpFeedback" class="mt-3 text-sm font-semibold"></p>
+    </div>
+
+
+    
     <!-- FORMULARIO -->
     <section id="createCard"
       class="hidden max-w-4xl mx-auto mb-12 bg-zinc-900 border border-zinc-700 rounded-3xl shadow-2xl p-8">
@@ -130,22 +163,15 @@
       </div>
 
       <!-- OBJETOS -->
-<div class="mt-8 bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
-  <h3 class="section-title text-emerald-400">Objetos</h3>
+      <div class="mt-8 bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
+        <h3 class="section-title text-emerald-400">Objetos</h3>
 
-  <div
-    id="objectsContainer"
-    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4"
-    
-  ></div>
+        <div id="objectsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4"></div>
 
-  <button
-  type="button"
-  onclick="addItemSlot()"
-  class="mt-4 w-full bg-zinc-700 hover:bg-zinc-600 rounded p-2">
-  ➕ Añadir objeto
-</button>
-</div>
+        <button type="button" onclick="addItemSlot()" class="mt-4 w-full bg-zinc-700 hover:bg-zinc-600 rounded p-2">
+          ➕ Añadir objeto
+        </button>
+      </div>
 
       <!-- BOTÓN -->
       <button id="submitCharacterBtn" onclick="submitCharacter()" class="mt-10 w-full py-3 rounded-xl
