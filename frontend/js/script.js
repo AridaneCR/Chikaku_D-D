@@ -747,12 +747,6 @@ async function quickModifyPlayer() {
 
   const amount = Number(rawValue);
 
-  if (isNaN(amount)) {
-    quickActionFeedback.textContent = "Introduce un número válido.";
-    quickActionFeedback.classList.add("text-red-400");
-    return;
-  }
-
   if (amount <= 0) {
     quickActionFeedback.textContent = "La cantidad debe ser mayor que 0.";
     quickActionFeedback.classList.add("text-red-400");
