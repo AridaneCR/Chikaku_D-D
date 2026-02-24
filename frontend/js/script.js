@@ -764,68 +764,70 @@ async function quickModifyPlayer() {
     let fd = new FormData();
 
     // ================= EXP =================
-    if (type === "exp") {
-      newValue = (Number(player.exp) || 0) + amount;
-      const newLevel = calculateLevelFromExp(newValue);
+if (type === "exp") {
 
-      fd.append("exp", newValue);
-      fd.append("level", newLevel);
+  newValue = (Number(player.exp) || 0) + amount;
+  const newLevel = calculateLevelFromExp(newValue);
 
-      await fetchJson(
-        `${API_PLAYERS}/${player._id}`,
-        { method: "PUT", body: fd },
-        true
-      );
+  fd.append("exp", newValue);
+  fd.append("level", newLevel);
 
-      quickActionFeedback.textContent =
-        `✅ ${player.name} recibió ${amount} EXP.`;
-    }
+  await fetchJson(
+    `${API_PLAYERS}/${player._id}`,
+    { method: "PUT", body: fd },
+    true
+  );
 
-    // ================= ORO =================
-    if (type === "gold") {
-      const finalAmount = mode === "subtract" ? -amount : amount;
+  quickActionFeedback.textContent =
+    `✅ ${player.name} recibió ${amount} EXP.`;
 
-      await fetchJson(
-        `${API_PLAYERS}/${player._id}/gold`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: finalAmount,
-            mode: "add",
-          }),
-        },
-        true
-      );
+}
 
-      quickActionFeedback.textContent =
-        `✅ ${mode === "subtract" ? "Se restaron" : "Se añadieron"} ${amount} de oro.`;
-    }
+// ================= ORO =================
+else if (type === "gold") {
 
-    // ================= VIDA =================
-    if (type === "life") {
-      const currentLife = Number(player.life) || 0;
+  const finalAmount = mode === "subtract" ? -amount : amount;
 
-      newValue =
-        mode === "subtract"
-          ? Math.max(0, currentLife - amount)
-          : currentLife + amount;
+  await fetchJson(
+    `${API_PLAYERS}/${player._id}/gold`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: finalAmount,
+        mode: "add",
+      }),
+    },
+    true
+  );
 
-      fd.append("life", newValue);
+  quickActionFeedback.textContent =
+    `✅ ${mode === "subtract" ? "Se restaron" : "Se añadieron"} ${amount} de oro.`;
 
-      await fetchJson(
-        `${API_PLAYERS}/${player._id}`,
-        { method: "PUT", body: fd },
-        true
-      );
+}
 
-      quickActionFeedback.textContent =
-        `✅ ${mode === "subtract" ? "Se restaron" : "Se añadieron"} ${amount} puntos de vida.`;
-    }
+// ================= VIDA =================
+else if (type === "life") {
 
-    quickActionFeedback.classList.add("text-green-400");
-    quickActionAmount.value = "";
-    refreshPlayers(true);
+  const currentLife = Number(player.life) || 0;
+
+  newValue =
+    mode === "subtract"
+      ? Math.max(0, currentLife - amount)
+      : currentLife + amount;
+
+  fd.append("life", newValue);
+
+  await fetchJson(
+    `${API_PLAYERS}/${player._id}`,
+    { method: "PUT", body: fd },
+    true
+  );
+
+  quickActionFeedback.textContent =
+    `✅ ${mode === "subtract" ? "Se restaron" : "Se añadieron"} ${amount} puntos de vida.`;
+
+}
 
   } catch (err) {
     console.error(err);
