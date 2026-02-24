@@ -843,7 +843,7 @@ else if (type === "life") {
 // INIT
 // =============================================================
 window.addEventListener("load", () => {
-  await refreshPlayers(true);
+   refreshPlayers(true);
   initItems();
   addPreview("charImgInput", "previewCharMain");
 });
