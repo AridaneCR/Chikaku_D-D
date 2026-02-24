@@ -647,50 +647,80 @@ function resetForm() {
 
 
 // =============================================================
-// ⚡ QUICK EXP MASTER
+// ⚡ QUICK EXP MASTER (SELECT BUSCADOR REAL)
 // =============================================================
 
 const quickExpSearch = document.getElementById("quickExpSearch");
-const quickExpSelect = document.getElementById("quickExpSelect");
+const quickExpDropdown = document.getElementById("quickExpDropdown");
 const quickExpAmount = document.getElementById("quickExpAmount");
 const quickExpFeedback = document.getElementById("quickExpFeedback");
 
-// Rellenar select con jugadores
-function populateQuickExpSelect(list = players) {
-  if (!quickExpSelect) return;
+let selectedQuickPlayerId = null;
 
-  quickExpSelect.innerHTML =
-    `<option value="">Selecciona personaje</option>`;
+// Render dropdown
+function renderQuickDropdown(list = players) {
+  quickExpDropdown.innerHTML = "";
+
+  if (!list.length) {
+    quickExpDropdown.innerHTML =
+      `<div class="px-3 py-2 text-sm text-zinc-400">Sin resultados</div>`;
+    return;
+  }
 
   list.forEach((p) => {
-    const opt = document.createElement("option");
-    opt.value = p._id;
-    opt.textContent = `${p.name} (Nivel ${p.level})`;
-    quickExpSelect.appendChild(opt);
+    const div = document.createElement("div");
+    div.className =
+      "px-3 py-2 cursor-pointer hover:bg-indigo-600 hover:text-white text-sm";
+    div.textContent = `${p.name} (Nivel ${p.level})`;
+
+    div.onclick = () => {
+      selectedQuickPlayerId = p._id;
+      quickExpSearch.value = p.name;
+      quickExpDropdown.classList.add("hidden");
+    };
+
+    quickExpDropdown.appendChild(div);
   });
 }
 
-// Filtro por buscador
+// Mostrar dropdown al escribir
 quickExpSearch?.addEventListener("input", () => {
   const query = quickExpSearch.value.trim().toLowerCase();
+
+  selectedQuickPlayerId = null;
 
   const filtered = players.filter((p) =>
     p.name.toLowerCase().includes(query)
   );
 
-  populateQuickExpSelect(filtered);
+  renderQuickDropdown(filtered);
+  quickExpDropdown.classList.remove("hidden");
 });
 
-// Añadir EXP rápida
+// Mostrar todos al hacer focus
+quickExpSearch?.addEventListener("focus", () => {
+  renderQuickDropdown(players);
+  quickExpDropdown.classList.remove("hidden");
+});
+
+// Cerrar si clic fuera
+document.addEventListener("click", (e) => {
+  if (!quickExpSearch.contains(e.target) &&
+      !quickExpDropdown.contains(e.target)) {
+    quickExpDropdown.classList.add("hidden");
+  }
+});
+
+// Añadir EXP
 async function quickAddExp() {
-  const playerId = quickExpSelect.value;
   const amount = Number(quickExpAmount.value);
 
   quickExpFeedback.textContent = "";
   quickExpFeedback.className = "mt-3 text-sm font-semibold";
 
-  if (!playerId) {
-    quickExpFeedback.textContent = "Selecciona un personaje.";
+  if (!selectedQuickPlayerId) {
+    quickExpFeedback.textContent =
+      "Selecciona un personaje válido.";
     quickExpFeedback.classList.add("text-red-400");
     return;
   }
@@ -703,36 +733,32 @@ async function quickAddExp() {
   }
 
   try {
-    const player = players.find((p) => p._id === playerId);
-    if (!player) return;
+    const player = players.find(
+      (p) => p._id === selectedQuickPlayerId
+    );
 
     const newTotalExp = (Number(player.exp) || 0) + amount;
     const newLevel = calculateLevelFromExp(newTotalExp);
 
+    const fd = new FormData();
+    fd.append("exp", newTotalExp);
+    fd.append("level", newLevel);
+
     await fetchJson(
-      `${API_PLAYERS}/${playerId}`,
-      {
-        method: "PUT",
-        body: (() => {
-          const fd = new FormData();
-          fd.append("exp", newTotalExp);
-          fd.append("level", newLevel);
-          return fd;
-        })(),
-      },
+      `${API_PLAYERS}/${selectedQuickPlayerId}`,
+      { method: "PUT", body: fd },
       true
     );
 
     quickExpFeedback.textContent =
-      `✅ Se añadieron ${amount} EXP correctamente.`;
+      `✅ ${player.name} recibió ${amount} EXP correctamente.`;
     quickExpFeedback.classList.add("text-green-400");
 
     quickExpAmount.value = "";
-
     refreshPlayers(true);
-    populateQuickExpSelect(players);
+
   } catch (err) {
-    console.error("❌ Error añadiendo EXP:", err);
+    console.error(err);
     quickExpFeedback.textContent =
       "Error añadiendo experiencia.";
     quickExpFeedback.classList.add("text-red-400");
