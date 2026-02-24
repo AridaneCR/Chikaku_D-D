@@ -375,7 +375,7 @@ async function refreshPlayers(force = false) {
   lastSignature = signature;
   players = data;
   renderPlayersList();
-  populateQuickExpSelect(players);
+  quickModifyPlayer(players);
 }
 
 function renderPlayersList() {
