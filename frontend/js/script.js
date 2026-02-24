@@ -738,12 +738,17 @@ async function quickModifyPlayer() {
     return;
   }
 
-  if (!amount || amount <= 0) {
-    quickActionFeedback.textContent = "Cantidad inválida.";
+  if (isNaN(amount) || amount === 0) {
+    quickActionFeedback.textContent = "Introduce una cantidad válida.";
     quickActionFeedback.classList.add("text-red-400");
     return;
   }
 
+  if (amount < 0) {
+    quickActionFeedback.textContent = "La cantidad no puede ser negativa.";
+    quickActionFeedback.classList.add("text-red-400");
+    return;
+  }
   try {
     const player = players.find(
       (p) => p._id === selectedQuickPlayerId
