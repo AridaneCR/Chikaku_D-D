@@ -49,13 +49,14 @@
 
       <div class="flex flex-col md:flex-row gap-3">
 
-        <!-- Buscador jugador -->
-        <input id="quickExpSearch" type="text" placeholder="Buscar personaje..." class="flex-1 input" />
+        <!-- Select con buscador integrado -->
+        <div class="relative flex-1">
+          <input id="quickExpSearch" type="text" placeholder="Buscar o seleccionar personaje..." class="w-full input" />
 
-        <!-- Select dinámico -->
-        <select id="quickExpSelect" class="flex-1 input">
-          <option value="">Selecciona personaje</option>
-        </select>
+          <div id="quickExpDropdown" class="absolute z-50 w-full bg-zinc-800 border border-zinc-700
+               rounded mt-1 max-h-60 overflow-y-auto hidden">
+          </div>
+        </div>
 
         <!-- Cantidad -->
         <input id="quickExpAmount" type="number" placeholder="Cantidad EXP" class="w-40 input" />
@@ -72,7 +73,7 @@
     </div>
 
 
-    
+
     <!-- FORMULARIO -->
     <section id="createCard"
       class="hidden max-w-4xl mx-auto mb-12 bg-zinc-900 border border-zinc-700 rounded-3xl shadow-2xl p-8">
