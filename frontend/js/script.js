@@ -837,11 +837,13 @@ else if (type === "life") {
   }
 }
 
+
+
 // =============================================================
 // INIT
 // =============================================================
 window.addEventListener("load", () => {
-  refreshPlayers(true);
+  await refreshPlayers(true);
   initItems();
   addPreview("charImgInput", "previewCharMain");
 });
