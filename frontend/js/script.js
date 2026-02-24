@@ -723,7 +723,6 @@ document.addEventListener("click", (e) => {
 // =============================================================
 // APLICAR MODIFICACIÓN
 // =============================================================
-
 async function quickModifyPlayer() {
   const rawValue = quickActionAmount.value.trim();
   const type = quickActionType.value;
@@ -738,7 +737,6 @@ async function quickModifyPlayer() {
     return;
   }
 
-
   if (rawValue === "") {
     quickActionFeedback.textContent = "Introduce una cantidad.";
     quickActionFeedback.classList.add("text-red-400");
@@ -747,7 +745,7 @@ async function quickModifyPlayer() {
 
   const amount = Number(rawValue);
 
-  if (amount <= 0) {
+  if (isNaN(amount) || amount <= 0) {
     quickActionFeedback.textContent = "La cantidad debe ser mayor que 0.";
     quickActionFeedback.classList.add("text-red-400");
     return;
@@ -764,70 +762,76 @@ async function quickModifyPlayer() {
     let fd = new FormData();
 
     // ================= EXP =================
-if (type === "exp") {
+    if (type === "exp") {
 
-  newValue = (Number(player.exp) || 0) + amount;
-  const newLevel = calculateLevelFromExp(newValue);
+      newValue = (Number(player.exp) || 0) + amount;
+      const newLevel = calculateLevelFromExp(newValue);
 
-  fd.append("exp", newValue);
-  fd.append("level", newLevel);
+      fd.append("exp", newValue);
+      fd.append("level", newLevel);
 
-  await fetchJson(
-    `${API_PLAYERS}/${player._id}`,
-    { method: "PUT", body: fd },
-    true
-  );
+      await fetchJson(
+        `${API_PLAYERS}/${player._id}`,
+        { method: "PUT", body: fd },
+        true
+      );
 
-  quickActionFeedback.textContent =
-    `✅ ${player.name} recibió ${amount} EXP.`;
+      quickActionFeedback.textContent =
+        `✅ ${player.name} recibió ${amount} EXP.`;
 
-}
+    }
 
-// ================= ORO =================
-else if (type === "gold") {
+    // ================= ORO =================
+    else if (type === "gold") {
 
-  const finalAmount = mode === "subtract" ? -amount : amount;
+      const finalAmount = mode === "subtract" ? -amount : amount;
 
-  await fetchJson(
-    `${API_PLAYERS}/${player._id}/gold`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount: finalAmount,
-        mode: "add",
-      }),
-    },
-    true
-  );
+      await fetchJson(
+        `${API_PLAYERS}/${player._id}/gold`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: finalAmount,
+            mode: "add",
+          }),
+        },
+        true
+      );
 
-  quickActionFeedback.textContent =
-    `✅ ${mode === "subtract" ? "Se restaron" : "Se añadieron"} ${amount} de oro.`;
+      quickActionFeedback.textContent =
+        `✅ ${mode === "subtract" ? "Se restaron" : "Se añadieron"} ${amount} de oro.`;
 
-}
+    }
 
-// ================= VIDA =================
-else if (type === "life") {
+    // ================= VIDA =================
+    else if (type === "life") {
 
-  const currentLife = Number(player.life) || 0;
+      const currentLife = Number(player.life) || 0;
 
-  newValue =
-    mode === "subtract"
-      ? Math.max(0, currentLife - amount)
-      : currentLife + amount;
+      newValue =
+        mode === "subtract"
+          ? Math.max(0, currentLife - amount)
+          : currentLife + amount;
 
-  fd.append("life", newValue);
+      fd.append("life", newValue);
 
-  await fetchJson(
-    `${API_PLAYERS}/${player._id}`,
-    { method: "PUT", body: fd },
-    true
-  );
+      await fetchJson(
+        `${API_PLAYERS}/${player._id}`,
+        { method: "PUT", body: fd },
+        true
+      );
 
-  quickActionFeedback.textContent =
-    `✅ ${mode === "subtract" ? "Se restaron" : "Se añadieron"} ${amount} puntos de vida.`;
+      quickActionFeedback.textContent =
+        `✅ ${mode === "subtract" ? "Se restaron" : "Se añadieron"} ${amount} puntos de vida.`;
 
-}
+    }
+
+    // 🔥 AQUÍ REFRESCAMOS
+    quickActionFeedback.classList.add("text-green-400");
+    quickActionAmount.value = "";
+
+    await refreshPlayers(true);
 
   } catch (err) {
     console.error(err);
@@ -835,8 +839,8 @@ else if (type === "life") {
       "Error aplicando modificación.";
     quickActionFeedback.classList.add("text-red-400");
   }
-  refreshPlayers(true)
 }
+ 
 
 
 
