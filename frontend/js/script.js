@@ -667,6 +667,11 @@ quickActionType.addEventListener("change", () => {
   }
 });
 
+function logoutMaster() {
+  sessionStorage.removeItem("masterToken");
+  window.location.href = "../index.html";
+}
+
 // Render dropdown
 function renderQuickDropdown(list = players) {
   quickActionDropdown.innerHTML = "";
