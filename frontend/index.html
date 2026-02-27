@@ -5,35 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>D&D App</title>
 
-  <!-- 🔥 CSP PERMITIENDO CLOUDINARY -->
+  <!-- 🔐 CSP PERMITIENDO CLOUDINARY -->
   <meta
-  http-equiv="Content-Security-Policy"
-  content="
-    default-src 'self' https: data: blob:;
-    img-src 'self' https://res.cloudinary.com data: blob:;
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https:;
-    style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
-    connect-src 'self' https:;
-  "
-/>
-
+    http-equiv="Content-Security-Policy"
+    content="
+      default-src 'self' https: data: blob:;
+      img-src 'self' https://res.cloudinary.com data: blob:;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https:;
+      style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
+      connect-src 'self' https:;
+    "
+  />
 
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-stone-900 text-stone-100 min-h-screen p-6 flex items-center justify-center">
+<body class="bg-stone-900 text-stone-100 min-h-screen flex items-center justify-center p-6">
 
-  <!-- LOGIN MASTER / PLAYER -->
-  <div id="loginScreen"
-    class="w-full max-w-md bg-stone-800 p-6 rounded-xl shadow-xl">
+  <!-- LOGIN -->
+  <div class="w-full max-w-md bg-stone-800 p-8 rounded-2xl shadow-2xl border border-stone-700">
 
-    <h1 class="text-4xl font-bold text-center mb-6 text-red-400">
-      Dungeons & Dragons
+    <h1 class="text-4xl font-bold text-center mb-8 text-red-400">
+      🐉 Dungeons & Dragons
     </h1>
 
     <!-- MASTER LOGIN -->
     <div class="mb-6">
-      <label class="block mb-1 text-sm text-stone-300">
+      <label class="block mb-2 text-sm text-stone-300">
         Entrar como Master
       </label>
 
@@ -41,28 +39,45 @@
         id="masterPass"
         type="password"
         placeholder="Contraseña del Master"
-        class="w-full p-2 rounded text-black mb-3" />
+        class="w-full p-3 rounded text-black mb-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+      />
 
       <button
         onclick="loginMaster()"
-        class="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold">
+        class="w-full bg-red-600 hover:bg-red-700 p-3 rounded font-semibold transition">
         Entrar como Master
       </button>
     </div>
 
     <div class="border-t border-stone-700 my-6"></div>
 
+    <!-- PLAYER ACCESS -->
     <button
       onclick="enterBoard()"
-      class="w-full bg-purple-600 hover:bg-purple-700 p-2 rounded font-semibold">
+      class="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded font-semibold transition">
       Entrar como Jugador
     </button>
+
   </div>
 
   <script>
+    // Limpia cualquier sesión anterior al volver al index
+    sessionStorage.removeItem("masterToken");
+
     function loginMaster() {
-      const pass = document.getElementById("masterPass").value;
+      const pass = document.getElementById("masterPass").value.trim();
+
+      if (!pass) {
+        alert("Introduce la contraseña.");
+        return;
+      }
+
       if (pass === "Chikaku2026") {
+        // 🔐 Generamos token simple
+        const token = btoa("master-session-" + Date.now());
+
+        sessionStorage.setItem("masterToken", token);
+
         window.location.href = "./Player/master.html";
       } else {
         alert("Contraseña incorrecta");
@@ -72,6 +87,13 @@
     function enterBoard() {
       window.location.href = "./Player/player_view.html";
     }
+
+    // Permitir pulsar ENTER para login
+    document.getElementById("masterPass").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        loginMaster();
+      }
+    });
   </script>
 
 </body>
