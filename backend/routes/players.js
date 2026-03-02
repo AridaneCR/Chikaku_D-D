@@ -272,13 +272,15 @@ router.put(
       }
 
       // ---------- DESCRIPCIONES ----------
-      const newDescriptions = req.body.itemDescriptions
-        ? JSON.parse(req.body.itemDescriptions)
-        : [];
+      if (req.body.itemDescriptions !== undefined) {
+        const newDescriptions = JSON.parse(req.body.itemDescriptions);
 
-      player.itemDescriptions = player.items.map(
-        (_, i) => newDescriptions[i] || "",
-      );
+        player.itemDescriptions = player.items.map(
+          (_, i) => newDescriptions[i] || ""
+        );
+
+        player.markModified("itemDescriptions");
+      }
 
       player.updatedAt = new Date();
 
