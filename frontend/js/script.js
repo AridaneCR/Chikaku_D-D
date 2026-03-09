@@ -427,7 +427,7 @@ ${p.name} (Nivel ${p.level})
 <p>⭐ EXP: ${p.exp}</p>
 <p>🪙 Oro: ${p.gold}</p>
 
-<div class="mt-2">
+<div class="mt-3 mb-4">
 
 <div class="text-xs text-zinc-400 mb-1">
 ${expProgress.current} / ${expProgress.needed}
@@ -435,14 +435,12 @@ ${expProgress.current} / ${expProgress.needed}
 
 <div class="w-full bg-zinc-700 rounded-full h-2 overflow-hidden">
 <div
-class="bg-green-500 h-2"
+class="bg-yellow-500 h-2"
 style="width:${expProgress.percent}%">
 </div>
 </div>
 
 </div>
-
-<div class="mt-auto space-y-2">
 
 <button onclick="editPlayer('${p._id}')"
 class="w-full bg-green-600 p-2 rounded">
