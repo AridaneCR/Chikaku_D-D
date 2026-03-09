@@ -394,16 +394,21 @@ function renderPlayerBoard(list = players) {
     </div>
 
     <!-- BOTÓN INVENTARIO -->
-    ${(p.items?.length || 0) > 6
-        ? `<button
-            class="mt-2 w-full bg-zinc-700 hover:bg-zinc-600 text-xs rounded p-1"
-            onclick='openInventoryModal(
-              ${JSON.stringify(p.items)},
-              ${JSON.stringify(p.itemDescriptions || [])}
-            )'>
-            📦 Ver inventario (${p.items.length})
-          </button>`
-        : ""
+    <button
+  class="mt-2 w-full text-xs rounded p-1
+  ${(p.items?.length || 0) === 0
+    ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+    : "bg-zinc-700 hover:bg-zinc-600 text-white"}
+  "
+  ${(p.items?.length || 0) === 0
+    ? "disabled"
+    : `onclick='openInventoryModal(
+        ${JSON.stringify(p.items)},
+        ${JSON.stringify(p.itemDescriptions || [])}
+      )'`}
+>
+  📦 Ver inventario (${p.items?.length || 0})
+</button>
       }
   </div>
     `;
