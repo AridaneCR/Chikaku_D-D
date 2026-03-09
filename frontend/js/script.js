@@ -59,6 +59,34 @@ function calculateLevelFromExp(totalExp) {
   }
 }
 
+function getExpProgress(exp) {
+
+  exp = Number(exp) || 0;
+
+  let level = 1;
+  let expUsed = 0;
+
+  while (true) {
+
+    const expForNextLevel = BASE_EXP + (level - 1) * EXP_STEP;
+
+    if (exp < expUsed + expForNextLevel) {
+
+      const currentLevelExp = exp - expUsed;
+      const percent = Math.floor((currentLevelExp / expForNextLevel) * 100);
+
+      return {
+        current: currentLevelExp,
+        needed: expForNextLevel,
+        percent
+      };
+    }
+
+    expUsed += expForNextLevel;
+    level++;
+  }
+}
+
 // =============================================================
 // UI ACTIONS
 // =============================================================
@@ -382,38 +410,52 @@ function renderPlayersList() {
   list.innerHTML = "";
 
   players.forEach((p) => {
+    const expProgress = getExpProgress(p.exp);
     const card = document.createElement("div");
     card.className =
       "bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow flex flex-col";
 
     card.innerHTML = `
-    <img src="${resolveImage(p.img)}"
-    class="w-full h-40 object-cover rounded mb-2">
+<img src="${resolveImage(p.img)}"
+class="w-full h-40 object-cover rounded mb-2">
 
+<h3 class="font-bold text-lg">
+${p.name} (Nivel ${p.level})
+</h3>
 
-      <h3 class="font-bold text-lg">
-        ${p.name} (Nivel ${p.level})
-      </h3>
+<p>❤️ Vida: ${p.life}</p>
+<p>⭐ EXP: ${p.exp}</p>
+<p>🪙 Oro: ${p.gold}</p>
 
-      <p>❤️ Vida: ${p.life}</p>
-      <p>⭐ EXP: ${p.exp}</p>
-      <p>🪙 Oro: ${p.gold}</p>
+<div class="mt-2">
 
-      <div class="mt-auto space-y-2">
-  </div>
-
-  <button onclick="editPlayer('${p._id}')"
-    class="w-full bg-green-600 p-2 rounded">
-    Editar
-  </button>
-
-  <button onclick="deletePlayer('${p._id}')"
-    class="w-full bg-red-600 p-2 rounded">
-    Eliminar
-  </button>
+<div class="text-xs text-zinc-400 mb-1">
+${expProgress.current} / ${expProgress.needed}
 </div>
 
-    `;
+<div class="w-full bg-zinc-700 rounded-full h-2 overflow-hidden">
+<div
+class="bg-green-500 h-2"
+style="width:${expProgress.percent}%">
+</div>
+</div>
+
+</div>
+
+<div class="mt-auto space-y-2">
+
+<button onclick="editPlayer('${p._id}')"
+class="w-full bg-green-600 p-2 rounded">
+Editar
+</button>
+
+<button onclick="deletePlayer('${p._id}')"
+class="w-full bg-red-600 p-2 rounded">
+Eliminar
+</button>
+
+</div>
+`;
     list.appendChild(card);
   });
 }
