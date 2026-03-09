@@ -367,16 +367,18 @@ function renderPlayerBoard(list = players) {
       }
 
   <div class="mt-auto">
-    <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
-      <div class="bg-green-500 h-3" style="width:${exp.percent}%"></div>
-    </div>
 
-    <p class="text-xs text-stone-300 mt-1 text-center">
-      ${exp.current} / ${exp.required} · faltan ${exp.remaining}
-    </p>
+  <!-- BARRA EXP -->
+  <div class="bg-stone-600 h-3 rounded mt-3 overflow-hidden">
+    <div class="bg-green-500 h-3" style="width:${exp.percent}%"></div>
+  </div>
 
-    <!-- OBJETOS VISIBLES (máx 6) -->
-    <div class="grid grid-cols-6 gap-1 mt-3">
+  <p class="text-xs text-stone-300 mt-1 text-center">
+    ${exp.current} / ${exp.required} · faltan ${exp.remaining}
+  </p>
+
+  <!-- OBJETOS -->
+  <div class="grid grid-cols-6 gap-1 mt-3 min-h-[44px]">
       ${visibleItems
         .map(
           (item, i) => `
