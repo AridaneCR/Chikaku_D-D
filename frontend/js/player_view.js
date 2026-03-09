@@ -409,7 +409,7 @@ function renderPlayerBoard(list = players) {
 >
   📦 Ver inventario (${p.items?.length || 0})
 </button>
-      }
+      
   </div>
     `;
 
