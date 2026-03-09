@@ -397,22 +397,9 @@ function renderPlayersList() {
 
       <p>❤️ Vida: ${p.life}</p>
       <p>⭐ EXP: ${p.exp}</p>
+      <p>🪙 Oro: ${p.gold}</p>
 
       <div class="mt-auto space-y-2">
-
-  <!-- 🪙 ORO -->
-  <div class="flex gap-2">
-    <button
-      onclick="updateGold('${p._id}', -10)"
-      class="flex-1 bg-yellow-700 hover:bg-yellow-800 p-1 rounded text-sm">
-      −10
-    </button>
-
-    <button
-      onclick="updateGold('${p._id}', 10)"
-      class="flex-1 bg-yellow-600 hover:bg-yellow-700 p-1 rounded text-sm">
-      +10
-    </button>
   </div>
 
   <button onclick="editPlayer('${p._id}')"
