@@ -108,3 +108,7 @@ app.listen(PORT, () =>
 setInterval(() => {
   fetch("https://chikaku-d-d-1.onrender.com").catch(() => {});
 }, 10 * 60 * 1000);
+
+const campaignInfoRoutes = require("./routes/campaignInfo");
+
+app.use("/api/campaign-info", campaignInfoRoutes);

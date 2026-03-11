@@ -465,30 +465,19 @@ Eliminar
 
 async function saveCampaignInfo() {
 
-  const textarea = document.getElementById("campaignInfoInput");
+  const info = document
+    .getElementById("campaignInfoInput")
+    .value;
 
-  if (!textarea) return;
+  await fetch(`${BASE_URL}/api/campaign-info`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ info })
+  });
 
-  const info = textarea.value.trim();
-
-  try {
-
-    await fetch(`${BASE_URL}/api/campaign-info`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ info })
-    });
-
-    alert("Información de campaña guardada");
-
-  } catch (err) {
-
-    console.error(err);
-    alert("Error guardando la información");
-
-  }
+  alert("Información guardada");
 
 }
 
