@@ -90,10 +90,25 @@
         <input id="quickActionAmount" type="number" placeholder="Cantidad" class="w-32 input" />
 
         <!-- Botón -->
-        <<button type="button" onclick="quickModifyPlayer()"
+        <button type="button" onclick="quickModifyPlayer()"
           class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded font-bold">
           Aplicar
           </button>
+
+          <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-4 mt-6">
+
+            <h3 class="font-bold mb-3">
+              📜 Información de la campaña
+            </h3>
+
+            <textarea id="campaignInfoInput" rows="4" class="input resize-none"
+              placeholder="Historia, reglas, eventos, etc..."></textarea>
+
+            <button onclick="saveCampaignInfo()" class="mt-3 bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">
+              Guardar información
+            </button>
+
+          </div>
 
       </div>
 

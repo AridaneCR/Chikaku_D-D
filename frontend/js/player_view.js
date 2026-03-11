@@ -423,6 +423,62 @@ function renderPlayerBoard(list = players) {
   });
 }
 
+function openCampaignInfo() {
+
+  let modal = document.getElementById("campaignInfoModal");
+
+  if (!modal) {
+
+    modal = document.createElement("div");
+    modal.id = "campaignInfoModal";
+
+    modal.className =
+      "fixed inset-0 bg-black/80 z-50 flex items-center justify-center";
+
+    modal.innerHTML = `
+      <div class="bg-stone-800 border border-stone-600 rounded-xl p-6 max-w-lg w-full relative">
+
+        <button
+          onclick="document.getElementById('campaignInfoModal').remove()"
+          class="absolute top-2 right-2 text-xl text-white">
+          ✕
+        </button>
+
+        <h3 class="text-lg font-bold mb-4 text-center">
+          📜 Información de la campaña
+        </h3>
+
+        <p id="campaignInfoText"
+           class="text-sm whitespace-pre-line text-stone-200">
+           Cargando...
+        </p>
+
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+  }
+
+  loadCampaignInfo();
+}
+
+async function loadCampaignInfo() {
+
+  try {
+
+    const res = await fetch(`${BASE_URL}/api/campaign-info`);
+    const data = await res.json();
+
+    document.getElementById("campaignInfoText").textContent =
+      data.info || "No hay información disponible";
+
+  } catch {
+    document.getElementById("campaignInfoText").textContent =
+      "No se pudo cargar la información";
+  }
+
+}
+
 // =============================================================
 // SSE
 // =============================================================

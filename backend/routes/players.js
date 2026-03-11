@@ -366,4 +366,14 @@ router.patch("/:id/gold", async (req, res) => {
   }
 });
 
+router.get("/campaign-info", async (req, res) => {
+
+  const info = await Settings.findOne({ key: "campaignInfo" });
+
+  res.json({
+    info: info?.value || ""
+  });
+
+});
+
 module.exports = router;
