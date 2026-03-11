@@ -366,14 +366,16 @@ router.patch("/:id/gold", async (req, res) => {
   }
 });
 
-router.get("/campaign-info", async (req, res) => {
+// routes/campaignInfo.js
 
-  const info = await Settings.findOne({ key: "campaignInfo" });
+let campaignInfo = "";
 
-  res.json({
-    info: info?.value || ""
-  });
-
+router.get("/campaign-info", (req, res) => {
+  res.json({ info: campaignInfo });
 });
 
+router.post("/campaign-info", (req, res) => {
+  campaignInfo = req.body.info || "";
+  res.json({ ok: true });
+});
 module.exports = router;

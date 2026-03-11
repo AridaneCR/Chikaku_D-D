@@ -458,6 +458,40 @@ Eliminar
   });
 }
 
+
+// =============================================================
+// CAMPAIGN INFO (MASTER)
+// =============================================================
+
+async function saveCampaignInfo() {
+
+  const textarea = document.getElementById("campaignInfoInput");
+
+  if (!textarea) return;
+
+  const info = textarea.value.trim();
+
+  try {
+
+    await fetch(`${BASE_URL}/api/campaign-info`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ info })
+    });
+
+    alert("Información de campaña guardada");
+
+  } catch (err) {
+
+    console.error(err);
+    alert("Error guardando la información");
+
+  }
+
+}
+
 // =============================================================
 // EDIT PLAYER
 // =============================================================
