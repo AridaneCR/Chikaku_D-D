@@ -333,6 +333,10 @@ function renderPlayerBoard(list = players) {
     ❤️ Salud: <span class="font-semibold">${p.life}</span>
   </p>
 
+  <p class="text-sm">
+  🛡️ CA: <span class="font-semibold">${p.ca ?? 10}</span>
+</p>
+
   ${p.class
         ? `
         <div class="flex flex-wrap gap-2 mt-1 mb-1">
@@ -397,12 +401,12 @@ function renderPlayerBoard(list = players) {
     <button
   class="mt-2 w-full text-xs rounded p-1
   ${(p.items?.length || 0) === 0
-    ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-    : "bg-zinc-700 hover:bg-zinc-600 text-white"}
+        ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+        : "bg-zinc-700 hover:bg-zinc-600 text-white"}
   "
   ${(p.items?.length || 0) === 0
-    ? "disabled"
-    : `onclick='openInventoryModal(
+        ? "disabled"
+        : `onclick='openInventoryModal(
         ${JSON.stringify(p.items)},
         ${JSON.stringify(p.itemDescriptions || [])}
       )'`}

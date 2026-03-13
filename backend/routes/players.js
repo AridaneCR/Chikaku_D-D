@@ -156,6 +156,7 @@ router.post(
         exp: Number(req.body.exp) || 0,
         level: Number(req.body.level) || 1,
         gold: Number(req.body.gold) || 0,
+        ca: Number(req.body.ca) || 10,
         class: req.body.class || "",
         subclass: req.body.subclass || "",
         skills,
@@ -207,6 +208,8 @@ router.put(
         req.body.class !== undefined ? req.body.class : player.class;
       player.subclass =
         req.body.subclass !== undefined ? req.body.subclass : player.subclass;
+      player.ca =
+        req.body.ca !== undefined ? Number(req.body.ca) : player.ca;
 
       if (req.body.skills) {
         player.skills = JSON.parse(req.body.skills);
@@ -363,6 +366,56 @@ router.patch("/:id/gold", async (req, res) => {
   } catch (err) {
     console.error("UPDATE GOLD ERROR:", err);
     res.status(500).json({ error: "Error actualizando oro" });
+  }
+});
+
+// ============================================================
+// 🛡️ UPDATE CA
+// ============================================================
+
+router.patch("/:id/ca", async (req, res) => {
+  try {
+
+    const notify = req.app.get("notifyPlayersUpdate");
+    const { amount, mode } = req.body;
+
+    if (typeof amount !== "number") {
+      return res.status(400).json({ error: "Cantidad inválida" });
+    }
+
+    const player = await Player.findById(req.params.id);
+
+    if (!player) {
+      return res.status(404).json({ error: "Jugador no encontrado" });
+    }
+
+    if (mode === "set") {
+      player.ca = Math.max(0, amount);
+    } else {
+      player.ca = Math.max(0, (player.ca || 0) + amount);
+    }
+
+    player.updatedAt = new Date();
+
+    const saved = await player.save();
+
+    invalidateCache();
+    notify?.();
+
+    res.json({
+      ok: true,
+      ca: saved.ca,
+      player: normalizePlayer(saved),
+    });
+
+  } catch (err) {
+
+    console.error("UPDATE CA ERROR:", err);
+
+    res.status(500).json({
+      error: "Error actualizando CA"
+    });
+
   }
 });
 

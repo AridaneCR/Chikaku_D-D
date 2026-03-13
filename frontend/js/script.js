@@ -710,11 +710,17 @@ let selectedQuickPlayerId = null;
 
 // Mostrar / ocultar modo según tipo
 quickActionType.addEventListener("change", () => {
-  if (quickActionType.value === "gold" || quickActionType.value === "life") {
+
+  if (
+    quickActionType.value === "gold" ||
+    quickActionType.value === "life" ||
+    quickActionType.value === "ca"
+  ) {
     quickActionMode.classList.remove("hidden");
   } else {
     quickActionMode.classList.add("hidden");
   }
+
 });
 
 function logoutMaster() {
@@ -881,6 +887,29 @@ async function quickModifyPlayer() {
 
     }
 
+    // ================= CA =================
+    else if (type === "ca") {
+
+      const currentCA = Number(player.ca) || 0;
+
+      newValue =
+        mode === "subtract"
+          ? Math.max(0, currentCA - amount)
+          : currentCA + amount;
+
+      fd.append("ca", newValue);
+
+      await fetchJson(
+        `${API_PLAYERS}/${player._id}`,
+        { method: "PUT", body: fd },
+        true
+      );
+
+      quickActionFeedback.textContent =
+        `🛡️ ${mode === "subtract" ? "Se redujo" : "Se aumentó"} la CA en ${amount}.`;
+
+    }
+
     // 🔥 AQUÍ REFRESCAMOS
     quickActionFeedback.classList.add("text-green-400");
     quickActionAmount.value = "";
@@ -894,7 +923,7 @@ async function quickModifyPlayer() {
     quickActionFeedback.classList.add("text-red-400");
   }
 }
- 
+
 
 
 
@@ -902,7 +931,7 @@ async function quickModifyPlayer() {
 // INIT
 // =============================================================
 window.addEventListener("load", () => {
-   refreshPlayers(true);
+  refreshPlayers(true);
   initItems();
   addPreview("charImgInput", "previewCharMain");
 });

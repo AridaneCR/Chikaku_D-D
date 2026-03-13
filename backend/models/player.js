@@ -44,6 +44,11 @@ const PlayerSchema = new mongoose.Schema(
       default: 10,
     },
 
+    ca: {
+      type: Number,
+      default: 10,
+    },
+
     exp: {
       type: Number,
       default: 0,
