@@ -888,20 +888,23 @@ async function quickModifyPlayer() {
     }
 
     // ================= CA =================
+    // ================= CA =================
     else if (type === "ca") {
 
-      const currentCA = Number(player.ca) || 0;
-
-      newValue =
-        mode === "subtract"
-          ? Math.max(0, currentCA - amount)
-          : currentCA + amount;
-
-      fd.append("ca", newValue);
+      const finalAmount = mode === "subtract" ? -amount : amount;
 
       await fetchJson(
-        `${API_PLAYERS}/${player._id}`,
-        { method: "PUT", body: fd },
+        `${API_PLAYERS}/${player._id}/ca`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            amount: finalAmount,
+            mode: "add"
+          })
+        },
         true
       );
 
