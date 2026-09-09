@@ -5,6 +5,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 
 const playersRouter = require("./routes/players");
+const productsRouter = require("./routes/products");
+
 
 const app = express();
 
@@ -15,6 +17,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 
 // =============================================================
 // MONGODB
@@ -88,6 +91,7 @@ app.get("/api/players/stream", (req, res) => {
 // ROUTES
 // =============================================================
 app.use("/api/players", playersRouter);
+app.use("/api/products", productsRouter);
 
 // =============================================================
 // HEALTH CHECK
