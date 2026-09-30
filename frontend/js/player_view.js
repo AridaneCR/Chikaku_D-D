@@ -646,10 +646,6 @@ function updateStoreWallet() {
 
   wallet.classList.remove("hidden");
 
-  // Estos campos se mostrarán cuando el endpoint de cartera esté disponible.
-  document.getElementById("storeBalance").textContent =
-    formatEuros(player.balanceCents || 0);
-
   document.getElementById("storeChikacoins").textContent =
     Number(player.chikacoins || 0);
 }
@@ -678,15 +674,10 @@ function openPurchaseModal(productId) {
 
         <p id="purchaseDescription" class="text-sm text-zinc-400 mb-5"></p>
 
-        <div class="grid grid-cols-2 gap-3">
-          <button id="buyMoneyButton"
-            class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl">
-            💶 Pagar con dinero
-          </button>
-
+        <div>
           <button id="buyCoinButton"
-            class="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-xl">
-            🪙 Pagar con Chikacoins
+            class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-xl">
+            🪙 Comprar por ${Number(product.chikacoinPrice || 0)} Chikacoins
           </button>
         </div>
 
@@ -700,10 +691,7 @@ function openPurchaseModal(productId) {
 
   modal.querySelector("#purchaseTitle").textContent = product.name;
   modal.querySelector("#purchaseDescription").textContent =
-    `💶 ${formatEuros(product.priceCents)} · 🪙 ${Number(product.chikacoinPrice || 0)} Chikacoins`;
-
-  modal.querySelector("#buyMoneyButton").onclick = () =>
-    attemptPurchase(product, "money");
+    `🪙 ${Number(product.chikacoinPrice || 0)} Chikacoins`;
 
   modal.querySelector("#buyCoinButton").onclick = () =>
     attemptPurchase(product, "chikacoin");
