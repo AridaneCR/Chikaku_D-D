@@ -172,6 +172,63 @@
     </div>
   </div>
 
+
+  <!-- ================= TIENDA ================= -->
+  <button
+    onclick="openStore()"
+    class="fixed bottom-24 right-6 z-[950]
+           bg-amber-600 hover:bg-amber-500
+           w-12 h-12 rounded-full
+           flex items-center justify-center
+           text-xl shadow-lg transition hover:scale-110"
+    title="Tienda">
+    🛒
+  </button>
+
+  <div id="storeModal" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-[9998]">
+    <div onclick="event.stopPropagation()"
+      class="bg-zinc-900 border border-zinc-700 rounded-2xl
+             p-6 w-[95vw] max-w-6xl max-h-[90vh] overflow-hidden shadow-2xl">
+
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+        <div>
+          <h2 class="text-2xl font-bold text-amber-400">🛒 Tienda</h2>
+          <p class="text-sm text-zinc-400">Compra objetos para tu personaje.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <select id="storePlayerSelect"
+            class="px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white">
+            <option value="">Selecciona tu personaje</option>
+          </select>
+
+          <button onclick="closeStore()"
+            class="text-zinc-400 hover:text-white text-2xl">✕</button>
+        </div>
+      </div>
+
+      <div id="storeWallet"
+        class="hidden mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+          <div class="text-xs text-zinc-400">Dinero disponible</div>
+          <div id="storeBalance" class="text-xl font-bold text-emerald-400">0,00 €</div>
+        </div>
+        <div class="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+          <div class="text-xs text-zinc-400">Chikacoins</div>
+          <div id="storeChikacoins" class="text-xl font-bold text-yellow-400">0</div>
+        </div>
+      </div>
+
+      <div id="storeProducts"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4
+               gap-4 max-h-[65vh] overflow-y-auto pr-1">
+        <div class="col-span-full text-center text-zinc-400 py-10">
+          Selecciona tu personaje para cargar la tienda.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <button id="infoButton"
   onclick="openCampaignInfo()"
   class="fixed bottom-6 right-6 z-[950]
