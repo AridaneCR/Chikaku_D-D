@@ -483,6 +483,241 @@ async function loadCampaignInfo() {
 
 }
 
+
+
+// =============================================================
+// 🛒 TIENDA DEL JUGADOR
+// =============================================================
+
+const API_PRODUCTS = `${BASE_URL}/api/products`;
+
+let storeProducts = [];
+let storePlayerId = "";
+
+function formatEuros(cents) {
+  return (Number(cents || 0) / 100).toLocaleString("es-ES", {
+    style: "currency",
+    currency: "EUR",
+  });
+}
+
+function escapeStoreHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function openStore() {
+  const modal = document.getElementById("storeModal");
+  if (!modal) return;
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+
+  populateStorePlayers();
+
+  if (storePlayerId) {
+    loadStoreProducts();
+    updateStoreWallet();
+  }
+}
+
+function closeStore() {
+  const modal = document.getElementById("storeModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+}
+
+function populateStorePlayers() {
+  const select = document.getElementById("storePlayerSelect");
+  if (!select) return;
+
+  const current = storePlayerId;
+  select.innerHTML = '<option value="">Selecciona tu personaje</option>';
+
+  players.forEach((p) => {
+    const option = document.createElement("option");
+    option.value = p._id;
+    option.textContent = p.name;
+    select.appendChild(option);
+  });
+
+  if (current && players.some((p) => p._id === current)) {
+    select.value = current;
+  }
+
+  select.onchange = async () => {
+    storePlayerId = select.value;
+    if (!storePlayerId) {
+      document.getElementById("storeWallet")?.classList.add("hidden");
+      document.getElementById("storeProducts").innerHTML =
+        '<div class="col-span-full text-center text-zinc-400 py-10">Selecciona tu personaje para cargar la tienda.</div>';
+      return;
+    }
+
+    await loadStoreProducts();
+    updateStoreWallet();
+  };
+}
+
+async function loadStoreProducts() {
+  const container = document.getElementById("storeProducts");
+  if (!container) return;
+
+  container.innerHTML =
+    '<div class="col-span-full text-center text-zinc-400 py-10">Cargando tienda…</div>';
+
+  try {
+    const res = await fetch(API_PRODUCTS, { cache: "no-store" });
+
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+
+    storeProducts = await res.json();
+
+    if (!storeProducts.length) {
+      container.innerHTML =
+        '<div class="col-span-full text-center text-zinc-400 py-10">No hay productos disponibles.</div>';
+      return;
+    }
+
+    container.innerHTML = "";
+
+    storeProducts.forEach((product) => {
+      const card = document.createElement("article");
+      card.className =
+        "bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden flex flex-col";
+
+      const image = product.image
+        ? escapeStoreHtml(product.image)
+        : "/placeholder.png";
+
+      card.innerHTML = `
+        <img src="${image}"
+          class="w-full h-44 object-cover bg-zinc-950"
+          onerror="this.src='/placeholder.png'">
+
+        <div class="p-4 flex flex-col flex-1">
+          <h3 class="font-bold text-white text-lg">${escapeStoreHtml(product.name)}</h3>
+
+          <p class="text-sm text-zinc-400 mt-2 flex-1">
+            ${escapeStoreHtml(product.description || "Sin descripción")}
+          </p>
+
+          <div class="grid grid-cols-2 gap-2 mt-4">
+            <div class="bg-zinc-900 rounded-lg p-2">
+              <div class="text-[11px] text-zinc-500">Dinero</div>
+              <div class="font-bold text-emerald-400">${formatEuros(product.priceCents)}</div>
+            </div>
+
+            <div class="bg-zinc-900 rounded-lg p-2">
+              <div class="text-[11px] text-zinc-500">Chikacoins</div>
+              <div class="font-bold text-yellow-400">${Number(product.chikacoinPrice || 0)}</div>
+            </div>
+          </div>
+
+          <button
+            onclick="openPurchaseModal('${escapeStoreHtml(product._id)}')"
+            class="mt-3 w-full bg-amber-600 hover:bg-amber-500 text-white
+                   font-bold py-2 rounded-lg">
+            Comprar
+          </button>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  } catch (error) {
+    console.error("Error cargando tienda:", error);
+    container.innerHTML =
+      '<div class="col-span-full text-center text-red-400 py-10">No se pudo cargar la tienda.</div>';
+  }
+}
+
+function updateStoreWallet() {
+  const player = players.find((p) => p._id === storePlayerId);
+  const wallet = document.getElementById("storeWallet");
+  if (!player || !wallet) return;
+
+  wallet.classList.remove("hidden");
+
+  // Estos campos se mostrarán cuando el endpoint de cartera esté disponible.
+  document.getElementById("storeBalance").textContent =
+    formatEuros(player.balanceCents || 0);
+
+  document.getElementById("storeChikacoins").textContent =
+    Number(player.chikacoins || 0);
+}
+
+function openPurchaseModal(productId) {
+  const product = storeProducts.find((p) => p._id === productId);
+  if (!product || !storePlayerId) {
+    showToast("Selecciona primero tu personaje", "warning");
+    return;
+  }
+
+  let modal = document.getElementById("purchaseModal");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "purchaseModal";
+    modal.className =
+      "fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4";
+    modal.innerHTML = `
+      <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-md">
+        <div class="flex justify-between items-center mb-5">
+          <h3 id="purchaseTitle" class="text-xl font-bold text-amber-400"></h3>
+          <button onclick="document.getElementById('purchaseModal').remove()"
+            class="text-zinc-400 hover:text-white text-xl">✕</button>
+        </div>
+
+        <p id="purchaseDescription" class="text-sm text-zinc-400 mb-5"></p>
+
+        <div class="grid grid-cols-2 gap-3">
+          <button id="buyMoneyButton"
+            class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl">
+            💶 Pagar con dinero
+          </button>
+
+          <button id="buyCoinButton"
+            class="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-xl">
+            🪙 Pagar con Chikacoins
+          </button>
+        </div>
+
+        <p class="text-xs text-zinc-500 mt-4 text-center">
+          El pago será validado por el servidor.
+        </p>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  modal.querySelector("#purchaseTitle").textContent = product.name;
+  modal.querySelector("#purchaseDescription").textContent =
+    `💶 ${formatEuros(product.priceCents)} · 🪙 ${Number(product.chikacoinPrice || 0)} Chikacoins`;
+
+  modal.querySelector("#buyMoneyButton").onclick = () =>
+    attemptPurchase(product, "money");
+
+  modal.querySelector("#buyCoinButton").onclick = () =>
+    attemptPurchase(product, "chikacoin");
+}
+
+async function attemptPurchase(product, paymentMethod) {
+  // El endpoint de compra se conectará cuando terminemos el backend
+  // de cartera/transacciones. No descontamos saldo desde el navegador.
+  showToast(
+    "💳 La compra está preparada; falta conectar el sistema de pagos del servidor.",
+    "info"
+  );
+}
+
 // =============================================================
 // SSE
 // =============================================================
