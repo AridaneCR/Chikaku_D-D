@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>D&D App – Usuarios</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    if (!sessionStorage.getItem("masterToken")) window.location.href = "../index.html";
+  </script>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen">
+  <header class="sticky top-0 z-40 bg-zinc-900/90 backdrop-blur border-b border-zinc-800">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-3 justify-between items-center">
+      <h1 class="text-2xl font-bold text-red-400">👥 Usuarios de la campaña</h1>
+      <div class="flex gap-2">
+        <button onclick="location.href='master.html'" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700">← Panel Master</button>
+        <button onclick="logoutMasterUsers()" class="px-4 py-2 rounded-lg bg-zinc-700 hover:bg-zinc-600">Cerrar sesión</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-5 mb-6">
+      <h2 class="text-xl font-bold text-amber-400 mb-2">Asignación de personajes</h2>
+      <p class="text-sm text-zinc-400">Cada usuario puede tener un único personaje. Un personaje no puede pertenecer a dos usuarios.</p>
+    </div>
+
+    <div id="usersList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
+  </main>
+
+  <div id="editModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-md">
+      <div class="flex justify-between items-center mb-5">
+        <h2 class="text-xl font-bold text-red-400">Editar usuario</h2>
+        <button onclick="closeEditUser()" class="text-zinc-400 hover:text-white text-xl">✕</button>
+      </div>
+      <input id="editUserId" type="hidden" />
+      <label class="block text-sm text-zinc-400 mb-1">Nombre</label>
+      <input id="editUserName" class="w-full mb-3 px-3 py-2 rounded text-black" />
+      <label class="block text-sm text-zinc-400 mb-1">Email</label>
+      <input id="editUserEmail" type="email" class="w-full mb-3 px-3 py-2 rounded text-black" />
+      <label class="block text-sm text-zinc-400 mb-1">Nueva contraseña (opcional)</label>
+      <input id="editUserPassword" type="password" class="w-full mb-5 px-3 py-2 rounded text-black" />
+      <button onclick="saveUser()" class="w-full bg-green-600 hover:bg-green-700 py-2 rounded font-bold">Guardar cambios</button>
+    </div>
+  </div>
+
+  <script src="../js/master_users.js"></script>
+</body>
+</html>
