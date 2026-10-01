@@ -7,6 +7,8 @@ const cors = require("cors");
 const playersRouter = require("./routes/players");
 const productsRouter = require("./routes/products");
 const storeRouter = require("./routes/store");
+const usersRouter = require("./routes/users");
+const campaignInfoRoutes = require("./routes/campaignInfo");
 
 const app = express();
 
@@ -42,7 +44,7 @@ let sseClients = [];
 function notifyPlayersUpdate() {
   sseClients.forEach((client) => {
     try {
-      client.res.write(`event: playersUpdated\ndata: update\n\n`);
+      client.res.write(`event: playersUpdated\\ndata: update\\n\\n`);
     } catch {
       sseClients = sseClients.filter((c) => c !== client);
     }
@@ -51,7 +53,7 @@ function notifyPlayersUpdate() {
 
 setInterval(() => {
   sseClients.forEach((client) => {
-    client.res.write(`:\n\n`);
+    client.res.write(`:\\n\\n`);
   });
 }, 15000);
 
@@ -71,7 +73,7 @@ app.get("/api/players/stream", (req, res) => {
   const client = { res };
   sseClients.push(client);
 
-  res.write(`event: connected\ndata: ok\n\n`);
+  res.write(`event: connected\\ndata: ok\\n\\n`);
 
   req.on("close", () => {
     sseClients = sseClients.filter((c) => c !== client);
@@ -84,6 +86,8 @@ app.get("/api/players/stream", (req, res) => {
 app.use("/api/players", playersRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/store", storeRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/campaign-info", campaignInfoRoutes);
 
 // =============================================================
 // HEALTH CHECK
@@ -104,6 +108,3 @@ app.listen(PORT, () =>
 setInterval(() => {
   fetch("https://chikaku-d-d-1.onrender.com").catch(() => {});
 }, 10 * 60 * 1000);
-
-const campaignInfoRoutes = require("./routes/campaignInfo");
-app.use("/api/campaign-info", campaignInfoRoutes);
