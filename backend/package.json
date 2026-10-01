@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "migrate:products": "node scripts/migrate_products.js"
+    "migrate:products": "node scripts/migrate_products.js",
+    "seed:store": "node scripts/seed_store_products.js"
   },
   "dependencies": {
     "cloudinary": "^2.8.0",
