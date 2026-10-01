@@ -4,97 +4,147 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>D&D App</title>
-
-  <!-- 🔐 CSP PERMITIENDO CLOUDINARY -->
-  <meta
-    http-equiv="Content-Security-Policy"
-    content="
-      default-src 'self' https: data: blob:;
-      img-src 'self' https://res.cloudinary.com data: blob:;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https:;
-      style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
-      connect-src 'self' https:;
-    "
-  />
-
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob:; img-src 'self' https://res.cloudinary.com data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https:; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self' https:;" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="bg-stone-900 text-stone-100 min-h-screen flex items-center justify-center p-6">
-
-  <!-- LOGIN -->
   <div class="w-full max-w-md bg-stone-800 p-8 rounded-2xl shadow-2xl border border-stone-700">
+    <h1 class="text-4xl font-bold text-center mb-2 text-red-400">🐉 Dungeons & Dragons</h1>
+    <p class="text-center text-stone-400 mb-8">Acceso a tu cuenta de jugador</p>
 
-    <h1 class="text-4xl font-bold text-center mb-8 text-red-400">
-      🐉 Dungeons & Dragons
-    </h1>
+    <!-- REGISTRO -->
+    <section id="registerSection">
+      <h2 class="text-xl font-bold text-amber-400 mb-4">Crear cuenta</h2>
+      <p class="text-sm text-stone-400 mb-4">Regístrate. El Master será quien te asigne tu personaje.</p>
 
-    <!-- MASTER LOGIN -->
-    <div class="mb-6">
-      <label class="block mb-2 text-sm text-stone-300">
-        Entrar como Master
-      </label>
+      <input id="registerName" type="text" placeholder="Nombre" autocomplete="name"
+        class="w-full p-3 rounded text-black mb-3 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+      <input id="registerEmail" type="email" placeholder="Email" autocomplete="email"
+        class="w-full p-3 rounded text-black mb-3 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+      <input id="registerPassword" type="password" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="new-password"
+        class="w-full p-3 rounded text-black mb-3 focus:outline-none focus:ring-2 focus:ring-amber-500" />
 
-      <input
-        id="masterPass"
-        type="password"
-        placeholder="Contraseña del Master"
-        class="w-full p-3 rounded text-black mb-3 focus:outline-none focus:ring-2 focus:ring-red-500"
-      />
+      <button onclick="registerUser()"
+        class="w-full bg-amber-600 hover:bg-amber-700 p-3 rounded font-semibold transition">
+        Registrarme
+      </button>
 
-      <button
-        onclick="loginMaster()"
+      <button onclick="showLogin()" class="w-full mt-3 text-sm text-stone-400 hover:text-white">
+        Ya tengo una cuenta → Iniciar sesión
+      </button>
+    </section>
+
+    <!-- LOGIN JUGADOR -->
+    <section id="loginSection" class="hidden">
+      <h2 class="text-xl font-bold text-purple-400 mb-4">Iniciar sesión</h2>
+
+      <input id="loginEmail" type="email" placeholder="Email" autocomplete="email"
+        class="w-full p-3 rounded text-black mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+      <input id="loginPassword" type="password" placeholder="Contraseña" autocomplete="current-password"
+        class="w-full p-3 rounded text-black mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+
+      <button onclick="loginUser()"
+        class="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded font-semibold transition">
+        Entrar como jugador
+      </button>
+
+      <button onclick="showRegister()" class="w-full mt-3 text-sm text-stone-400 hover:text-white">
+        ← Crear una cuenta
+      </button>
+    </section>
+
+    <div class="border-t border-stone-700 my-7"></div>
+
+    <!-- MASTER -->
+    <section>
+      <label class="block mb-2 text-sm text-stone-300">Entrar como Master</label>
+      <input id="masterPass" type="password" placeholder="Contraseña del Master"
+        class="w-full p-3 rounded text-black mb-3 focus:outline-none focus:ring-2 focus:ring-red-500" />
+      <button onclick="loginMaster()"
         class="w-full bg-red-600 hover:bg-red-700 p-3 rounded font-semibold transition">
         Entrar como Master
       </button>
-    </div>
-
-    <div class="border-t border-stone-700 my-6"></div>
-
-    <!-- PLAYER ACCESS -->
-    <button
-      onclick="enterBoard()"
-      class="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded font-semibold transition">
-      Entrar como Jugador
-    </button>
-
+    </section>
   </div>
 
   <script>
-    // Limpia cualquier sesión anterior al volver al index
+    const BASE_URL = window.__env && window.__env.API_URL
+      ? window.__env.API_URL
+      : "https://chikaku-d-d-1.onrender.com";
+
     sessionStorage.removeItem("masterToken");
+
+    function showLogin() {
+      document.getElementById("registerSection").classList.add("hidden");
+      document.getElementById("loginSection").classList.remove("hidden");
+    }
+
+    function showRegister() {
+      document.getElementById("loginSection").classList.add("hidden");
+      document.getElementById("registerSection").classList.remove("hidden");
+    }
+
+    async function userRequest(path, body) {
+      const res = await fetch(`${BASE_URL}/api/users/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Error de conexión");
+      return data;
+    }
+
+    async function registerUser() {
+      const name = document.getElementById("registerName").value.trim();
+      const email = document.getElementById("registerEmail").value.trim();
+      const password = document.getElementById("registerPassword").value;
+
+      if (!name || !email || !password) return alert("Completa todos los campos.");
+
+      try {
+        const data = await userRequest("register", { name, email, password });
+        sessionStorage.setItem("userToken", data.token);
+        sessionStorage.setItem("user", JSON.stringify(data.user));
+        window.location.href = "./Player/player_view.html";
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function loginUser() {
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+
+      if (!email || !password) return alert("Introduce email y contraseña.");
+
+      try {
+        const data = await userRequest("login", { email, password });
+        sessionStorage.setItem("userToken", data.token);
+        sessionStorage.setItem("user", JSON.stringify(data.user));
+        window.location.href = "./Player/player_view.html";
+      } catch (error) {
+        alert(error.message);
+      }
+    }
 
     function loginMaster() {
       const pass = document.getElementById("masterPass").value.trim();
-
-      if (!pass) {
-        alert("Introduce la contraseña.");
-        return;
-      }
+      if (!pass) return alert("Introduce la contraseña.");
 
       if (pass === "Chikaku2026") {
-        // 🔐 Generamos token simple
         const token = btoa("master-session-" + Date.now());
-
         sessionStorage.setItem("masterToken", token);
-
         window.location.href = "./Player/master.html";
       } else {
         alert("Contraseña incorrecta");
       }
     }
 
-    function enterBoard() {
-      window.location.href = "./Player/player_view.html";
-    }
-
-    // Permitir pulsar ENTER para login
-    document.getElementById("masterPass").addEventListener("keypress", function(e) {
-      if (e.key === "Enter") {
-        loginMaster();
-      }
+    document.getElementById("masterPass").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") loginMaster();
     });
   </script>
-
 </body>
 </html>
