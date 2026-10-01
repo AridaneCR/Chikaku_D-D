@@ -1,59 +1,31 @@
 const express = require("express");
 const mongoose = require("mongoose");
-
 const User = require("../models/User");
 const Player = require("../models/player");
 const Purchase = require("../models/Purchase");
-const {
-  hashPassword,
-  verifyPassword,
-  createSessionToken,
-  requireUser,
-  publicUser,
-} = require("../utils/auth");
+const { hashPassword, verifyPassword, createSessionToken, requireUser, publicUser } = require("../utils/auth");
 
 const router = express.Router();
 
 function normalizeMasterUser(user) {
   return {
     ...publicUser(user),
-    player: user.player
-      ? {
-          _id: user.player._id,
-          name: user.player.name,
-          chikacoins: user.player.chikacoins,
-        }
-      : null,
+    player: user.player ? { _id: user.player._id, name: user.player.name, chikacoins: user.player.chikacoins } : null,
   };
 }
 
-// Registro público. El personaje lo asigna posteriormente el Master.
 router.post("/register", async (req, res) => {
   try {
     const name = String(req.body.name || "").trim();
     const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "");
+    if (!name || !email || !password) return res.status(400).json({ error: "Nombre, email y contraseña son obligatorios" });
+    if (password.length < 6) return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "Nombre, email y contraseña son obligatorios" });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
-    }
-
-    const exists = await User.findOne({ email });
-    if (exists) return res.status(409).json({ error: "Ese email ya está registrado" });
+    if (await User.findOne({ email })) return res.status(409).json({ error: "Ese email ya está registrado" });
 
     const { hash, salt } = hashPassword(password);
-    const user = await User.create({
-      name,
-      email,
-      passwordHash: hash,
-      passwordSalt: salt,
-      sessionToken: createSessionToken(),
-    });
-
+    const user = await User.create({ name, email, passwordHash: hash, passwordSalt: salt, sessionToken: createSessionToken() });
     res.status(201).json({ ok: true, token: user.sessionToken, user: publicUser(user) });
   } catch (error) {
     console.error("REGISTER USER ERROR:", error);
@@ -65,15 +37,11 @@ router.post("/login", async (req, res) => {
   try {
     const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "");
-
     const user = await User.findOne({ email }).select("+passwordHash +passwordSalt +sessionToken");
-    if (!user || !verifyPassword(password, user.passwordHash, user.passwordSalt)) {
-      return res.status(401).json({ error: "Email o contraseña incorrectos" });
-    }
+    if (!user || !verifyPassword(password, user.passwordHash, user.passwordSalt)) return res.status(401).json({ error: "Email o contraseña incorrectos" });
 
     user.sessionToken = createSessionToken();
     await user.save();
-
     res.json({ ok: true, token: user.sessionToken, user: publicUser(user) });
   } catch (error) {
     console.error("LOGIN USER ERROR:", error);
@@ -95,12 +63,9 @@ router.get("/me", requireUser, async (req, res) => {
 // ============================================================
 // MASTER: gestión de usuarios
 // ============================================================
-
 router.get("/", async (req, res) => {
   try {
-    const users = await User.find()
-      .select("name email player createdAt updatedAt")
-      .populate("player", "name chikacoins");
+    const users = await User.find().select("name email player createdAt updatedAt").populate("player", "name chikacoins");
     res.json(users.map(normalizeMasterUser));
   } catch (error) {
     console.error("GET USERS ERROR:", error);
@@ -116,15 +81,12 @@ router.put("/:id", async (req, res) => {
     if (req.body.name !== undefined) user.name = String(req.body.name).trim();
     if (req.body.email !== undefined) {
       const email = String(req.body.email).trim().toLowerCase();
-      const duplicate = await User.findOne({ email, _id: { $ne: user._id } });
-      if (duplicate) return res.status(409).json({ error: "Ese email ya está registrado" });
+      if (await User.findOne({ email, _id: { $ne: user._id } })) return res.status(409).json({ error: "Ese email ya está registrado" });
       user.email = email;
     }
 
     if (req.body.password) {
-      if (String(req.body.password).length < 6) {
-        return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
-      }
+      if (String(req.body.password).length < 6) return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
       const { hash, salt } = hashPassword(String(req.body.password));
       user.passwordHash = hash;
       user.passwordSalt = salt;
@@ -144,11 +106,9 @@ router.delete("/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
-
-    await User.deleteOne({ _id: user._id });
-    // Las compras quedan vinculadas al usuario cuando existe historial.
+    if (user.player) await Player.updateOne({ _id: user.player }, { $set: { user: null } });
     await Purchase.deleteMany({ user: user._id });
-
+    await User.deleteOne({ _id: user._id });
     res.json({ ok: true });
   } catch (error) {
     console.error("DELETE USER ERROR:", error);
@@ -159,7 +119,6 @@ router.delete("/:id", async (req, res) => {
 // El Master asigna o desasigna exactamente un personaje por usuario.
 router.patch("/:id/player", async (req, res) => {
   const session = await mongoose.startSession();
-
   try {
     let result;
     await session.withTransaction(async () => {
@@ -170,6 +129,7 @@ router.patch("/:id/player", async (req, res) => {
         throw error;
       }
 
+      const previousPlayerId = user.player || null;
       const playerId = req.body.playerId || null;
 
       if (playerId) {
@@ -179,7 +139,6 @@ router.patch("/:id/player", async (req, res) => {
           error.status = 404;
           throw error;
         }
-
         const owner = await User.findOne({ player: player._id, _id: { $ne: user._id } }).session(session);
         if (owner) {
           const error = new Error("Ese personaje ya está asignado a otro usuario");
@@ -188,18 +147,20 @@ router.patch("/:id/player", async (req, res) => {
         }
       }
 
+      if (previousPlayerId && String(previousPlayerId) !== String(playerId)) {
+        await Player.updateOne({ _id: previousPlayerId }, { $set: { user: null } }, { session });
+      }
+      if (playerId) {
+        await Player.updateOne({ _id: playerId }, { $set: { user: user._id } }, { session });
+      }
+
       user.player = playerId;
       await user.save({ session });
       result = user;
     });
 
-    const notify = req.app.get("notifyPlayersUpdate");
-    notify?.();
-
-    const populated = await User.findById(result._id)
-      .select("name email player createdAt updatedAt")
-      .populate("player", "name chikacoins");
-
+    req.app.get("notifyPlayersUpdate")?.();
+    const populated = await User.findById(result._id).select("name email player createdAt updatedAt").populate("player", "name chikacoins");
     res.json({ ok: true, user: normalizeMasterUser(populated) });
   } catch (error) {
     console.error("ASSIGN USER PLAYER ERROR:", error);
