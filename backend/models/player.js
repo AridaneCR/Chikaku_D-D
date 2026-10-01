@@ -43,7 +43,7 @@ const PlayerSchema = new mongoose.Schema(
     // 🪙 CHIKACOINS
     chikacoins: {
       type: Number,
-      default: 0,
+      default: 100,
       min: 0,
     },
 
@@ -78,15 +78,3 @@ const PlayerSchema = new mongoose.Schema(
       default: [],
       select: false,
     },
-
-    itemDescriptions: {
-      type: [String],
-      default: [],
-    },
-  },
-  {
-    timestamps: true,
-  },
-);
-
-module.exports = mongoose.model("Player", PlayerSchema);
