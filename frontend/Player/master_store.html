@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>D&D App – Tienda Master</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    (function () {
+      const token = sessionStorage.getItem("masterToken");
+      if (!token) window.location.href = "../index.html";
+    })();
+  </script>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen">
+  <header class="sticky top-0 z-40 bg-zinc-900/90 backdrop-blur border-b border-zinc-800">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-3 justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-amber-400">🛒 Gestión de tienda</h1>
+        <p class="text-sm text-zinc-400">Crear, editar y activar productos para los jugadores</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="window.location.href='master.html'" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700">← Master</button>
+        <button onclick="logoutMaster()" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 font-semibold">Cerrar sesión</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <section class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 shadow-xl mb-8">
+      <div class="flex justify-between items-center gap-3 mb-5">
+        <div>
+          <h2 id="formTitle" class="text-xl font-bold text-emerald-400">➕ Crear producto</h2>
+          <p class="text-sm text-zinc-400">El precio de compra de los jugadores se expresa en Chikacoins.</p>
+        </div>
+        <button id="cancelEditBtn" onclick="resetProductForm()" class="hidden px-4 py-2 rounded-lg bg-zinc-700 hover:bg-zinc-600">Cancelar edición</button>
+      </div>
+
+      <form id="productForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="lg:col-span-2">
+          <label class="label">Nombre *</label>
+          <input id="productName" class="input" required maxlength="120" placeholder="Ej. Espada larga" />
+        </div>
+        <div>
+          <label class="label">Código de barras *</label>
+          <input id="productBarcode" class="input" required maxlength="100" placeholder="Ej. ESP-001" />
+        </div>
+        <div>
+          <label class="label">Campaña</label>
+          <input id="productCampaign" class="input" value="default" maxlength="80" />
+        </div>
+        <div class="lg:col-span-2">
+          <label class="label">Descripción</label>
+          <textarea id="productDescription" class="input resize-none" rows="3" placeholder="Descripción del objeto..."></textarea>
+        </div>
+        <div>
+          <label class="label">Precio (€)</label>
+          <input id="productPrice" class="input" type="number" min="0" step="0.01" value="0" />
+        </div>
+        <div>
+          <label class="label">🪙 Precio Chikacoins *</label>
+          <input id="productChikacoins" class="input" type="number" min="0" step="1" value="0" required />
+        </div>
+        <div class="lg:col-span-2">
+          <label class="label">Imagen del producto</label>
+          <input id="productImage" class="file" type="file" accept="image/png,image/jpeg,image/jpg,image/webp" />
+          <img id="productImagePreview" class="hidden mt-3 h-40 w-full object-contain rounded-xl border border-zinc-700 bg-zinc-950" />
+        </div>
+        <div class="flex items-end">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input id="productActive" type="checkbox" checked class="w-5 h-5" />
+            <span>Producto activo en la tienda</span>
+          </label>
+        </div>
+        <div class="flex items-end lg:justify-end">
+          <button id="saveProductBtn" type="submit" class="w-full lg:w-auto px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-bold">💾 Crear producto</button>
+        </div>
+      </form>
+      <p id="formFeedback" class="mt-4 text-sm font-semibold"></p>
+    </section>
+
+    <section class="mb-4 flex flex-wrap justify-between items-center gap-3">
+      <div>
+        <h2 class="text-2xl font-bold">📦 Productos</h2>
+        <p id="productCount" class="text-sm text-zinc-400"></p>
+      </div>
+      <button onclick="loadProducts()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 font-semibold">🔄 Actualizar</button>
+    </section>
+
+    <section id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></section>
+  </main>
+
+  <style>
+    .label { display:block; margin-bottom:.35rem; font-size:.875rem; font-weight:600; color:#a1a1aa; }
+    .input { width:100%; background:#fff !important; color:#000 !important; border:1px solid #71717a; border-radius:.6rem; padding:.65rem .85rem; }
+    .input:focus { outline:none; border-color:#f59e0b; box-shadow:0 0 0 2px rgba(245,158,11,.25); }
+    .file { width:100%; border:1px solid #71717a; border-radius:.6rem; background:#fff; color:#000; padding:.55rem; }
+    .file::file-selector-button { background:#52525b; color:#fff; border:0; border-radius:.45rem; padding:.45rem .8rem; margin-right:.6rem; cursor:pointer; }
+  </style>
+  <script src="../js/master_store.js"></script>
+</body>
+</html>
