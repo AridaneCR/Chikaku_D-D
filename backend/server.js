@@ -44,7 +44,7 @@ let sseClients = [];
 function notifyPlayersUpdate() {
   sseClients.forEach((client) => {
     try {
-      client.res.write(`event: playersUpdated\\ndata: update\\n\\n`);
+      client.res.write(`event: playersUpdated\ndata: update\n\n`);
     } catch {
       sseClients = sseClients.filter((c) => c !== client);
     }
@@ -53,7 +53,7 @@ function notifyPlayersUpdate() {
 
 setInterval(() => {
   sseClients.forEach((client) => {
-    client.res.write(`:\\n\\n`);
+    client.res.write(`:\n\n`);
   });
 }, 15000);
 
@@ -73,7 +73,7 @@ app.get("/api/players/stream", (req, res) => {
   const client = { res };
   sseClients.push(client);
 
-  res.write(`event: connected\\ndata: ok\\n\\n`);
+  res.write(`event: connected\ndata: ok\n\n`);
 
   req.on("close", () => {
     sseClients = sseClients.filter((c) => c !== client);
