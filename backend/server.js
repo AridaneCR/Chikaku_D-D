@@ -6,18 +6,16 @@ const cors = require("cors");
 
 const playersRouter = require("./routes/players");
 const productsRouter = require("./routes/products");
-
+const storeRouter = require("./routes/store");
 
 const app = express();
 
 // =============================================================
 // MIDDLEWARES
 // =============================================================
-
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 
 // =============================================================
 // MONGODB
@@ -31,7 +29,7 @@ if (!MONGO_URI) {
 mongoose
   .connect(MONGO_URI)
   .then(() => console.log("✅ MongoDB conectado"))
-  .catch(err => {
+  .catch((err) => {
     console.error("❌ Error MongoDB:", err);
     process.exit(1);
   });
@@ -41,29 +39,23 @@ mongoose
 // =============================================================
 let sseClients = [];
 
-// 👉 FUNCIÓN GLOBAL (🔥 CLAVE)
 function notifyPlayersUpdate() {
-  sseClients.forEach(client => {
+  sseClients.forEach((client) => {
     try {
       client.res.write(`event: playersUpdated\ndata: update\n\n`);
     } catch {
-      // cliente muerto
-      sseClients = sseClients.filter(c => c !== client);
+      sseClients = sseClients.filter((c) => c !== client);
     }
   });
 }
 
-// 🔥 HEARTBEAT SSE (evita buffering de Render)
 setInterval(() => {
-  sseClients.forEach(client => {
+  sseClients.forEach((client) => {
     client.res.write(`:\n\n`);
   });
-}, 15000); // cada 15s
+}, 15000);
 
-
-// 👉 HACERLA DISPONIBLE AL ROUTER
 app.set("notifyPlayersUpdate", notifyPlayersUpdate);
-
 
 // =============================================================
 // SSE ENDPOINT
@@ -79,11 +71,10 @@ app.get("/api/players/stream", (req, res) => {
   const client = { res };
   sseClients.push(client);
 
-  // 🔥 EVENTO INICIAL (IMPORTANTE)
   res.write(`event: connected\ndata: ok\n\n`);
 
   req.on("close", () => {
-    sseClients = sseClients.filter(c => c !== client);
+    sseClients = sseClients.filter((c) => c !== client);
   });
 });
 
@@ -92,6 +83,7 @@ app.get("/api/players/stream", (req, res) => {
 // =============================================================
 app.use("/api/players", playersRouter);
 app.use("/api/products", productsRouter);
+app.use("/api/store", storeRouter);
 
 // =============================================================
 // HEALTH CHECK
@@ -103,7 +95,7 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 // =============================================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`)
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`),
 );
 
 // =============================================================
@@ -114,5 +106,4 @@ setInterval(() => {
 }, 10 * 60 * 1000);
 
 const campaignInfoRoutes = require("./routes/campaignInfo");
-
 app.use("/api/campaign-info", campaignInfoRoutes);
