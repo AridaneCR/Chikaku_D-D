@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node server.js",
     "migrate:products": "node scripts/migrate_products.js",
-    "seed:store": "node scripts/seed_store_products.js"
+    "seed:store": "node scripts/seed_store_products.js",
+    "seed:chikacoins": "node scripts/seed_chikacoins.js"
   },
   "dependencies": {
     "cloudinary": "^2.8.0",
