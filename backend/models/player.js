@@ -78,3 +78,13 @@ const PlayerSchema = new mongoose.Schema(
       default: [],
       select: false,
     },
+
+    itemDescriptions: {
+      type: [String],
+      default: [],
+    },
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.model("Player", PlayerSchema);
